@@ -1,68 +1,111 @@
-<script setup lang="ts">
-import { onMounted, ref, reactive } from 'vue'
-import { ElMessage } from 'element-plus'
-import { api } from '@/api/client'
-
-const sections = ref<any[]>([
-  { id: 1, page_key: 'home', section_key: 'hero', title: 'Home → Hero Banner', content: { headline: 'Pu\'er Tea, Traceable to the Mountain.', subheadline: 'Single origin, SGS certified, 24/7 live streamed from Yunnan.', cta_text: 'Create Your Bespoke →', cta_link: '/bespoke' }, updated_by: 'Admin Root', updated_at: '2026-09-15T10:00:00Z' },
-  { id: 2, page_key: 'home', section_key: 'live_strip', title: 'Home → Live Strip Heading', content: { heading: 'Live From the Tea Gardens', subheading: 'Watch your tea being picked, rolled and sun-dried in real time.' }, updated_by: 'Admin Root', updated_at: '2026-09-15T10:00:00Z' },
-  { id: 3, page_key: 'tea_gardens', section_key: 'intro', title: 'Tea Gardens → Intro', content: { heading: 'Six Tea Gardens. One Promise.', body: '曼岗 · 景迈 · 大乌岽 · 贺开 · 翁基 · 多依 — 每片茶园精确到村，师傅实名。' }, updated_by: 'Admin Root', updated_at: '2026-09-15T10:00:00Z' },
-  { id: 4, page_key: 'bespoke', section_key: 'how_it_works', title: 'Bespoke → How It Works', content: { steps: [ '1. Pick tea garden & roast', '2. Choose packaging', '3. We quote within 24h', '4. Tea arrives in 45 days' ] }, updated_by: 'Admin Root', updated_at: '2026-09-14T09:00:00Z' },
-  { id: 5, page_key: 'quality', section_key: 'intro', title: 'Quality → SGS Intro', content: { heading: 'Independently Tested. Always.', body: 'Every batch tested for pesticides, heavy metals, microbiology, flavonoid profile.' }, updated_by: 'Admin Root', updated_at: '2026-09-13T14:00:00Z' },
-])
-
-const editing = ref<any>(null)
-const draft = reactive<any>({})
-
-function startEdit(s: any) {
-  editing.value = s
-  Object.assign(draft, s.content)
-}
-async function save() {
-  editing.value.content = { ...draft }
-  ElMessage.success('✅ Site content saved — public site updated instantly')
-  editing.value = null
-}
-</script>
 <template>
-  <el-card>
-    <template #header><div class="flex justify-between items-center"><span class="font-medium">🏛️ Public Site CMS</span>
-      <el-tag type="success">Live — changes apply instantly</el-tag>
-    </div></template>
-    <el-alert type="info" :closable="false" class="mb-4">
-      All public site content is pulled from this CMS table. Edit sections below. All fields in English (UK).
-    </el-alert>
-    <el-table :data="sections" stripe>
-      <el-table-column prop="page_key" label="Page" width="150">
-        <template #default="{ row }"><code>{{ row.page_key }}</code></template>
-      </el-table-column>
-      <el-table-column prop="section_key" label="Section" width="150">
-        <template #default="{ row }"><code>{{ row.section_key }}</code></template>
-      </el-table-column>
-      <el-table-column prop="title" label="Description" width="280" />
-      <el-table-column label="Content Preview" min-width="280">
-        <template #default="{ row }">
-          <code class="text-xs text-slate-500 break-all">{{ JSON.stringify(row.content).slice(0, 80) }}…</code>
-        </template>
-      </el-table-column>
-      <el-table-column prop="updated_at" label="Updated" width="170" />
-      <el-table-column label="Actions" width="100">
-        <template #default="{ row }">
-          <el-button size="small" @click="startEdit(row)">✏️ Edit</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-  </el-card>
+  <div>
+    <el-card>
+      <template #header>
+        <div class="flex items-center justify-between">
+          <span class="font-bold text-lg">CMS — Site Content</span>
+          <el-button type="primary" :icon="Refresh" @click="load">Reload</el-button>
+        </div>
+      </template>
+      <el-alert v-if="!loaded" title="Click Reload to fetch from backend" type="info" show-icon :closable="false" class="mb-4" />
+      <el-table :data="contents" v-else stripe>
+        <el-table-column prop="page_key" label="Page" width="160" />
+        <el-table-column prop="section_key" label="Section" width="180" />
+        <el-table-column label="Content Preview" min-width="260">
+          <template #default="{ row }">
+            <span class="text-xs text-gray-500">{{ JSON.stringify(row.content).slice(0, 120) }}{{ JSON.stringify(row.content).length > 120 ? '…' : '' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="updated_at" label="Updated" width="180" />
+        <el-table-column label="Actions" width="200">
+          <template #default="{ row }">
+            <el-button size="small" @click="openEdit(row)">Edit</el-button>
+            <el-button size="small" type="success" @click="reset(row)">Reset to defaults</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
 
-  <el-dialog v-model="!!editing" :title="editing?.title" width="640px">
-    <div v-if="editing">
-      <div class="text-xs text-slate-500 mb-3">Edit JSON content below (pretty-printed):</div>
-      <el-input v-model="draft.content" type="textarea" :autosize="{ minRows: 12, maxRows: 25 }"
-        placeholder="JSON content" />
-    </div>
-    <template #footer>
-      <el-button @click="editing = null">Cancel</el-button>
-      <el-button type="primary" @click="save">💾 Publish</el-button>
-    </template>
-  </el-dialog>
+    <!-- Edit Dialog -->
+    <el-dialog v-model="dialog" :title="`Edit ${editing?.page_key}/${editing?.section_key}`" width="640px">
+      <div v-if="editing">
+        <div class="mb-2 text-xs text-gray-400">Edit JSON content directly</div>
+        <el-input v-model="draft" type="textarea" :rows="12" />
+      </div>
+      <template #footer>
+        <el-button @click="dialog = false">Cancel</el-button>
+        <el-button type="primary" @click="save">Save</el-button>
+      </template>
+    </el-dialog>
+  </div>
 </template>
+
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { Refresh } from '@element-plus/icons-vue'
+import { api } from '../api/client'
+
+const contents = ref<any[]>([])
+const loaded = ref(false)
+const dialog = ref(false)
+const editing = ref<any>(null)
+const draft = ref('')
+
+async function load() {
+  try {
+    const res: any = await api.get('/site-contents')
+    // res can be array or { items: [...] }
+    contents.value = Array.isArray(res) ? res : (res?.items || [])
+    loaded.value = true
+  } catch (e: any) {
+    ElMessage.error('Load failed: ' + (e?.message || e))
+  }
+}
+
+function openEdit(row: any) {
+  editing.value = row
+  draft.value = JSON.stringify(row.content, null, 2)
+  dialog.value = true
+}
+
+async function save() {
+  try {
+    const parsed = JSON.parse(draft.value)
+    const url = editing.value.id
+      ? `/site-contents/${editing.value.id}`
+      : '/site-contents'
+    await api.put(url, {
+      page_key: editing.value.page_key,
+      section_key: editing.value.section_key,
+      content: parsed
+    })
+    ElMessage.success('Saved')
+    dialog.value = false
+    await load()
+  } catch (e: any) {
+    ElMessage.error('Save failed: ' + (e?.message || e))
+  }
+}
+
+async function reset(row: any) {
+  try {
+    const defaults: Record<string, any> = {
+      'home/hero': { title: 'Pu\'er Tea Direct from Yunnan', subtitle: 'Personalized tea experience' },
+      'home/featured_presets': { items: [] },
+      'home/quality_sgs': { title: 'Third-Party Lab Certified', items: [] },
+      'about/story': { paragraph: 'UK-based Pu\'er tea specialist since 2024.' },
+      'checkout/contact_us': { email: 'hello@ukteahouse.co.uk', phone: '+44 ...' },
+      'footer/links': { privacy: '/privacy', terms: '/terms', gdpr_dsar: '/gdpr-dsar' }
+    }
+    const def = defaults[`${row.page_key}/${row.section_key}`] || {}
+    await api.put(`/site-contents/${row.id}`, { ...row, content: def })
+    ElMessage.success('Reset to defaults')
+    await load()
+  } catch (e: any) {
+    ElMessage.error(e?.message || 'Reset failed')
+  }
+}
+
+onMounted(load)
+</script>

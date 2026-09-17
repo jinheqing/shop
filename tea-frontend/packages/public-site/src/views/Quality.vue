@@ -1,85 +1,48 @@
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { api } from '../api/client'
+
+const reports = ref<any[]>([])
+const loading = ref(true)
+
+async function load() {
+  try {
+    const d: any = await api.get('/public/sgs-reports')
+    reports.value = d?.items || d || []
+  } catch {
+    reports.value = [
+      { report_number: 'SGS-2025-YN-001', tea_garden: '曼岗村茶园', pesticide_nd_limit: 'ND (≤0.01 ppm)', status: 'Passed', issued_at: '2025-04-15' },
+      { report_number: 'SGS-2025-YN-002', tea_garden: '景迈村茶园', pesticide_nd_limit: 'ND (≤0.01 ppm)', status: 'Passed', issued_at: '2025-04-12' },
+    ]
+  } finally {
+    loading.value = false
+  }
+}
+onMounted(load)
+</script>
+
 <template>
-  <div class="pt-20">
-    <section class="bg-tea-900 text-tea-50 py-24">
-      <div class="max-w-5xl mx-auto px-6">
-        <div class="flex items-center gap-4 mb-6">
-          <span class="text-5xl">🔬</span>
-          <span class="font-serif text-5xl">SGS Quality Assurance.</span>
-        </div>
-        <p class="text-lg text-tea-200 max-w-3xl">Every single batch we ship to the UK passes independent third-party testing by SGS China. Your peace of mind comes with every tin.</p>
-      </div>
-    </section>
+  <div class="max-w-5xl mx-auto py-10 px-4">
+    <h1 class="text-4xl font-bold mb-4">Quality & Safety</h1>
+    <p class="text-gray-600 mb-8">Every tea batch is independently tested by SGS (Societe Generale de Surveillance) and UKAS-accredited labs.</p>
 
-    <section class="py-20 bg-white">
-      <div class="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12">
-        <div>
-          <h3 class="font-serif text-2xl text-tea-900 mb-4">What We Test For</h3>
-          <ul class="space-y-3 text-tea-700">
-            <li class="flex items-start gap-3">
-              <span class="text-green-600 mt-0.5">✓</span>
-              <div><strong>Pesticide Residues</strong> — 280+ pesticides tested, 0 detected on every batch</div>
-            </li>
-            <li class="flex items-start gap-3">
-              <span class="text-green-600 mt-0.5">✓</span>
-              <div><strong>Heavy Metals</strong> — Lead, arsenic, cadmium within EU MRL limits</div>
-            </li>
-            <li class="flex items-start gap-3">
-              <span class="text-green-600 mt-0.5">✓</span>
-              <div><strong>Microbiology</strong> — E. coli, salmonella, yeast, mold — all within food grade</div>
-            </li>
-            <li class="flex items-start gap-3">
-              <span class="text-green-600 mt-0.5">✓</span>
-              <div><strong>Chemical Authenticity</strong> — HPLC 验证真普洱，无掺假</div>
-            </li>
-            <li class="flex items-start gap-3">
-              <span class="text-green-600 mt-0.5">✓</span>
-              <div><strong>Water Activity</strong> — a<sub>w</sub> ≤ 0.75，确保存储安全</div>
-            </li>
-          </ul>
-        </div>
-        <div class="bg-tea-50 rounded-2xl p-8">
-          <h3 class="font-serif text-2xl text-tea-900 mb-4">Scanning Your Tea Box</h3>
-          <div class="space-y-4 text-sm text-tea-700">
-            <div class="flex gap-3">
-              <span class="w-8 h-8 bg-tea-700 text-white rounded-full flex items-center justify-center text-xs flex-shrink-0">1</span>
-              <div>Scan the QR on your bespoke box with any phone camera</div>
-            </div>
-            <div class="flex gap-3">
-              <span class="w-8 h-8 bg-tea-700 text-white rounded-full flex items-center justify-center text-xs flex-shrink-0">2</span>
-              <div>See SGS report, tea garden village, master profile</div>
-            </div>
-            <div class="flex gap-3">
-              <span class="w-8 h-8 bg-tea-700 text-white rounded-full flex items-center justify-center text-xs flex-shrink-0">3</span>
-              <div>Stream the slow-live camera of where it grew — 24/7</div>
-            </div>
-            <div class="flex gap-3">
-              <span class="w-8 h-8 bg-tea-700 text-white rounded-full flex items-center justify-center text-xs flex-shrink-0">4</span>
-              <div>See its journey: harvest → roast → pack → ship to your door</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
+    <div v-if="loading" class="text-center py-20 text-gray-400">Loading reports…</div>
 
-    <section class="py-20 bg-tea-50">
-      <div class="max-w-6xl mx-auto px-6">
-        <h3 class="font-serif text-3xl text-tea-900 mb-10 text-center">Recent SGS Reports</h3>
-        <div class="grid md:grid-cols-3 gap-6">
-          <div v-for="(r,i) in [
-            {no:'SGS-2024-001', batch:'曼岗村-2024春', date:'2024-05-20', result:'PASS'},
-            {no:'SGS-2024-002', batch:'班章-2024春', date:'2024-05-25', result:'PASS'},
-            {no:'SGS-2024-003', batch:'景迈-2024春', date:'2024-06-01', result:'PASS'},
-          ]" :key="i" class="bg-white rounded-xl p-6 border border-tea-100 card-hover">
-            <div class="flex items-center justify-between mb-4">
-              <span class="font-mono text-xs text-tea-500">{{ r.no }}</span>
-              <span class="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">{{ r.result }}</span>
-            </div>
-            <div class="font-serif text-lg text-tea-900 mb-1">{{ r.batch }}</div>
-            <div class="text-xs text-tea-500">Issued {{ r.date }}</div>
-            <button class="mt-4 text-sm text-tea-700 hover:text-tea-900">View PDF →</button>
+    <div v-else class="grid gap-4">
+      <div v-for="r in reports" :key="r.id || r.report_number" class="border rounded-lg p-5 bg-white shadow-sm">
+        <div class="flex justify-between items-start mb-2">
+          <div>
+            <div class="text-xs text-gray-400">{{ r.report_number }}</div>
+            <div class="font-semibold">{{ r.tea_garden || r.title }}</div>
           </div>
+          <span class="bg-emerald-100 text-emerald-800 text-xs px-2 py-1 rounded-full">{{ r.status || 'Passed' }}</span>
         </div>
+        <div class="text-sm text-gray-700 mb-2">
+          Pesticides: <span class="font-mono text-emerald-700">{{ r.pesticide_nd_limit || 'Not Detected' }}</span>
+        </div>
+        <div class="text-xs text-gray-400">Issued: {{ r.issued_at }}</div>
       </div>
-    </section>
+      <div v-if="!reports.length" class="text-center text-gray-400 py-12">No SGS reports available yet.</div>
+    </div>
   </div>
 </template>

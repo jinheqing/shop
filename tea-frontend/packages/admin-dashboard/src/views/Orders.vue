@@ -16,6 +16,15 @@ async function transition(id: number, state: string) {
   ElMessage.success(`→ ${state}`)
   load()
 }
+
+async function showTimeline(id: number) {
+  const d: any = await api.get(`/orders/${id}/timeline`)
+  ElMessageBox.alert(
+    '<pre style="max-height:400px;overflow:auto;font-size:11px;white-space:pre-wrap">'+JSON.stringify(d, null, 2)+'</pre>',
+    `Timeline — Order #${id}`,
+    { dangerouslyUseHTMLString: true }
+  )
+}
 </script>
 
 <template>
@@ -32,14 +41,16 @@ async function transition(id: number, state: string) {
       <el-table-column prop="created_at" label="Created" width="180" />
       <el-table-column label="Actions" width="300">
         <template #default="{ row }">
+          <el-button size="small" @click="showTimeline(row.id)">⏱ Timeline</el-button>
           <el-button size="small" @click="invoice(row.id)">📄 Invoice</el-button>
+          <el-button size="small" @click="showDecl(row.id)">📋 Decl</el-button>
           <el-dropdown size="small" @command="(s:string)=>transition(row.id,s)">
             <el-button size="small">Transition ▾</el-button>
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item command="paid">→ paid</el-dropdown-item>
                 <el-dropdown-item command="producing">→ producing</el-dropdown-item>
-                <el-dropdown-item command="ready_for_delivery">→ ready_for_delivery</el-dropdown-item>
+                <el-dropdown-item command="ready_for_production">→ ready_for_production</el-dropdown-item>
                 <el-dropdown-item command="pending_customs">→ pending_customs</el-dropdown-item>
                 <el-dropdown-item command="shipped">→ shipped</el-dropdown-item>
                 <el-dropdown-item command="completed">→ completed</el-dropdown-item>

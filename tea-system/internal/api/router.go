@@ -41,6 +41,7 @@ type Handlers struct {
 		DSAR           *handlers.DSARHandler
 		SiteContent    *handlers.SiteContentHandler
 		CookieConsent  *handlers.CookieConsentHandler
+	SystemConfig    *handlers.SystemConfigHandler
 }
 
 type Router struct {
@@ -99,6 +100,21 @@ func (r *Router) Setup() *gin.Engine {
 		{
 			auth.POST("/staff/logout", r.h.StaffAuth.Logout)
 			auth.GET("/staff/audit-logs", r.h.StaffAuth.AuditLogs)
+
+			// ===== 新增缺失后端路由 =====
+			// Staff CRUD (admin/supervisor)
+			auth.GET("/staff", r.h.StaffAuth.StaffList)
+			auth.POST("/staff", r.h.StaffAuth.StaffCreate)
+			auth.POST("/staff/:id/toggle", r.h.StaffAuth.StaffToggle)
+			auth.DELETE("/staff/:id", r.h.StaffAuth.StaffDelete)
+			// Users (customers) list
+			auth.GET("/users", r.h.StaffAuth.UserList)
+			// System Config
+			auth.GET("/system/config", r.h.SystemConfig.List)
+			auth.GET("/system/config/:key", r.h.SystemConfig.Get)
+			auth.PUT("/system/config/:key", r.h.SystemConfig.Put)
+			// Payment Transactions
+			auth.GET("/payment/transactions", r.h.Payment.ListTransactions)
 
 			// Step 7: IM
 			auth.GET("/conversations", r.h.Conversation.List)

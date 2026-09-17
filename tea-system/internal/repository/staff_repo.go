@@ -74,3 +74,22 @@ func (r *StaffRepo) List(ctx context.Context, page, size int) ([]models.Staff, i
 
 	return staffs, total, err
 }
+
+// ToggleActive — 启用/禁用 Staff
+func (r *StaffRepo) ToggleActive(ctx context.Context, id uint64, active bool) error {
+	return r.db.WithContext(ctx).Model(&models.Staff{}).
+		Where("id = ?", id).
+		Update("is_active", active).Error
+}
+
+// SoftDelete — 软删除 Staff（置 is_active=false + email 加 deleted_ 前缀）
+func (r *StaffRepo) SoftDelete(ctx context.Context, id uint64) error {
+	var s models.Staff
+	if err := r.db.WithContext(ctx).First(&s, id).Error; err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Model(&s).Updates(map[string]interface{}{
+		"is_active": false,
+		"email":     "deleted_" + s.Email,
+	}).Error
+}

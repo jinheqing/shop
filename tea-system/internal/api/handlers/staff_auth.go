@@ -25,6 +25,7 @@ import (
 
 type StaffAuthHandler struct {
 	staffRepo    *repository.StaffRepo
+	userRepo     *repository.UserRepo
 	passwordSvc  *service.PasswordService
 	jwtSvc       *service.JWTService
 	mfaSvc       *service.MFAService
@@ -34,6 +35,7 @@ type StaffAuthHandler struct {
 
 func NewStaffAuthHandler(
 	staffRepo *repository.StaffRepo,
+	userRepo *repository.UserRepo,
 	passwordSvc *service.PasswordService,
 	jwtSvc *service.JWTService,
 	mfaSvc *service.MFAService,
@@ -42,6 +44,7 @@ func NewStaffAuthHandler(
 ) *StaffAuthHandler {
 	return &StaffAuthHandler{
 		staffRepo:   staffRepo,
+		userRepo:    userRepo,
 		passwordSvc: passwordSvc,
 		jwtSvc:      jwtSvc,
 		mfaSvc:      mfaSvc,
@@ -302,3 +305,107 @@ var _ context.Context = nil // 确保 import 不警告
 // 方便后续取 claims（middleware 层已注入）
 var _ = middleware.GetSubjectID
 var _ = models.Staff{}
+
+// ==================== Staff 管理（admin/supervisor 用） ====================
+
+// StaffList — GET /staff
+func (h *StaffAuthHandler) StaffList(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	size, _ := strconv.Atoi(c.DefaultQuery("size", "20"))
+	list, total, err := h.staffRepo.List(c.Request.Context(), page, size)
+	if err != nil {
+		log.Error().Err(err).Msg("staff list failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "list failed"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"items": list, "total": total, "page": page, "size": size})
+}
+
+// StaffCreate — POST /staff
+func (h *StaffAuthHandler) StaffCreate(c *gin.Context) {
+	var req struct {
+		Name        string `json:"name" binding:"required"`
+		Email       string `json:"email" binding:"required,email"`
+		Role        string `json:"role" binding:"required,oneof=admin supervisor advisor tea_farmer operations"`
+		WorkTZ      string `json:"work_timezone"`
+		AssignFarm  *uint64 `json:"assigned_farm_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	// 生成初始密码
+	initialPwd := strings.ReplaceAll(time.Now().Format("2006"), "-", "") + "Tea!" + strconv.FormatInt(int64(time.Now().UnixNano()%1000), 10)
+	hash, _ := h.passwordSvc.Hash(initialPwd)
+
+	tz := req.WorkTZ
+	if tz == "" {
+		tz = "Europe/London"
+	}
+
+	s := models.Staff{
+		Name:           req.Name,
+		Email:          strings.ToLower(req.Email),
+		PasswordHash:   hash,
+		Role:           req.Role,
+		WorkTimezone:   tz,
+		AssignedFarmID: req.AssignFarm,
+		IsActive:       true,
+	}
+	if err := h.staffRepo.Create(c.Request.Context(), &s); err != nil {
+		log.Error().Err(err).Msg("staff create failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "create failed (email might exist)"})
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"staff": s, "initial_password": initialPwd, "note": "share this password securely — require reset on first login"})
+}
+
+// StaffToggle — POST /staff/:id/toggle (启用/禁用)
+func (h *StaffAuthHandler) StaffToggle(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+	var body struct{ Active *bool `json:"active"` }
+	if err := c.ShouldBindJSON(&body); err != nil || body.Active == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "provide {active: true/false}"})
+		return
+	}
+	if err := h.staffRepo.ToggleActive(c.Request.Context(), id, *body.Active); err != nil {
+		log.Error().Err(err).Msg("staff toggle failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "toggle failed"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "staff updated", "active": *body.Active})
+}
+
+// StaffDelete — DELETE /staff/:id (软删除)
+func (h *StaffAuthHandler) StaffDelete(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+	if err := h.staffRepo.SoftDelete(c.Request.Context(), id); err != nil {
+		log.Error().Err(err).Msg("staff delete failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "delete failed"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "staff soft-deleted"})
+}
+
+// ==================== Users 管理 ====================
+
+// UserList — GET /users (admin)
+func (h *StaffAuthHandler) UserList(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	size, _ := strconv.Atoi(c.DefaultQuery("size", "20"))
+	list, total, err := h.userRepo.List(c.Request.Context(), page, size)
+	if err != nil {
+		log.Error().Err(err).Msg("user list failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "list failed"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"items": list, "total": total, "page": page, "size": size})
+}

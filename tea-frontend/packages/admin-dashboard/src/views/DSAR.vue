@@ -1,55 +1,107 @@
-<script setup lang="ts">
-import { ref } from 'vue'
-import { ElMessage } from 'element-plus'
-import { api } from '@/api/client'
-
-const tickets = ref<any[]>([
-  { id: 1, user_id: 1, user_email: 'james.l@london.com', request_type: 'access', status: 'pending', created_at: '2026-09-15T11:00:00Z', due_at: '2026-09-19T11:00:00Z' },
-  { id: 2, user_id: 3, user_email: 'chen.xs@manchester.uk', request_type: 'erasure', status: 'processing', created_at: '2026-09-16T09:00:00Z', due_at: '2026-09-20T09:00:00Z' },
-  { id: 3, user_id: 2, user_email: 'sarah.w@edinburgh.scot', request_type: 'portability', status: 'completed', created_at: '2026-09-10T14:00:00Z', completed_at: '2026-09-12T10:00:00Z', due_at: '2026-09-14T14:00:00Z' },
-  { id: 4, user_id: 5, user_email: 'anonymized@example.com', request_type: 'rectification', status: 'pending', created_at: '2026-09-17T08:00:00Z', due_at: '2026-09-21T08:00:00Z' },
-])
-
-async function exportData(id: number) { await api.post(`/dsar/requests/${id}/export`); ElMessage.success('Data exported and queued for email') }
-async function erase(id: number) { await api.post(`/dsar/requests/${id}/delete`); ElMessage.success('User data erased'); tickets.value.find(t=>t.id===id).status='completed' }
-</script>
 <template>
-  <el-card>
-    <template #header><div class="flex justify-between items-center"><span class="font-medium">🔒 GDPR / DSAR Tickets</span>
-      <div class="flex gap-2">
-        <el-tag type="warning">{{ tickets.filter(t=>t.status==='pending'||t.status==='processing').length }} Open</el-tag>
-        <el-button @click="">📁 Export All Open</el-button>
-      </div>
-    </div></template>
-    <el-alert type="info" :closable="false" class="mb-4">
-      GDPR requires response within 30 days. "Due At" column shows deadline. Erasure requests block future marketing.
-    </el-alert>
-    <el-table :data="tickets" stripe>
-      <el-table-column prop="id" label="#" width="60" />
-      <el-table-column prop="user_email" label="User Email" width="220" />
-      <el-table-column prop="request_type" label="Type" width="130">
-        <template #default="{ row }">
-          <el-tag :type="{'access':'primary','erasure':'danger','rectification':'warning','portability':'info','restriction':'warning'}[row.request_type]" effect="dark">{{ row.request_type }}</el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column prop="status" label="Status" width="130">
-        <template #default="{ row }">
-          <el-tag :type="{'pending':'warning','processing':'primary','completed':'success','overdue':'danger'}[row.status]" effect="dark">{{ row.status }}</el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column prop="created_at" label="Requested" width="170" />
-      <el-table-column prop="due_at" label="Due By" width="170">
-        <template #default="{ row }">
-          <span :class="new Date(row.due_at) < new Date() ? 'text-red-600 font-medium' : ''">{{ row.due_at }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="Actions" width="220">
-        <template #default="{ row }">
-          <el-button size="small" @click="exportData(row.id)">📤 Export Data</el-button>
-          <el-button v-if="row.request_type==='erasure'" size="small" type="danger" @click="erase(row.id)">🗑 Erase</el-button>
-          <el-button size="small">Reply</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-  </el-card>
+  <div>
+    <el-card>
+      <template #header>
+        <div class="flex items-center justify-between">
+          <span class="font-bold text-lg">GDPR — DSAR Requests</span>
+          <el-button type="primary" :icon="Refresh" @click="load">Reload</el-button>
+        </div>
+      </template>
+      <el-alert v-if="!loaded" title="Click Reload to fetch from backend" type="info" show-icon :closable="false" class="mb-4" />
+      <el-table :data="requests" v-else stripe>
+        <el-table-column prop="id" label="ID" width="70" />
+        <el-table-column prop="email" label="Email" width="200" />
+        <el-table-column prop="request_type" label="Type" width="120" />
+        <el-table-column prop="status" label="Status" width="120">
+          <template #default="{ row }">
+            <el-tag :type="statusTag(row.status)">{{ row.status }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="submitted_at" label="Submitted" width="180" />
+        <el-table-column label="SLA" width="120">
+          <template #default="{ row }">
+            <span v-if="row.sla_deadline" :class="isOverdue(row) ? 'text-red-500 font-bold' : ''">
+              {{ row.sla_deadline }}
+            </span>
+            <span v-else class="text-gray-400">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="Actions" width="220">
+          <template #default="{ row }">
+            <el-button size="small" :disabled="row.status !== 'completed'" @click="exportData(row)">Export</el-button>
+            <el-button size="small" type="danger" @click="erase(row)">Erase</el-button>
+            <el-button size="small" type="success" @click="markDone(row)">Done</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+  </div>
 </template>
+
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { Refresh } from '@element-plus/icons-vue'
+import { api } from '../api/client'
+
+const requests = ref<any[]>([])
+const loaded = ref(false)
+
+async function load() {
+  try {
+    const res: any = await api.get('/dsar/requests')
+    requests.value = res?.items || res || []
+    loaded.value = true
+  } catch (e: any) {
+    ElMessage.error('Load failed: ' + (e?.message || e))
+  }
+}
+
+function statusTag(s: string) {
+  const m: Record<string, string> = { pending: 'warning', processing: 'primary', completed: 'success', errored: 'danger' }
+  return m[s] || 'info'
+}
+
+function isOverdue(row: any) {
+  if (!row.sla_deadline || row.status === 'completed') return false
+  return new Date(row.sla_deadline).getTime() < Date.now()
+}
+
+async function exportData(row: any) {
+  try {
+    const res = await api.get(`/dsar/requests/${row.id}/export`)
+    const data = (res as any)?.data_export || res
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = `dsar-${row.id}.json`; a.click()
+    URL.revokeObjectURL(url)
+    ElMessage.success('Exported')
+  } catch (e: any) {
+    ElMessage.error('Export failed: ' + (e?.message || e))
+  }
+}
+
+async function erase(row: any) {
+  if (!confirm(`Erase all personal data for ${row.email}? This cannot be undone.`)) return
+  try {
+    await api.post(`/dsar/requests/${row.id}/delete`)
+    ElMessage.success('Erased')
+    await load()
+  } catch (e: any) {
+    ElMessage.error(e?.message || 'Erase failed')
+  }
+}
+
+async function markDone(row: any) {
+  try {
+    await api.put(`/dsar/requests/${row.id}`, { status: 'completed' })
+    ElMessage.success('Marked completed')
+    await load()
+  } catch (e: any) {
+    ElMessage.error(e?.message || 'Update failed')
+  }
+}
+
+onMounted(load)
+</script>

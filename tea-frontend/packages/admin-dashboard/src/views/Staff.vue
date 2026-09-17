@@ -1,74 +1,117 @@
-<script setup lang="ts">
-import { ref, reactive } from 'vue'
-import { ElMessage } from 'element-plus'
-import { api } from '@/api/client'
-
-const list = ref<any[]>([
-  { id: 1, name: 'Admin Root', email: 'admin@ukteahouse.co.uk', role: 'admin', mfa_enabled: true, is_active: true, last_login_at: '2026-09-17T13:20:00Z' },
-  { id: 5, name: '顾问小王', email: 'advisor.w@ukteahouse.co.uk', role: 'advisor', mfa_enabled: false, is_active: true, last_login_at: '2026-09-17T10:02:00Z' },
-  { id: 6, name: '顾问小李', email: 'advisor.li@ukteahouse.co.uk', role: 'advisor', mfa_enabled: false, is_active: true, last_login_at: '2026-09-16T15:40:00Z' },
-  { id: 10, name: '王师傅', email: 'farmer.wang@ukteahouse.co.uk', role: 'tea_farmer', mfa_enabled: false, is_active: true, assigned_farm_id: 1, last_login_at: '2026-09-17T06:10:00Z' },
-  { id: 20, name: 'Operations Jane', email: 'ops.jane@ukteahouse.co.uk', role: 'operations', mfa_enabled: true, is_active: true, last_login_at: '2026-09-17T09:00:00Z' },
-])
-const open = ref(false)
-const form = reactive({ name: '', email: '', role: 'advisor', mfa_enabled: false })
-
-async function save() { await api.post('/staff', form); ElMessage.success('Staff created'); open.value = false }
-async function toggle(id: number) { await api.post(`/staff/${id}/toggle`); ElMessage.success('Toggled') }
-async function resetMfa(id: number) { ElMessage.success('MFA reset token sent to staff email') }
-</script>
 <template>
-  <el-card>
-    <template #header><div class="flex justify-between items-center"><span class="font-medium">🧑‍💼 Staff Management</span>
-      <el-button type="primary" @click="open=true">+ Add Staff</el-button>
-    </div></template>
-    <el-table :data="list" stripe>
-      <el-table-column prop="name" label="Name" width="160" />
-      <el-table-column prop="email" label="Email" width="200" />
-      <el-table-column prop="role" label="Role" width="130">
-        <template #default="{ row }">
-          <el-tag :type="{'admin':'danger','supervisor':'warning','advisor':'primary','tea_farmer':'success','operations':'info'}[row.role]" effect="dark">{{ row.role }}</el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column prop="mfa_enabled" label="MFA" width="90">
-        <template #default="{ row }">
-          <el-tag v-if="row.mfa_enabled" type="success" size="small">✅ ON</el-tag>
-          <el-tag v-else type="info" size="small">OFF</el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column prop="is_active" label="Active" width="100">
-        <template #default="{ row }">
-          <el-switch :model-value="row.is_active" @change="toggle(row.id)" />
-        </template>
-      </el-table-column>
-      <el-table-column prop="last_login_at" label="Last Login" width="170" />
-      <el-table-column label="Actions" width="200">
-        <template #default="{ row }">
-          <el-button size="small" @click="">Edit</el-button>
-          <el-button size="small" type="warning" @click="resetMfa(row.id)">Reset MFA</el-button>
-          <el-button size="small" type="danger" @click="">Password Reset</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-  </el-card>
+  <div>
+    <el-card>
+      <template #header>
+        <div class="flex items-center justify-between">
+          <span class="font-bold text-lg">Staff Management</span>
+          <el-button type="primary" @click="openCreate">+ Invite New Staff</el-button>
+        </div>
+      </template>
+      <el-table :data="items" stripe>
+        <el-table-column prop="id" label="ID" width="70" />
+        <el-table-column prop="name" label="Name" width="160" />
+        <el-table-column prop="email" label="Email" width="220" />
+        <el-table-column prop="role" label="Role" width="130">
+          <template #default="{ row }">
+            <el-tag size="small" :type="roleColor(row.role)">{{ row.role }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="Status" width="100">
+          <template #default="{ row }">
+            <el-tag :type="row.is_active ? 'success' : 'info'">{{ row.is_active ? 'Active' : 'Disabled' }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="last_login_at" label="Last Login" width="180" />
+        <el-table-column label="Actions" width="200">
+          <template #default="{ row }">
+            <el-button size="small" v-if="row.is_active" type="warning" @click="toggle(row, false)">Disable</el-button>
+            <el-button size="small" v-else type="success" @click="toggle(row, true)">Enable</el-button>
+            <el-button size="small" type="danger" @click="remove(row)">Delete</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
 
-  <el-dialog v-model="open" title="Add New Staff" width="480px">
-    <el-form :model="form" label-width="100px">
-      <el-form-item label="Name"><el-input v-model="form.name" /></el-form-item>
-      <el-form-item label="Email"><el-input v-model="form.email" /></el-form-item>
-      <el-form-item label="Role">
-        <el-select v-model="form.role" class="w-full">
-          <el-option value="admin">Admin</el-option>
-          <el-option value="supervisor">Supervisor</el-option>
-          <el-option value="advisor">Advisor</el-option>
-          <el-option value="tea_farmer">Tea Farmer</el-option>
-          <el-option value="operations">Operations</el-option>
-        </el-select>
-      </el-form-item>
-      <el-form-item label="Force MFA">
-        <el-switch v-model="form.mfa_enabled" />
-      </el-form-item>
-    </el-form>
-    <template #footer><el-button @click="open=false">Cancel</el-button><el-button type="primary" @click="save">Create & Send Invite</el-button></template>
-  </el-dialog>
+    <el-dialog v-model="dialog" title="Invite Staff" width="480px">
+      <el-form :model="form">
+        <el-form-item label="Name"><el-input v-model="form.name" /></el-form-item>
+        <el-form-item label="Email"><el-input v-model="form.email" /></el-form-item>
+        <el-form-item label="Role">
+          <el-select v-model="form.role" style="width:100%">
+            <el-option label="Admin" value="admin" />
+            <el-option label="Supervisor" value="supervisor" />
+            <el-option label="Advisor" value="advisor" />
+            <el-option label="Tea Farmer" value="tea_farmer" />
+            <el-option label="Operations" value="operations" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="Timezone">
+          <el-input v-model="form.work_timezone" placeholder="Europe/London" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialog = false">Cancel</el-button>
+        <el-button type="primary" @click="submitCreate">Create & Send Invite</el-button>
+      </template>
+    </el-dialog>
+  </div>
 </template>
+
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { api } from '../api/client'
+
+const items = ref<any[]>([])
+const dialog = ref(false)
+const form = ref({ name: '', email: '', role: 'advisor', work_timezone: 'Europe/London' })
+
+async function load() {
+  const res: any = await api.get('/staff')
+  items.value = res?.items || res || []
+}
+
+function roleColor(r: string) {
+  const m: Record<string, string> = { admin: 'danger', supervisor: 'warning', advisor: 'primary', tea_farmer: 'success', operations: 'info' }
+  return m[r] || ''
+}
+
+function openCreate() {
+  form.value = { name: '', email: '', role: 'advisor', work_timezone: 'Europe/London' }
+  dialog.value = true
+}
+
+async function submitCreate() {
+  try {
+    await api.post('/staff', form.value)
+    ElMessage.success('Staff invited')
+    dialog.value = false
+    await load()
+  } catch (e: any) {
+    ElMessage.error(e?.message || 'Create failed')
+  }
+}
+
+async function toggle(row: any, active: boolean) {
+  try {
+    await api.post(`/staff/${row.id}/toggle`, { active })
+    ElMessage.success('Updated')
+    await load()
+  } catch (e: any) {
+    ElMessage.error(e?.message || 'Toggle failed')
+  }
+}
+
+async function remove(row: any) {
+  if (!confirm(`Delete ${row.email}? (soft-delete)`)) return
+  try {
+    await api.delete(`/staff/${row.id}`)
+    ElMessage.success('Soft-deleted')
+    await load()
+  } catch (e: any) {
+    ElMessage.error(e?.message || 'Delete failed')
+  }
+}
+
+onMounted(load)
+</script>

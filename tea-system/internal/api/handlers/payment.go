@@ -241,3 +241,18 @@ func (h *PaymentHandler) processCallback(c *gin.Context, cb *service.CallbackRes
 		"status":                  status,
 	})
 }
+
+// ListTransactions — GET /payment/transactions (admin)
+func (h *PaymentHandler) ListTransactions(c *gin.Context) {
+	gateway := c.Query("gateway")
+	status := c.Query("status")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	size, _ := strconv.Atoi(c.DefaultQuery("size", "20"))
+	list, total, err := h.repo.ListPaymentTransactions(c.Request.Context(), gateway, status, page, size)
+	if err != nil {
+		log.Error().Err(err).Msg("payment transactions list failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "list failed"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"items": list, "total": total, "page": page, "size": size})
+}

@@ -1,4 +1,6 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 :root { --tea-50:#fdf8f0; --tea-100:#f7ecd8; --tea-200:#efd8b0; --tea-300:#e3bd7d; --tea-400:#d4a04f; --tea-500:#c48a2f; --tea-600:#a66e23; --tea-700:#855620; --tea-800:#6d451f; --tea-900:#5a3a1c; --tea-950:#311d0c; }
 html, body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: var(--tea-50); color: var(--tea-900); }
 .bg-tea-gradient { background: linear-gradient(135deg, var(--tea-900) 0%, var(--tea-700) 50%, var(--tea-500) 100%); }

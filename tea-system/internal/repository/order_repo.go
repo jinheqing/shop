@@ -293,3 +293,23 @@ func containsAny(s string, subs ...string) bool {
 	}
 	return false
 }
+
+// ListPaymentTransactions — 通用支付交易列表（admin 用）
+func (r *OrderRepo) ListPaymentTransactions(ctx context.Context, gateway, status string, page, size int) ([]models.PaymentTransaction, int64, error) {
+	var list []models.PaymentTransaction
+	var total int64
+	q := r.db.WithContext(ctx).Model(&models.PaymentTransaction{})
+	if gateway != "" {
+		q = q.Where("payment_gateway = ?", gateway)
+	}
+	if status != "" {
+		q = q.Where("status = ?", status)
+	}
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	if err := q.Order("created_at DESC").Offset((page - 1) * size).Limit(size).Find(&list).Error; err != nil {
+		return nil, 0, err
+	}
+	return list, total, nil
+}

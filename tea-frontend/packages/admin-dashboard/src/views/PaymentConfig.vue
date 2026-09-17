@@ -1,97 +1,129 @@
-<script setup lang="ts">
-import { reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
-import { api } from '@/api/client'
+<template>
+  <div>
+    <el-card>
+      <template #header>
+        <div class="flex items-center justify-between">
+          <span class="font-bold text-lg">System — Payment Configuration</span>
+          <div>
+            <el-tag v-if="saving" type="warning">Saving…</el-tag>
+            <el-tag v-else-if="savedAt" type="success">Saved {{ savedAt }}</el-tag>
+          </div>
+        </div>
+      </template>
 
-const tab = ref<'2checkout' | 'paypal' | 'general'>('2checkout')
-const cfg = reactive({
-  twocheckout_account_id: '210000000001',
-  twocheckout_secret_key: '2checkout_sk_xxxxxxxxx',
-  twocheckout_seller_id: '',
-  paypal_client_id: 'AYxxxxxxx.apps.googleusercontent.com',
-  paypal_client_secret: 'paypal_sk_xxxxxxxxx',
+      <el-alert v-if="!loaded" title="Loading from /system/config/payment_config…" type="info" show-icon :closable="false" class="mb-4" />
+
+      <el-form v-else :model="cfg" label-width="200px" class="max-w-3xl">
+        <!-- 2Checkout -->
+        <el-divider content-position="left">2Checkout (Primary Gateway)</el-divider>
+        <el-form-item label="Account #">
+          <el-input v-model="cfg.twocheckout_account_id" placeholder="1234567890" />
+          <div class="text-xs text-gray-400 mt-1">NOT the seller ID — use the numeric account identifier</div>
+        </el-form-item>
+        <el-form-item label="Secret Key">
+          <el-input v-model="cfg.twocheckout_secret_key" type="password" show-password placeholder="Encrypted at rest" />
+        </el-form-item>
+        <el-form-item label="3DS / SCA">
+          <el-switch v-model="cfg.twocheckout_3ds_enabled" />
+          <span class="ml-2 text-xs text-gray-500">Strong Customer Authentication (EU required)</span>
+        </el-form-item>
+        <el-form-item label="Mode">
+          <el-radio-group v-model="cfg.twocheckout_mode">
+            <el-radio value="sandbox">Sandbox</el-radio>
+            <el-radio value="live">Live</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="Webhook URL">
+          <el-input v-model="cfg.twocheckout_webhook_url" placeholder="/api/v1/webhooks/2checkout" />
+        </el-form-item>
+
+        <!-- PayPal -->
+        <el-divider content-position="left">PayPal (Optional Alternative)</el-divider>
+        <el-form-item label="Client ID">
+          <el-input v-model="cfg.paypal_client_id" />
+        </el-form-item>
+        <el-form-item label="Client Secret">
+          <el-input v-model="cfg.paypal_client_secret" type="password" show-password />
+        </el-form-item>
+        <el-form-item label="Mode">
+          <el-radio-group v-model="cfg.paypal_mode">
+            <el-radio value="sandbox">Sandbox</el-radio>
+            <el-radio value="live">Live</el-radio>
+          </el-radio-group>
+        </el-form-item>
+
+        <!-- 通用 -->
+        <el-divider content-position="left">General</el-divider>
+        <el-form-item label="Currency">
+          <el-select v-model="cfg.currency">
+            <el-option label="GBP — Pound Sterling" value="GBP" />
+            <el-option label="EUR — Euro" value="EUR" />
+            <el-option label="USD — US Dollar" value="USD" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="VAT Rate (%)">
+          <el-input-number v-model="cfg.vat_rate" :precision="2" :step="0.5" :min="0" :max="50" />
+        </el-form-item>
+
+        <el-form-item>
+          <el-button type="primary" :loading="saving" @click="save">Save All</el-button>
+          <el-button @click="load">Reload</el-button>
+          <el-button @click="testWebhook" :disabled="!cfg.twocheckout_webhook_url">Test 2Checkout Webhook</el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { api } from '../api/client'
+
+const loaded = ref(false)
+const saving = ref(false)
+const savedAt = ref('')
+const cfg = ref<any>({
+  twocheckout_account_id: '',
+  twocheckout_secret_key: '',
+  twocheckout_3ds_enabled: true,
+  twocheckout_mode: 'sandbox',
+  twocheckout_webhook_url: '/api/v1/webhooks/2checkout',
+  paypal_client_id: '',
+  paypal_client_secret: '',
   paypal_mode: 'sandbox',
-  paypal_webhook_id: '',
-  default_currency: 'GBP',
-  default_tax_rate: 0,
-  payment_gateways_enabled: ['2checkout', 'paypal'] as string[],
-  webhook_secret: 'whsecxxxxxxxxxxxxxxxxxxxxx',
+  currency: 'GBP',
+  vat_rate: 20
 })
 
+async function load() {
+  try {
+    const res: any = await api.get('/system/config/payment_config')
+    if (res?.value && typeof res.value === 'object') {
+      cfg.value = { ...cfg.value, ...res.value }
+    }
+    loaded.value = true
+  } catch (e: any) {
+    ElMessage.error('Load failed: ' + (e?.message || e))
+  }
+}
+
 async function save() {
-  await api.post('/system/payment-config', cfg)
-  ElMessage.success('✅ Payment config saved. Webhook secret rotated if changed.')
+  saving.value = true
+  try {
+    await api.put('/system/config/payment_config', { value: cfg.value })
+    ElMessage.success('Saved successfully')
+    savedAt.value = new Date().toLocaleTimeString()
+  } catch (e: any) {
+    ElMessage.error('Save failed: ' + (e?.message || e))
+  } finally {
+    saving.value = false
+  }
 }
-function rotate() {
-  cfg.webhook_secret = 'whsec_' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)
-  ElMessage.info('New webhook secret generated — click Save to apply')
+
+function testWebhook() {
+  ElMessage.info('Webhook test endpoint would POST a mock event — not wired yet')
 }
-function test2co() { ElMessage.success('🔌 Test connection to 2Checkout: OK (mock)') }
-function testPP() { ElMessage.success('🔌 Test connection to PayPal: OK (mock)') }
+
+onMounted(load)
 </script>
-<template>
-  <el-card>
-    <template #header><div class="flex justify-between items-center"><span class="font-medium">💳 Payment Gateway Configuration</span>
-      <el-button type="primary" @click="save">💾 Save All</el-button>
-    </div></template>
-
-    <el-tabs v-model="tab">
-      <el-tab-pane label="2Checkout" name="2checkout">
-        <el-form label-width="180px" class="max-w-2xl">
-          <el-form-item label="Account ID"><el-input v-model="cfg.twocheckout_account_id" /></el-form-item>
-          <el-form-item label="Secret Key"><el-input v-model="cfg.twocheckout_secret_key" type="password" show-password /></el-form-item>
-          <el-form-item label="Seller ID (optional)"><el-input v-model="cfg.twocheckout_seller_id" /></el-form-item>
-          <el-form-item>
-            <el-button type="success" @click="test2co">🔌 Test 2Checkout Connection</el-button>
-          </el-form-item>
-          <el-alert type="info" :closable="false" class="mb-4">
-            ⚠️ 2Checkout webhook URL: <code>https://api.ourdomain.com/api/v1/webhooks/2checkout</code> — configure in 2Checkout dashboard
-          </el-alert>
-        </el-form>
-      </el-tab-pane>
-
-      <el-tab-pane label="PayPal" name="paypal">
-        <el-form label-width="180px" class="max-w-2xl">
-          <el-form-item label="Client ID"><el-input v-model="cfg.paypal_client_id" /></el-form-item>
-          <el-form-item label="Client Secret"><el-input v-model="cfg.paypal_client_secret" type="password" show-password /></el-form-item>
-          <el-form-item label="Mode">
-            <el-select v-model="cfg.paypal_mode">
-              <el-option value="sandbox">Sandbox (test)</el-option>
-              <el-option value="live">Live (production)</el-option>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="Webhook ID"><el-input v-model="cfg.paypal_webhook_id" placeholder="from PayPal Developer console" /></el-form-item>
-          <el-form-item>
-            <el-button type="success" @click="testPP">🔌 Test PayPal Connection</el-button>
-          </el-form-item>
-          <el-alert type="info" :closable="false">
-            ⚠️ PayPal webhook URL: <code>https://api.ourdomain.com/api/v1/webhooks/paypal</code>
-          </el-alert>
-        </el-form>
-      </el-tab-pane>
-
-      <el-tab-pane label="General" name="general">
-        <el-form label-width="180px" class="max-w-2xl">
-          <el-form-item label="Enabled Gateways">
-            <el-checkbox-group v-model="cfg.payment_gateways_enabled">
-              <el-checkbox value="2checkout">2Checkout</el-checkbox>
-              <el-checkbox value="paypal">PayPal</el-checkbox>
-            </el-checkbox-group>
-          </el-form-item>
-          <el-form-item label="Default Currency">
-            <el-input v-model="cfg.default_currency" />
-          </el-form-item>
-          <el-form-item label="Default Tax Rate (%)">
-            <el-input-number v-model="cfg.default_tax_rate" :precision="2" :min="0" :max="30" />
-          </el-form-item>
-          <el-form-item label="Webhook HMAC Secret">
-            <div class="flex gap-2 w-full">
-              <el-input v-model="cfg.webhook_secret" type="password" show-password class="flex-1" />
-              <el-button @click="rotate">🔄 Rotate</el-button>
-            </div>
-          </el-form-item>
-        </el-form>
-      </el-tab-pane>
-    </el-tabs>
-  </el-card>
-</template>

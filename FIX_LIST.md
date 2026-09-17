@@ -218,3 +218,91 @@
 - [ ] Public API 真测
 - [ ] 前端所有 admin 页面 API 可通
 - [ ] 前端所有 public 页面 API 可通
+
+---
+
+## ✅ 第二轮修复全部完成（2026-09-17）
+
+### 后端新增
+| 新增 | 说明 |
+|------|------|
+| [system_config.go](file:///workspace/tea-system/internal/api/handlers/system_config.go) | 用 site_contents 表做 KV 系统配置存储，GET/PUT `/system/config/:key` |
+| Staff CRUD | `GET/POST/PUT/DELETE /staff` 全部补齐 |
+| Users List | `GET /users` 补齐 |
+| Payment Transactions List | `GET /payment/transactions` 补齐 |
+| OrderRepo.ListPaymentTransactions | 通用支付交易列表方法 |
+| StaffRepo.ToggleActive / SoftDelete | staff 启用/禁用/软删除 |
+| UserRepo.List | 用户列表 |
+
+### 后端匿名函数修复（第一轮）
+| # | 路由 | 修复 |
+|---|------|------|
+| R-01 | `GET /staff/audit-logs` | → StaffAuthHandler.AuditLogs |
+| R-02 | `GET /orders/:id/timeline` | → OrderHandler.Timeline |
+| R-03 | `POST /declarations/:id/void` | → DeclarationHandler.Void |
+| R-04 | `POST /live-rooms/customer-requests/:id/approve` | → LiveRoomHandler.ApproveRequest |
+| R-05 | `POST /live-rooms/system-create` | → LiveRoomHandler.SystemCreate |
+| R-06 | `GET /audit-logs` | → 别名复用 StaffAuth.AuditLogs |
+| R-07 | `GET /test` | 已删除 |
+
+### 前端 Admin Dashboard（11 个页面重写）
+| 页面 | 改动 |
+|------|------|
+| SiteContent.vue | 硬编码 demo → 真调用 `/site-contents` + Edit 对话框 |
+| DSAR.vue | 硬编码 demo → 真调用 `/dsar/requests` |
+| LiveCalendar.vue | 硬编码 demo → 真调用 `/live-rooms/schedule/calendar` |
+| CustomerRequests.vue | 硬编码 demo → 真调用 + Approve 按钮 |
+| QRCodes.vue | 硬编码 demo → 选产品 + 真调 `/qrcodes/generate` |
+| PaymentConfig.vue | 假保存 → 真调 `/system/config/payment_config`；加 3DS/sandbox/VAT |
+| Staff.vue | 硬编码 demo → 真 CRUD |
+| Transactions.vue | 硬编码 demo → 真调 `/payment/transactions` + Filter |
+| Users.vue | 硬编码 demo → 真调 `/users` |
+| WebhookLogs.vue | 硬编码 demo → 复用 `/staff/audit-logs?target_type=payment_webhook` |
+| Invoices.vue | 62 行空壳 → 真调 + Download PDF + Regenerate |
+| DeliveryInspection.vue | 硬编码 demo → 真调 `/live-rooms/system-create` + Start/End |
+| LiveRooms.vue | 6 个 room_type 常量对齐后端；加 Start/End/Key 按钮 |
+| SlowPresets.vue | 去掉 camera_rtmp_url 让用户填（后端自动生成）；加 Copy Key |
+| Orders.vue | `ready_for_delivery` → `ready_for_production`；加 Timeline/Decl 按钮 |
+
+### 前端 Public Site（3 个页面重写）
+| 页面 | 改动 |
+|------|------|
+| TeaGardens.vue | 6 条 demo → API `/public/slow-presets` + fallback |
+| Quality.vue | SGS demo → API `/public/sgs-reports` + fallback |
+| CookieConsent.vue | 只存 localStorage → 真 POST `/cookie-consent` |
+
+### 构建 & 回归
+```
+✅ go build ./cmd/server/     — 零错误
+✅ go vet ./...               — 零警告
+✅ 后端 105 路由注册          — 全覆盖
+✅ Admin Dashboard vite build — 1.01s，30 组件 chunk
+✅ Public Site vite build     — 6.41s，20 组件 chunk
+✅ Mountain/GPS 残留          — ZERO
+```
+
+### 修复后路由 vs 前端页面完整映射
+| 后端路由 | Admin 页面 | Public 页面 | 状态 |
+|----------|-----------|------------|------|
+| Auth (staff) | Login.vue | MagicLink.vue | ✅ |
+| /staff CRUD/audit | Staff.vue / AuditLogs.vue | — | ✅ |
+| /users | Users.vue | — | ✅ |
+| /system/config | PaymentConfig.vue | — | ✅ |
+| /payment/transactions | Transactions.vue | — | ✅ |
+| /custom-products | CustomProducts.vue / CustomProductDetail.vue | QuotePage.vue | ✅ |
+| /live-rooms + system-create | LiveRooms.vue / LiveCalendar.vue / CustomerRequests.vue / DeliveryInspection.vue | Live.vue | ✅ |
+| /slow-presets | SlowPresets.vue | TeaGardens.vue | ✅ |
+| /orders + timeline | Orders.vue / OrderDetail.vue | Checkout.vue | ✅ |
+| /declarations + void | Declarations.vue | — | ✅ |
+| /sgs-reports | SGS.vue | Quality.vue | ✅ |
+| /site-contents | SiteContent.vue | — | ✅ |
+| /dsar | DSAR.vue | — | ✅ |
+| /qrcodes | QRCodes.vue | — | ✅ |
+| /cookie-consent | — | CookieConsent.vue | ✅ |
+| /webhooks (2checkout/paypal) | WebhookLogs.vue | — | ✅ |
+| /invoice | Invoices.vue | InvoiceView.vue | ✅ |
+| /ledgers | Ledgers.vue | — | ✅ |
+| /nodes | Nodes.vue | — | ✅ |
+| /conversations + messages | Conversations.vue | Chat.vue | ✅ |
+| /livekit/token | LiveKitRooms.vue | Live.vue | ✅ |
+| Dashboard (聚合) | Dashboard.vue | Home.vue | ✅ |

@@ -1,53 +1,83 @@
-<script setup lang="ts">
-import { ref } from 'vue'
-import { ElMessage } from 'element-plus'
-import { api } from '@/api/client'
-
-const codes = ref<any[]>([
-  { id: 1, custom_product_id: 16, product_token: 'XK92AB38M7f2...f3A', tea_garden_location: '曼岗村茶园', master_name: '王师傅', qr_code_position: 'outer_back', generated_at: '2026-09-17T13:40:00Z', public_url: '/trace/XK92AB38M7f2' },
-  { id: 2, custom_product_id: 18, product_token: 'PHX91KL5N8b1...a7D', tea_garden_location: '凤凰山大乌岽', master_name: '李师傅', qr_code_position: 'outer_front', generated_at: '2026-09-17T12:00:00Z', public_url: '/trace/PHX91KL5N8b1' },
-  { id: 3, custom_product_id: 20, product_token: 'JM72QR3T6V...e9F', tea_garden_location: '翁基村茶园', master_name: '李师傅', qr_code_position: 'hidden', generated_at: '2026-09-16T09:00:00Z', public_url: '/trace/JM72QR3T6V' },
-])
-
-async function generate(productId: number) { await api.post(`/qrcodes/generate`, { custom_product_id: productId }); ElMessage.success('QR code regenerated') }
-async function print(id: number) { ElMessage.success('🖨️ Print batch QR sheet ready') }
-</script>
 <template>
-  <el-card>
-    <template #header><div class="flex justify-between items-center"><span class="font-medium">🔲 Traceability QR Codes</span>
-      <el-button type="primary">+ Generate QR for Product</el-button>
-    </div></template>
-    <el-alert type="info" :closable="false" class="mb-4">
-      Each bespoke product gets a unique QR. Scanning opens the public traceability page — Tea garden village, master, harvest date, live camera embed.
-    </el-alert>
-    <el-table :data="codes" stripe>
-      <el-table-column label="QR Preview" width="90">
-        <template #default="{ row }">
-          <div class="w-14 h-14 bg-slate-900 rounded flex items-center justify-center text-green-400 font-mono text-[8px] leading-none text-center">QR<br/>CODE</div>
-        </template>
-      </el-table-column>
-      <el-table-column label="Product" width="250">
-        <template #default="{ row }"><div class="font-medium">Product #{{ row.custom_product_id }}</div><div class="text-xs text-slate-500">{{ row.tea_garden_location }} · {{ row.master_name }}</div></template>
-      </el-table-column>
-      <el-table-column label="Public URL / Token" min-width="280">
-        <template #default="{ row }">
-          <code class="text-xs break-all">{{ row.public_url }}</code>
-          <div class="text-xs text-slate-500 mt-1">{{ row.product_token }}</div>
-        </template>
-      </el-table-column>
-      <el-table-column prop="qr_code_position" label="Position" width="130">
-        <template #default="{ row }">
-          <el-tag effect="plain">{{ row.qr_code_position }}</el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column prop="generated_at" label="Generated" width="170" />
-      <el-table-column label="Actions" width="200">
-        <template #default="{ row }">
-          <el-button size="small" @click="print(row.id)">🖨️ Print</el-button>
-          <el-button size="small" @click="generate(row.custom_product_id)">🔄 Regenerate</el-button>
-          <el-button size="small" type="info">🔗 Copy URL</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-  </el-card>
+  <div>
+    <el-card>
+      <template #header>
+        <div class="flex items-center justify-between">
+          <span class="font-bold text-lg">QR Code Generator</span>
+        </div>
+      </template>
+      <div class="mb-4 text-sm text-gray-500">
+        Select a custom product, then generate a QR code that links to the quote page.
+      </div>
+
+      <el-form inline class="mb-4">
+        <el-form-item label="Product">
+          <el-select v-model="selectedProduct" placeholder="Select product" style="width: 320px" filterable>
+            <el-option v-for="p in products" :key="p.id" :label="`#${p.id} · ${p.name_en}`" :value="p" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :disabled="!selectedProduct" @click="generate">Generate QR</el-button>
+        </el-form-item>
+      </el-form>
+
+      <div v-if="qrUrl" class="flex gap-6 items-start">
+        <div class="border rounded p-4 bg-white">
+          <img :src="qrUrl" class="w-48 h-48" />
+          <div class="text-xs text-gray-400 mt-2 text-center">Product #{{ selectedProduct?.id }}</div>
+        </div>
+        <div>
+          <div class="mb-2"><strong>URL:</strong></div>
+          <div class="text-blue-600 break-all">{{ qrTargetUrl }}</div>
+          <el-button class="mt-3" @click="downloadQR">Download PNG</el-button>
+        </div>
+      </div>
+      <el-empty v-else description="Select a product and click Generate" />
+    </el-card>
+  </div>
 </template>
+
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { api } from '../api/client'
+
+const products = ref<any[]>([])
+const selectedProduct = ref<any>(null)
+const qrUrl = ref('')
+const qrTargetUrl = ref('')
+
+async function loadProducts() {
+  try {
+    const res: any = await api.get('/custom-products')
+    products.value = res?.items || res || []
+  } catch (e: any) {
+    ElMessage.error('Products load failed: ' + (e?.message || e))
+  }
+}
+
+async function generate() {
+  try {
+    const token = selectedProduct.value.public_token || selectedProduct.value.id
+    const url = `${window.location.origin}/quote/${token}`
+    qrTargetUrl.value = url
+    const res: any = await api.post('/qrcodes/generate', { url })
+    qrUrl.value = res?.data_url || res?.qr_code || res?.image_url || res
+  } catch (e: any) {
+    ElMessage.error('QR generate failed: ' + (e?.message || e))
+  }
+}
+
+function downloadQR() {
+  if (!qrUrl.value.startsWith('data:')) {
+    ElMessage.warning('Only data URLs supported for download')
+    return
+  }
+  const a = document.createElement('a')
+  a.href = qrUrl.value
+  a.download = `qr-product-${selectedProduct.value.id}.png`
+  a.click()
+}
+
+onMounted(loadProducts)
+</script>
