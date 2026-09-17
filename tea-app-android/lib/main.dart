@@ -1,49 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:tea_app_android/services/api.dart';
+import 'pages/login.dart';
+import 'pages/home/home_page.dart';
+import 'pages/farmer/farmer_dashboard.dart';
+import 'pages/advisor/advisor_dashboard.dart';
+import 'pages/live/live_page.dart';
 
-/// Tea App Android — Step 1 scaffolding
-/// 
-/// One APK, two roles:
-///   role=tea_farmer  → Farmer dashboard (Go Live, orders)
-///   role=advisor     → Advisor dashboard (IM, quotes, Go Live, nodes)
-void main() {
-  runApp(const TeaApp());
-}
+void main() { runApp(const TeaApp()); }
+
+final router = GoRouter(initialLocation: '/', routes: [
+  GoRoute(path: '/', builder: (_, __) => const LoginPage()),
+  GoRoute(path: '/home', builder: (_, __) => const HomePage()),
+  GoRoute(path: '/farmer', builder: (_, __) => const FarmerDashboard()),
+  GoRoute(path: '/advisor', builder: (_, __) => const AdvisorDashboard()),
+  GoRoute(path: '/live/:room', builder: (_, s) => LivePage(room: s.pathParameters['room']!)),
+]);
 
 class TeaApp extends StatelessWidget {
   const TeaApp({super.key});
-
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Tea System',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFB8A47C)),
-        useMaterial3: true,
-      ),
-      home: const Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Tea System',
-                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 12),
-              Text(
-                'Step 1 scaffolding ✅',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'Flutter 3.38 + livekit_client',
-                style: TextStyle(fontSize: 14, color: Colors.grey),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext ctx) => MaterialApp.router(
+    title: 'UK Tea House',
+    theme: ThemeData(colorSchemeSeed: const Color(0xFF5a3a1c), useMaterial3: true),
+    routerConfig: router,
+  );
 }
