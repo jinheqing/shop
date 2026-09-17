@@ -50,7 +50,11 @@ type CustomProduct struct {
 	StorageLocation string    `gorm:"column:storage_location;not null;size:200" json:"storage_location"`
 	SgsReportID     *uint64   `gorm:"column:sgs_report_id" json:"sgs_report_id,omitempty"`
 
-	CreatedAt time.Time `gorm:"column:created_at;not null" json:"created_at"`
+        // 直播定制字段（2026-09 补齐前后端漂移）
+        IncludeCustomLive   bool       `gorm:"column:include_custom_live;default:false" json:"include_custom_live"`
+        LiveScheduledDate   *time.Time `gorm:"column:live_scheduled_date" json:"live_scheduled_date,omitempty"`
+
+        CreatedAt time.Time `gorm:"column:created_at;not null" json:"created_at"`
 	UpdatedAt time.Time `gorm:"column:updated_at;not null" json:"updated_at"`
 	DeletedAt *time.Time `gorm:"column:deleted_at" json:"-"`
 

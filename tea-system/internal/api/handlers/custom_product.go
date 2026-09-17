@@ -63,8 +63,12 @@ type CustomProductCreateRequest struct {
 	ProductCardFormat string `json:"product_card_format,omitempty"`
 	SKU               string `json:"sku,omitempty"`
 	SgsReportID       *uint64 `json:"sgs_report_id,omitempty"`
-	IsBespoke         *bool  `json:"is_bespoke,omitempty"`
-	NonRefundable     *bool  `json:"non_refundable,omitempty"`
+        IsBespoke         *bool   `json:"is_bespoke,omitempty"`
+        NonRefundable     *bool   `json:"non_refundable,omitempty"`
+
+        // 直播定制字段（2026-09 补齐前后端漂移）
+        IncludeCustomLive bool   `json:"include_custom_live"`
+        LiveScheduledDate string `json:"live_scheduled_date,omitempty"`
 }
 
 // CustomProductUpdateRequest — PUT /custom-products/:id（所有字段可选 patch）
@@ -95,6 +99,10 @@ type CustomProductUpdateRequest struct {
 	SgsReportID       *uint64  `json:"sgs_report_id,omitempty"`
 	IsBespoke         *bool    `json:"is_bespoke,omitempty"`
 	NonRefundable     *bool    `json:"non_refundable,omitempty"`
+
+	// 直播定制字段（2026-09 补齐前后端漂移）
+	IncludeCustomLive *bool   `json:"include_custom_live,omitempty"`
+	LiveScheduledDate *string `json:"live_scheduled_date,omitempty"`
 }
 
 // ==================== handler 方法 ====================
@@ -116,6 +124,14 @@ func (h *CustomProductHandler) Create(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "invalid roasting_date (expect YYYY-MM-DD)"})
 		return
+	}
+
+	// live_scheduled_date — 可选
+	var liveScheduled *time.Time
+	if req.LiveScheduledDate != "" {
+		if t, err := time.Parse("2006-01-02", req.LiveScheduledDate); err == nil {
+			liveScheduled = &t
+		}
 	}
 
 	isBespoke := true
@@ -159,6 +175,8 @@ func (h *CustomProductHandler) Create(c *gin.Context) {
 		MasterName:       req.MasterName,
 		StorageLocation:  req.StorageLocation,
 		SgsReportID:      req.SgsReportID,
+		IncludeCustomLive: req.IncludeCustomLive,
+		LiveScheduledDate: liveScheduled,
 	}
 	if req.ProductCardFormat != "" {
 		p.ProductCardFormat = req.ProductCardFormat
@@ -405,6 +423,16 @@ func buildUpdatePatch(req CustomProductUpdateRequest) (map[string]interface{}, e
 	}
 	if v := req.NonRefundable; v != nil {
 		patch["non_refundable"] = *v
+	}
+	if v := req.IncludeCustomLive; v != nil {
+		patch["include_custom_live"] = *v
+	}
+	if v := req.LiveScheduledDate; v != nil {
+		if *v == "" {
+			patch["live_scheduled_date"] = nil
+		} else if t, err := time.Parse("2006-01-02", *v); err == nil {
+			patch["live_scheduled_date"] = t
+		}
 	}
 
 	return patch, nil

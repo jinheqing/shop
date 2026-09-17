@@ -33,7 +33,8 @@ type Node struct {
 	LastViewersCount    int        `gorm:"column:last_viewers_count" json:"last_viewers_count,omitempty"`
 	DeployedByStaffID   *uint64    `gorm:"column:deployed_by_staff_id" json:"deployed_by_staff_id,omitempty"`
 	DeployedAt          *time.Time `gorm:"column:deployed_at" json:"deployed_at,omitempty"`
-	CreatedAt           time.Time  `gorm:"column:created_at;not null" json:"created_at"`
+        ErrorMsg            string     `gorm:"column:error_message;size:500" json:"error_message,omitempty"`
+        CreatedAt           time.Time  `gorm:"column:created_at;not null" json:"created_at"`
 	UpdatedAt           time.Time  `gorm:"column:updated_at;not null" json:"updated_at"`
 	DeletedAt           *time.Time `gorm:"column:deleted_at" json:"-"`
 }

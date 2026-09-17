@@ -264,7 +264,6 @@ func (r *Router) Setup() *gin.Engine {
 		// 公开路由：QR trace + cookie consent + site contents
 		v1.GET("/public/qrcodes/:token", r.h.QRCode.GetTrace)
 		v1.POST("/cookie-consent", r.h.CookieConsent.Submit)
-		v1.GET("/site-contents", r.h.SiteContent.List)
 
 
 	r.engine.NoRoute(func(c *gin.Context) {
