@@ -193,3 +193,32 @@ func (h *DeclarationHandler) Delete(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "voided"})
 }
+
+// Void — POST /declarations/:id/void（标记作废，不可物理删除）
+func (h *DeclarationHandler) Void(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "invalid id"})
+		return
+	}
+
+	var req struct {
+		Reason string `json:"reason"`
+	}
+	_ = c.ShouldBindJSON(&req)
+	if req.Reason == "" {
+		req.Reason = "voided via API"
+	}
+
+	if err := h.repo.SoftDeleteDeclaration(c.Request.Context(), id, req.Reason); err != nil {
+		if errors.Is(err, repository.ErrDeclarationNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "declaration not found"})
+			return
+		}
+		log.Error().Err(err).Msg("declaration: void failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "void failed"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "declaration voided", "id": id})
+}

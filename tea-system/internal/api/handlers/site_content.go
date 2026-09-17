@@ -1,11 +1,17 @@
 package handlers
 
 import (
-	"encoding/json"
+	"errors"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
+
+	"tea-system/internal/middleware"
+	"tea-system/internal/models"
 )
 
 type SiteContentHandler struct {
@@ -14,41 +20,51 @@ type SiteContentHandler struct {
 
 func NewSiteContentHandler(db *gorm.DB) *SiteContentHandler { return &SiteContentHandler{DB: db} }
 
-// GET /site-contents — 公开读取所有 CMS 内容
+// List — GET /site-contents
 func (h *SiteContentHandler) List(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"items": []gin.H{
-		{"page_key": "home", "section_key": "hero", "content": gin.H{"headline": "Pu'er Tea, Traceable to the Tea Garden."}},
-		{"page_key": "tea_gardens", "section_key": "intro", "content": gin.H{"heading": "Six Tea Gardens. One Promise."}},
-		{"page_key": "bespoke", "section_key": "how_it_works", "content": gin.H{"steps": []string{"Pick tea garden & roast", "Choose packaging", "We quote within 24h", "Tea arrives in 45 days"}}},
-		{"page_key": "quality", "section_key": "intro", "content": gin.H{"heading": "Independently Tested. Always."}},
-	}})
+	key := c.Query("page_key")
+	var items []models.SiteContent
+	q := h.DB.Model(&models.SiteContent{})
+	if key != "" {
+		q = q.Where("page_key = ?", key)
+	}
+	if err := q.Order("page_key, section_key").Limit(200).Find(&items).Error; err != nil {
+		log.Error().Err(err).Msg("site_content: list failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "list failed"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"items": items, "total": len(items)})
 }
 
-// PUT /site-contents/:id — 更新 CMS 内容
+// Update — PUT /site-contents/:id
 func (h *SiteContentHandler) Update(c *gin.Context) {
-	id := c.Param("id")
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
 	var body struct {
-		Content json.RawMessage `json:"content"`
+		Content models.JSONMap `json:"content"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "site content updated", "id": id})
-}
-
-// CookieConsentHandler — 记录用户 Cookie 同意
-type CookieConsentHandler struct{}
-
-func NewCookieConsentHandler() *CookieConsentHandler { return &CookieConsentHandler{} }
-
-func (h *CookieConsentHandler) Submit(c *gin.Context) {
-	var body struct {
-		ConsentMarketing bool   `json:"consent_marketing"`
-		ConsentAnalytics bool   `json:"consent_analytics"`
-		ConsentEssential bool   `json:"consent_essential"`
-		VisitorID        string `json:"visitor_id"`
+	var sc models.SiteContent
+	if err := h.DB.First(&sc, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "site content not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "lookup failed"})
+		return
 	}
-	c.ShouldBindJSON(&body)
-	c.JSON(http.StatusOK, gin.H{"message": "cookie consent recorded"})
+	staffID := middleware.GetSubjectID(c)
+	h.DB.Model(&sc).Updates(map[string]interface{}{
+		"content":             body.Content,
+		"updated_by_staff_id": staffID,
+		"updated_at":          time.Now().UTC(),
+	})
+	h.DB.First(&sc, id)
+	c.JSON(http.StatusOK, sc)
 }

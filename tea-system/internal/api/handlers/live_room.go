@@ -5,10 +5,11 @@ import (
 	"net/http"
 	"strconv"
 
-"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 
 	"tea-system/internal/middleware"
+	"tea-system/internal/models"
 	"tea-system/internal/repository"
 	"tea-system/internal/service"
 )
@@ -286,4 +287,106 @@ func (h *LiveRoomHandler) CustomerRequests(c *gin.Context) {
 		"message": "stub — would list pending customer_requests here",
 		"items":   []interface{}{},
 	})
+}
+
+// ApproveRequest — POST /live-rooms/customer-requests/:id/approve
+// 审批客户申请：查找 live_room（room_type=customer_request），审核通过后改为 configuring
+func (h *LiveRoomHandler) ApproveRequest(c *gin.Context) {
+	if middleware.GetSubjectType(c) != "staff" {
+		c.JSON(http.StatusForbidden, gin.H{"code": 403, "message": "staff only"})
+		return
+	}
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "invalid id"})
+		return
+	}
+
+	var req struct {
+		ScheduledStart string `json:"scheduled_start"` // RFC3339
+		Note           string `json:"note"`
+	}
+	_ = c.ShouldBindJSON(&req)
+
+	// 先查一下 room 是否存在，并确认类型
+	room, err := h.svc.GetByID(c.Request.Context(), id)
+	if err != nil {
+		if errors.Is(err, repository.ErrLiveRoomNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "customer request not found"})
+			return
+		}
+		log.Error().Err(err).Msg("live_room: approve lookup failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "internal error"})
+		return
+	}
+	_ = room // room 信息已存在，用于后续 audit 可扩展
+
+	// patch：设置 scheduled_start + status=configuring
+	patch := map[string]interface{}{
+		"status": "configuring",
+	}
+	if req.ScheduledStart != "" {
+		patch["scheduled_start"] = req.ScheduledStart
+	}
+
+	updated, err := h.svc.Update(c.Request.Context(), id, patch)
+	if err != nil {
+		log.Error().Err(err).Msg("live_room: approve update failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "approve failed"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":       0,
+		"message":    "customer request approved",
+		"room":       updated,
+		"note":       req.Note,
+	})
+}
+
+// SystemCreate — POST /live-rooms/system-create
+// 系统自动创建直播间（如：订单 → 交付验货直播间）
+func (h *LiveRoomHandler) SystemCreate(c *gin.Context) {
+	if middleware.GetSubjectType(c) != "staff" {
+		c.JSON(http.StatusForbidden, gin.H{"code": 403, "message": "staff only"})
+		return
+	}
+
+	var req struct {
+		OrderID      uint64 `json:"order_id" binding:"required"`
+		RoomType     string `json:"room_type"` // 默认 delivery_inspection
+		Location     string `json:"location"`
+		Description  string `json:"description"`
+		HostStaffID  *uint64 `json:"host_staff_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": err.Error()})
+		return
+	}
+
+	roomType := req.RoomType
+	if roomType == "" {
+		roomType = models.RoomTypeDeliveryInspection
+	}
+
+	staffID := middleware.GetSubjectID(c)
+	in := service.CreateInput{
+		RoomType:     roomType,
+		PushSource:   models.PushSourceOBSRTMP,
+		OrderID:      &req.OrderID,
+		Location:     req.Location,
+		Description:  req.Description,
+		HostStaffID:  req.HostStaffID,
+		CreatedByStaffID: &staffID,
+	}
+
+	room, err := h.svc.Create(c.Request.Context(), in)
+	if err != nil {
+		log.Error().Err(err).Msg("live_room: system-create failed")
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, room)
 }

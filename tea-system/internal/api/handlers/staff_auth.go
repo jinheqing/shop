@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog/log"
+	"gorm.io/gorm"
 
 	"tea-system/internal/middleware"
 	"tea-system/internal/models"
@@ -27,6 +29,7 @@ type StaffAuthHandler struct {
 	jwtSvc       *service.JWTService
 	mfaSvc       *service.MFAService
 	rdb          *redis.Client
+	auditDB      *gorm.DB
 }
 
 func NewStaffAuthHandler(
@@ -35,6 +38,7 @@ func NewStaffAuthHandler(
 	jwtSvc *service.JWTService,
 	mfaSvc *service.MFAService,
 	rdb *redis.Client,
+	auditDB *gorm.DB,
 ) *StaffAuthHandler {
 	return &StaffAuthHandler{
 		staffRepo:   staffRepo,
@@ -42,6 +46,7 @@ func NewStaffAuthHandler(
 		jwtSvc:      jwtSvc,
 		mfaSvc:      mfaSvc,
 		rdb:         rdb,
+		auditDB:     auditDB,
 	}
 }
 
@@ -243,6 +248,52 @@ func (h *StaffAuthHandler) Logout(c *gin.Context) {
 	// 简化实现：返回 200 让客户端删除 token
 	// 生产应该把 token 的 jti 加到 Redis 黑名单
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "logged out"})
+}
+
+// AuditLogs — GET /staff/audit-logs（从独立 audit PostgreSQL 实例查询）
+func (h *StaffAuthHandler) AuditLogs(c *gin.Context) {
+	// 解析过滤参数
+	staffIDStr := c.Query("staff_id")
+	action := c.Query("action")
+	targetType := c.Query("target_type")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	size, _ := strconv.Atoi(c.DefaultQuery("size", "50"))
+	if size > 200 {
+		size = 200
+	}
+	if page < 1 {
+		page = 1
+	}
+
+	q := h.auditDB.Model(&models.AuditLog{})
+	if staffIDStr != "" {
+		if id, err := strconv.ParseUint(staffIDStr, 10, 64); err == nil {
+			q = q.Where("staff_id = ?", id)
+		}
+	}
+	if action != "" {
+		q = q.Where("action LIKE ?", "%"+action+"%")
+	}
+	if targetType != "" {
+		q = q.Where("target_type = ?", targetType)
+	}
+
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		log.Warn().Err(err).Msg("audit_logs: count failed")
+		// auditDB 可能未连接，返回空数组
+		c.JSON(http.StatusOK, gin.H{"items": []interface{}{}, "total": 0, "page": page, "size": size})
+		return
+	}
+
+	var items []models.AuditLog
+	if err := q.Order("created_at DESC").Offset((page - 1) * size).Limit(size).Find(&items).Error; err != nil {
+		log.Warn().Err(err).Msg("audit_logs: query failed")
+		c.JSON(http.StatusOK, gin.H{"items": []interface{}{}, "total": 0, "page": page, "size": size})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"items": items, "total": total, "page": page, "size": size})
 }
 
 // 编译期接口检查

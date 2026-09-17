@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
+	"gorm.io/gorm"
 
 	"tea-system/internal/middleware"
 	"tea-system/internal/models"
@@ -23,17 +24,20 @@ type OrderHandler struct {
 	repo         *repository.OrderRepo
 	customRepo   *repository.CustomProductRepo
 	stateMachine *service.OrderStateMachine
+	auditDB      *gorm.DB
 }
 
 func NewOrderHandler(
 	repo *repository.OrderRepo,
 	customRepo *repository.CustomProductRepo,
 	stateMachine *service.OrderStateMachine,
+	auditDB *gorm.DB,
 ) *OrderHandler {
 	return &OrderHandler{
 		repo:         repo,
 		customRepo:   customRepo,
 		stateMachine: stateMachine,
+		auditDB:      auditDB,
 	}
 }
 
@@ -340,4 +344,89 @@ func rawToJSONMap(raw json.RawMessage) (models.JSONMap, error) {
 		return nil, err
 	}
 	return m, nil
+}
+
+// Timeline — GET /orders/:id/timeline
+// 聚合订单状态变化、审计日志等事件，按时间排序返回时间线
+func (h *OrderHandler) Timeline(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "invalid id"})
+		return
+	}
+
+	// 1. 订单本身（必须存在）
+	o, err := h.repo.GetByID(c.Request.Context(), id)
+	if err != nil {
+		if errors.Is(err, repository.ErrOrderNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "order not found"})
+			return
+		}
+		log.Error().Err(err).Msg("order: timeline get failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "internal error"})
+		return
+	}
+
+	// 2. 构建时间线事件
+	type TimelineEvent struct {
+		At      string                 `json:"at"`
+		Type    string                 `json:"type"`     // order_state_change / audit / payment / declaration / live_room
+		Detail  map[string]interface{} `json:"detail"`
+	}
+
+	var events []TimelineEvent
+
+	// 事件 A — 订单创建
+	events = append(events, TimelineEvent{
+		At:   o.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
+		Type: "order_created",
+		Detail: map[string]interface{}{
+			"order_no": o.OrderNo,
+			"initial_state": o.State,
+			"staff_id": o.StaffID,
+		},
+	})
+
+	// 事件 B — 审计日志（从独立 audit 库查）
+	if h.auditDB != nil {
+		var logs []models.AuditLog
+		ptr := id
+		h.auditDB.Where("target_type = ? AND target_id = ?", "order", ptr).
+			Order("created_at ASC").
+			Limit(100).
+			Find(&logs)
+		for _, l := range logs {
+			detail := map[string]interface{}{
+				"action":  l.Action,
+				"staff_id": l.StaffID,
+			}
+			if l.Detail != nil {
+				detail["extra"] = l.Detail
+			}
+			events = append(events, TimelineEvent{
+				At:     l.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
+				Type:   "audit",
+				Detail: detail,
+			})
+		}
+	}
+
+	// 事件 C — 订单最后更新
+	if o.UpdatedAt.After(o.CreatedAt) {
+		events = append(events, TimelineEvent{
+			At:   o.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z"),
+			Type: "order_updated",
+			Detail: map[string]interface{}{
+				"state": o.State,
+			},
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"order_id":  id,
+		"order_no":  o.OrderNo,
+		"state":     o.State,
+		"events":    events,
+		"event_cnt": len(events),
+	})
 }

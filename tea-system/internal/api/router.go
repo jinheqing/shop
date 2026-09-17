@@ -5,7 +5,6 @@ import (
 	"tea-system/internal/config"
 	"tea-system/internal/middleware"
 
-	"net/http"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/redis/go-redis/v9"
@@ -98,34 +97,8 @@ func (r *Router) Setup() *gin.Engine {
 		auth := v1.Group("")
 		auth.Use(middleware.JWTAuth(r.cfg.JWT.Secret))
 		{
-			// 测试端点
-			auth.GET("/test", func(c *gin.Context) {
-				c.JSON(200, gin.H{
-					"sub_type": middleware.GetSubjectType(c),
-					"sub_id":   middleware.GetSubjectID(c),
-					"email":    middleware.GetEmail(c),
-					"role":     middleware.GetRole(c),
-				})
-			})
 			auth.POST("/staff/logout", r.h.StaffAuth.Logout)
-			auth.GET("/staff/audit-logs", func(c *gin.Context) {
-				type AuditLogRow struct {
-					ID         uint64                 `gorm:"column:id" json:"id"`
-					StaffID    *uint64                `gorm:"column:staff_id" json:"staff_id"`
-					Action     string                 `gorm:"column:action" json:"action"`
-					TargetType string                 `gorm:"column:target_type" json:"target_type"`
-					TargetID   *uint64                `gorm:"column:target_id" json:"target_id"`
-					Detail     map[string]interface{} `gorm:"column:detail" json:"detail"`
-					IPAddress  string                 `gorm:"column:ip_address" json:"ip_address"`
-					UserAgent  string                 `gorm:"column:user_agent" json:"user_agent"`
-					CreatedAt  string                 `gorm:"column:created_at" json:"created_at"`
-				}
-				var rows []AuditLogRow
-				if r.audit != nil {
-					r.audit.Raw(`SELECT id, staff_id, action, target_type, target_id, detail, ip_address, user_agent, created_at FROM audit_logs ORDER BY created_at DESC LIMIT 50`).Scan(&rows)
-				}
-				c.JSON(http.StatusOK, gin.H{"items": rows, "total": len(rows)})
-			})
+			auth.GET("/staff/audit-logs", r.h.StaffAuth.AuditLogs)
 
 			// Step 7: IM
 			auth.GET("/conversations", r.h.Conversation.List)
@@ -202,39 +175,22 @@ func (r *Router) Setup() *gin.Engine {
 			auth.DELETE("/nodes/:id", r.h.Node.Delete)
 			auth.GET("/nodes/:id/health", r.h.Node.Health)
 
-			// === 设计文档缺失 API — 19 个补齐 ===
+			// === 设计文档缺失 API — 补齐 ===
 			// 订单时间线
-			auth.GET("/orders/:id/timeline", func(c *gin.Context) {
-				id := c.Param("id")
-				c.JSON(http.StatusOK, gin.H{
-					"order_id": id,
-					"events": []gin.H{
-						{"state": "paid", "at": "2026-09-17T13:34:41Z"},
-						{"state": "pending_declaration", "at": "2026-09-17T14:00:00Z"},
-					},
-				})
-			})
+			auth.GET("/orders/:id/timeline", r.h.Order.Timeline)
 			// PayPal 单独初始化
 			auth.POST("/orders/:id/payment/paypal", r.h.Payment.Init)
 
 			// 报关作废（标记 void 不可删除）
-			auth.POST("/declarations/:id/void", func(c *gin.Context) {
-				c.JSON(http.StatusOK, gin.H{"message": "declaration voided"})
-			})
+			auth.POST("/declarations/:id/void", r.h.Declaration.Void)
 			// exchange-records 别名（设计文档命名）
 			auth.GET("/exchange-records", r.h.Ledger.List)
 			auth.POST("/exchange-records", r.h.Ledger.Create)
 
 			// Live Room: schedule calendar + 客户申请审核 + system-create
 			auth.GET("/live-rooms/schedule/calendar", r.h.LiveRoom.Calendar)
-			auth.POST("/live-rooms/customer-requests/:id/approve", func(c *gin.Context) {
-				c.JSON(http.StatusOK, gin.H{"message": "customer request approved"})
-			})
-			auth.POST("/live-rooms/system-create", func(c *gin.Context) {
-				var body struct { OrderID uint64 `json:"order_id"` }
-				c.ShouldBindJSON(&body)
-				c.JSON(http.StatusOK, gin.H{"room_type": "delivery_inspection", "order_id": body.OrderID})
-			})
+			auth.POST("/live-rooms/customer-requests/:id/approve", r.h.LiveRoom.ApproveRequest)
+			auth.POST("/live-rooms/system-create", r.h.LiveRoom.SystemCreate)
 
 			// QR Code
 			auth.POST("/qrcodes/generate", r.h.QRCode.Generate)
@@ -251,9 +207,7 @@ func (r *Router) Setup() *gin.Engine {
 			auth.GET("/dsar/requests", r.h.DSAR.List)
 			auth.POST("/dsar/requests/:id/export", r.h.DSAR.Export)
 			auth.POST("/dsar/requests/:id/delete", r.h.DSAR.Delete)
-			auth.GET("/audit-logs", func(c *gin.Context) {
-				c.JSON(http.StatusOK, gin.H{"message": "use /staff/audit-logs"})
-			})
+			auth.GET("/audit-logs", r.h.StaffAuth.AuditLogs) // 别名 → 与 /staff/audit-logs 同实现
 
 			// PayPal + 2Checkout callback 别名（设计文档路径）
 			v1.POST("/payment/callback/2checkout", r.h.Payment.Handle2CheckoutWebhook)

@@ -18,6 +18,8 @@ var AllModels = []interface{}{
 	&Node{},
 	&TranslationSession{},
 	&SiteContent{},
+	&DSARRequest{},
+	&CookieConsentLog{},
 }
 
 // AuditModels — 审计库 model（独立 PostgreSQL 实例）
