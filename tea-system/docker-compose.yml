@@ -1,58 +1,104 @@
-# 基础设施服务编排（Step 3 再完整配置，当前骨架）
-version: '3.8'
+# ============================================================================
+# 英国高端定制普洱茶系统 — Docker Compose 基础设施编排
+# 一键 docker compose up -d 启动所有服务（11 个容器）
+# ============================================================================
 
 services:
-  # ============ 数据库 ============
+  # ==========================================================================
+  # PostgreSQL 主业务库
+  # ==========================================================================
   postgres:
-    image: postgres:16
+    image: postgres:16-alpine
     container_name: tea-system-postgres
     environment:
       POSTGRES_USER: ${DB_USER:-tea_system}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme_dev}
       POSTGRES_DB: ${DB_NAME:-tea_system}
+      PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
+      # 初始化迁移（首次启动时自动跑）
+      # - ./migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-tea_system}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
+    networks:
+      - tea-net
 
+  # ==========================================================================
+  # PostgreSQL 审计库（独立实例，DSAR 数据隔离）
+  # ==========================================================================
   postgres_audit:
-    image: postgres:16
+    image: postgres:16-alpine
     container_name: tea-system-postgres-audit
     environment:
-      POSTGRES_USER: ${AUDIT_DB_USER:-tea_system}
-      POSTGRES_PASSWORD: ${AUDIT_DB_PASSWORD:-changeme}
-      POSTGRES_DB: ${AUDIT_DB_NAME:-tea_system_audit}
+      POSTGRES_USER: ${AUDIT_DB_USER:-tea_audit}
+      POSTGRES_PASSWORD: ${AUDIT_DB_PASSWORD:-changeme_audit_dev}
+      POSTGRES_DB: ${AUDIT_DB_NAME:-tea_audit}
     ports:
       - "5433:5432"
     volumes:
       - pg_audit_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AUDIT_DB_USER:-tea_audit}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
+    networks:
+      - tea-net
 
-  # ============ 缓存 & 消息队列 ============
+  # ==========================================================================
+  # Redis 7
+  # ==========================================================================
   redis:
     image: redis:7-alpine
     container_name: tea-system-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
+    networks:
+      - tea-net
 
+  # ==========================================================================
+  # RabbitMQ（带管理界面）
+  # ==========================================================================
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: tea-system-rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "5672:5672"       # AMQP
+      - "15672:15672"     # 管理界面 (http://localhost:15672)
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
     restart: unless-stopped
+    networks:
+      - tea-net
 
-  # ============ 翻译引擎 ============
+  # ==========================================================================
+  # FastAPI 翻译引擎（Step 5 实现，先占位）
+  # ==========================================================================
   fastapi-translate:
     build:
       context: ../tea-translate
@@ -60,86 +106,179 @@ services:
     container_name: tea-system-translate
     ports:
       - "8090:8090"
-    restart: unless-stopped
-
-  # ============ LiveKit + MediaMTX ============
-  livekit:
-    image: livekit/livekit:latest
-    container_name: tea-system-livekit
-    ports:
-      - "7880:7880"
-      - "7882:7882"
+    environment:
+      - TRANSFORMERS_CACHE=/app/models
+      - HF_HOME=/app/models
     volumes:
-      - ./docker/livekit.yaml:/etc/livekit/livekit.yaml
+      - translate_models:/app/models   # 持久化模型缓存（~2GB）
+    # 模型预下载约 2GB，首次启动慢
+    # Step 5 完成后取消注释以下行
+    # depends_on:
+    #   - redis
     restart: unless-stopped
+    networks:
+      - tea-net
 
-  mediamtx:
-    image: bluenviron/mediamtx:latest
-    container_name: tea-system-mediamtx
-    ports:
-      - "1935:1935"   # RTMP
-      - "8889:8889"   # WebRTC HTTP
-      - "8189:8189"   # WebRTC ICE
-    volumes:
-      - ./docker/mediamtx.yaml:/etc/mediamtx/mediamtx.yaml
-    restart: unless-stopped
-
-  # ============ Go 后端 ============
+  # ==========================================================================
+  # Go 后端（gin-backend）
+  # ==========================================================================
   gin-backend:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: tea-system-backend
     ports:
       - "8080:8080"
     env_file:
       - .env.example
+    environment:
+      DB_HOST: postgres
+      AUDIT_DB_HOST: postgres_audit
+      REDIS_ADDR: redis:6379
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672/
+      TRANSLATE_FASTAPI_URL: http://fastapi-translate:8090
+      LIVEKIT_URL: http://livekit:7880
+      MEDIAMTX_WEBRTC_URL: http://mediamtx:8889
     depends_on:
-      - postgres
-      - redis
-      - rabbitmq
+      postgres:
+        condition: service_healthy
+      postgres_audit:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      fastapi-translate:
+        condition: service_started
     restart: unless-stopped
+    networks:
+      - tea-net
 
-  # ============ 监控 ============
+  # ==========================================================================
+  # LiveKit 主节点（WebSocket SFU）
+  # ==========================================================================
+  livekit:
+    image: livekit/livekit:v1.7.3
+    container_name: tea-system-livekit
+    ports:
+      - "7880:7880"     # WebSocket / HTTP (必须暴露)
+      - "7882:7882/udp" # WebRTC ICE UDP
+      - "7882:7882"     # WebRTC ICE TCP
+    volumes:
+      - ./docker/livekit.yaml:/etc/livekit/livekit.yaml:ro
+    environment:
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-dev-key}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-dev-secret}
+    # WireGuard 内网 10.10.0.0/24 地址在 livekit.yaml 中配置
+    restart: unless-stopped
+    networks:
+      - tea-net
+
+  # ==========================================================================
+  # MediaMTX（RTMP 接收 + RTMP→WebRTC 自动转码 + 慢直播中继）
+  # ==========================================================================
+  mediamtx:
+    image: bluenviron/mediamtx:1.9.1
+    container_name: tea-system-mediamtx
+    ports:
+      - "1935:1935"     # RTMP（OBS Studio 推流用，必须暴露）
+      - "8889:8889"     # WebRTC HTTP (必须暴露)
+      - "8889:8889/udp" # WebRTC HTTP UDP
+      - "8189:8189/udp" # WebRTC ICE fallback
+      - "8888:8888"     # HLS + 管理 API + Prometheus
+    volumes:
+      - ./docker/mediamtx.yaml:/etc/mediamtx/mediamtx.yaml:ro
+    restart: unless-stopped
+    networks:
+      - tea-net
+
+  # ==========================================================================
+  # Prometheus
+  # ==========================================================================
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.52.0
     container_name: tea-system-prometheus
     ports:
       - "9090:9090"
     volumes:
-      - ./docker/prometheus.yaml:/etc/prometheus/prometheus.yml
+      - ./docker/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=30d'
     restart: unless-stopped
+    networks:
+      - tea-net
 
+  # ==========================================================================
+  # Grafana
+  # ==========================================================================
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:10.4.0
     container_name: tea-system-grafana
     ports:
       - "3000:3000"
     environment:
-      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-changeme}
+      GF_USERS_ALLOW_SIGN_UP: "false"
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./docker/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+    depends_on:
+      - prometheus
     restart: unless-stopped
+    networks:
+      - tea-net
 
+  # ==========================================================================
+  # Loki（日志存储）
+  # ==========================================================================
   loki:
-    image: grafana/loki:latest
+    image: grafana/loki:3.0.0
     container_name: tea-system-loki
     ports:
       - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki_data:/loki
     restart: unless-stopped
+    networks:
+      - tea-net
 
+  # ==========================================================================
+  # Promtail（日志采集 → Loki）
+  # ==========================================================================
   promtail:
-    image: grafana/promtail:latest
+    image: grafana/promtail:3.0.0
     container_name: tea-system-promtail
     volumes:
-      - ./docker/promtail.yaml:/etc/promtail/promtail.yml
+      - ./docker/promtail.yaml:/etc/promtail/promtail.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - promtail_positions:/tmp
     depends_on:
       - loki
     restart: unless-stopped
+    networks:
+      - tea-net
 
+# ============================================================================
+# Volume 持久化
+# ============================================================================
 volumes:
   pg_data:
   pg_audit_data:
   redis_data:
   rabbitmq_data:
+  translate_models:      # FastAPI NLLB 1.3B + Whisper base 模型缓存
   prometheus_data:
   grafana_data:
+  loki_data:
+  promtail_positions:
+
+# ============================================================================
+# 共享网络
+# ============================================================================
+networks:
+  tea-net:
+    driver: bridge

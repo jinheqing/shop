@@ -1,0 +1,59 @@
+# ============================================================================
+# LiveKit Server 配置 — 主节点（UK VPS）
+# WireGuard 网关: 10.10.0.1
+# ============================================================================
+
+# 服务端监听
+address: 0.0.0.0
+port: 7880
+# WebRTC ICE 候选地址（公网）
+rtc_host: "0.0.0.0"
+rtc_udp_port: 7882
+
+# WireGuard 内网地址（边缘节点通过这个连主节点）
+# rtc_addresses:
+#   - "10.10.0.1"  # WireGuard 内网
+#   - "YOUR_PUBLIC_IP"  # 公网
+
+# LiveKit 主节点模式（非 edge）
+node:
+  id: tea-livekit-main
+  zone: default
+  region: eu-west
+
+# API 密钥（与 Go 后端 .env 一致）
+api:
+  key: ${LIVEKIT_API_KEY:-dev-key}
+  secret: ${LIVEKIT_API_SECRET:-dev-secret}
+
+# 房间自动清理
+room:
+  # 房间没人后自动销毁
+  empty_timeout: 300s          # 没人等 5 分钟销毁
+  max_lifetime: 24h
+  # 直播录制（MediaMTX 或后端处理）
+  max_active_sessions: 0       # 0 = 不限
+
+# 并发限制
+limits:
+  max_tracks: 10
+  max_subscriptions: 100
+  max_join_frequency: 50
+
+# Prometheus 指标
+prometheus:
+  enabled: true
+  port: 9091
+
+# 日志
+logging:
+  level: info
+
+# Webhook（直播事件回调给 Go 后端）
+# webhook:
+#   url: "http://gin-backend:8080/api/v1/webhooks/livekit"
+#   api_key: "${LIVEKIT_WEBHOOK_KEY}"
+
+# Redis（集群用，单节点可忽略）
+# redis:
+#   address: redis:6379
