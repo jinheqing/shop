@@ -23,7 +23,7 @@ const (
 type Order struct {
 	ID                    uint64    `gorm:"primaryKey;column:id" json:"id"`
 	OrderNo               string    `gorm:"column:order_no;uniqueIndex;not null;size:30" json:"order_no"`
-	UserID                uint64    `gorm:"column:user_id;not null;index" json:"user_id"`
+	UserID                *uint64   `gorm:"column:user_id;index" json:"user_id"`
 	StaffID               uint64    `gorm:"column:staff_id;not null" json:"staff_id"`
 	CustomProductID       uint64    `gorm:"column:custom_product_id;not null" json:"custom_product_id"`
 	CustomProductSnapshot JSONMap   `gorm:"column:custom_product_snapshot;not null;type:jsonb" json:"custom_product_snapshot"`

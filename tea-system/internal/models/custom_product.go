@@ -14,7 +14,7 @@ const (
 // CustomProduct — 定制报价商品表（完整 26+ 字段，含溯源）
 type CustomProduct struct {
 	ID                  uint64    `gorm:"primaryKey;column:id" json:"id"`
-	ProductToken        string    `gorm:"column:product_token;uniqueIndex;not null;size:64" json:"product_token"`
+	ProductToken        *string   `gorm:"column:product_token;uniqueIndex;size:64" json:"product_token,omitempty"`
 	Version             int       `gorm:"column:version;default:1" json:"version"`
 	IsBespoke           bool      `gorm:"column:is_bespoke;default:true" json:"is_bespoke"`
 	NonRefundable       bool      `gorm:"column:non_refundable;default:true" json:"non_refundable"`
