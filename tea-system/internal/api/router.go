@@ -76,13 +76,13 @@ func (r *Router) Setup() *gin.Engine {
 
 	v1 := r.engine.Group("/api/v1")
 	{
-		// ---------- 认证 ----------
-		v1.POST("/staff/login", r.h.StaffAuth.Login)
-		v1.POST("/staff/mfa/verify", r.h.StaffAuth.MFAVerify)
+		// ---------- 认证（限流：防暴力破解/邮件轰炸） ----------
+		v1.POST("/staff/login", middleware.RateLimit(2, 10), r.h.StaffAuth.Login)           // 2 req/s, burst 10
+		v1.POST("/staff/mfa/verify", middleware.RateLimit(5, 20), r.h.StaffAuth.MFAVerify)
 		v1.POST("/staff/refresh", r.h.StaffAuth.Refresh)
-		v1.POST("/user/magic-link/request", r.h.UserAuth.MagicLinkRequest)
-		v1.POST("/user/magic-link/verify", r.h.UserAuth.MagicLinkVerify)
-		v1.POST("/user/login", r.h.UserAuth.UserLogin)
+		v1.POST("/user/magic-link/request", middleware.RateLimit(1, 5), r.h.UserAuth.MagicLinkRequest) // 1 req/s, burst 5
+		v1.POST("/user/magic-link/verify", middleware.RateLimit(5, 20), r.h.UserAuth.MagicLinkVerify)
+		v1.POST("/user/login", middleware.RateLimit(2, 10), r.h.UserAuth.UserLogin)
 
 		// ---------- 公开 API ----------
 		v1.GET("/custom-products/by-token/:token", r.h.CustomProduct.GetByToken)

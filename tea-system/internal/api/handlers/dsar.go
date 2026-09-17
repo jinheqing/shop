@@ -10,6 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 
+	"tea-system/internal/middleware"
 	"tea-system/internal/models"
 )
 
@@ -19,20 +20,31 @@ type DSARHandler struct {
 
 func NewDSARHandler(db *gorm.DB) *DSARHandler { return &DSARHandler{DB: db} }
 
-// POST /dsar/requests
+// POST /dsar/requests — GDPR DSAR 发起
 func (h *DSARHandler) CreateRequest(c *gin.Context) {
 	var req struct {
-		UserID      uint64 `json:"user_id" binding:"required"`
-		RequestType string `json:"request_type" binding:"required,oneof=access erasure rectification portability"`
-		Reason      string `json:"reason"`
+		UserIDHint  *uint64 `json:"user_id"`  // 可选：admin 代用户发起时传入
+		RequestType string  `json:"request_type" binding:"required,oneof=access erasure rectification portability"`
+		Reason      string  `json:"reason"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	// UserID 优先级：body.user_id > JWT subject_id
+	userID := uint64(0)
+	if req.UserIDHint != nil && *req.UserIDHint > 0 {
+		userID = *req.UserIDHint
+	} else {
+		userID = middleware.GetSubjectID(c)
+	}
+	if userID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "unable to resolve user_id (login or provide user_id)"})
+		return
+	}
 	now := time.Now().UTC()
 	ticket := models.DSARRequest{
-		UserID:      req.UserID,
+		UserID:      userID,
 		RequestType: req.RequestType,
 		Status:      models.DSARStatusPending,
 		Reason:      req.Reason,

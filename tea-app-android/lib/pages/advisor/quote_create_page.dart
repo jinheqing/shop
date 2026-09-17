@@ -125,7 +125,7 @@ class _QuoteCreatePageState extends State<QuoteCreatePage> {
     _field('Lead Time', initialValue: leadTime, onChanged: (v) => leadTime = v),
     _field('Harvest Date', onChanged: (v) => harvestDate = v, hint: 'YYYY-MM-DD'),
     _field('Roasting Date', onChanged: (v) => roastingDate = v, hint: 'YYYY-MM-DD'),
-    _field('Mountain Location', onChanged: (v) => teaGardenLocation = v),
+    _field('Tea Garden (Village)', onChanged: (v) => teaGardenLocation = v),
     _field('Master Name', onChanged: (v) => masterName = v),
     _field('Storage Location', onChanged: (v) => storageLocation = v),
   ]);
