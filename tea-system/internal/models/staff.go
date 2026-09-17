@@ -20,7 +20,7 @@ type Staff struct {
 	Email            string    `gorm:"column:email;uniqueIndex;not null;size:200" json:"email"`
 	PasswordHash     string    `gorm:"column:password_hash;not null;size:255" json:"-"`
 	Role             string    `gorm:"column:role;not null;size:30" json:"role"`
-	Permissions      JSONMap   `gorm:"column:permissions;type:jsonb" json:"permissions"`
+	Permissions      JSONArray `gorm:"column:permissions;type:jsonb" json:"permissions"`
 	MfaEnabled       bool      `gorm:"column:mfa_enabled;default:false" json:"mfa_enabled"`
 	MfaSecret        string    `gorm:"column:mfa_secret;size:100" json:"-"`
 	WorkTimezone     string    `gorm:"column:work_timezone;size:50;default:'Europe/London'" json:"work_timezone"`

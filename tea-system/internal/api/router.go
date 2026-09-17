@@ -7,24 +7,36 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
-// Router — 路由注册器（依赖注入风格）
+// Handlers — 所有 HTTP handler 聚合（依赖注入风格）
+type Handlers struct {
+	Health    *handlers.HealthHandler
+	StaffAuth *handlers.StaffAuthHandler
+	UserAuth  *handlers.UserAuthHandler
+}
+
+// Router — 路由注册器
 type Router struct {
 	cfg    *config.Config
 	db     *gorm.DB
 	audit  *gorm.DB
+	rdb    *redis.Client
+	h      *Handlers
 	engine *gin.Engine
 }
 
-func NewRouter(cfg *config.Config, db *gorm.DB, auditDB *gorm.DB, jwtSecret string) *Router {
+func NewRouter(cfg *config.Config, db *gorm.DB, auditDB *gorm.DB, rdb *redis.Client, h *Handlers) *Router {
 	gin.SetMode(cfg.Server.Mode)
 	engine := gin.New()
 	return &Router{
 		cfg:    cfg,
 		db:     db,
 		audit:  auditDB,
+		rdb:    rdb,
+		h:      h,
 		engine: engine,
 	}
 }
@@ -38,8 +50,8 @@ func (r *Router) Setup() *gin.Engine {
 	// r.engine.Use(middleware.RateLimitPerIP(120)) // 生产打开
 
 	// ==================== 公开路由（不需要 JWT） ====================
-	r.engine.GET("/health", handlers.Health)
-	r.engine.GET("/ready", handlers.Ready)
+	r.engine.GET("/health", r.h.Health.Health)
+	r.engine.GET("/ready", r.h.Health.Ready)
 	r.engine.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"service": "tea-system",
@@ -51,19 +63,21 @@ func (r *Router) Setup() *gin.Engine {
 	// API v1
 	v1 := r.engine.Group("/api/v1")
 	{
-		// 公开 endpoint（魔法链接申请、public/sgs、public/slow-presets 等）
-		// Step 6 实现
-		// public.POST("/user/magic-link/request", ...)
-		// public.POST("/user/magic-link/verify", ...)
-		// public.GET("/public/sgs-reports", ...)
-		// public.GET("/public/slow-presets", ...)
+		// ---------- 公开 endpoint ----------
+		v1.POST("/staff/login", r.h.StaffAuth.Login)
+		v1.POST("/staff/mfa/verify", r.h.StaffAuth.MFAVerify)
+		v1.POST("/staff/refresh", r.h.StaffAuth.Refresh)
+
+		v1.POST("/user/magic-link/request", r.h.UserAuth.MagicLinkRequest)
+		v1.POST("/user/magic-link/verify", r.h.UserAuth.MagicLinkVerify)
+		v1.POST("/user/login", r.h.UserAuth.UserLogin)
 
 		// 需要 JWT 的 endpoint
 		jwtSecret := r.cfg.JWT.Secret
 		auth := v1.Group("")
 		auth.Use(middleware.JWTAuth(jwtSecret))
 		{
-			// 测试端点（未带 JWT → 401；带有效 JWT → 404 因为还没注册具体路由）
+			// 测试端点
 			auth.GET("/test", func(c *gin.Context) {
 				c.JSON(200, gin.H{
 					"sub_type": middleware.GetSubjectType(c),
@@ -73,20 +87,12 @@ func (r *Router) Setup() *gin.Engine {
 				})
 			})
 
+			// Staff 登出
+			auth.POST("/staff/logout", r.h.StaffAuth.Logout)
+
 			// IM（Step 7）
-			// auth.GET("/conversations", ...)
-			// auth.POST("/conversations", ...)
-			// auth.GET("/conversations/:id", ...)
-
 			// 定制报价（Step 8）
-			// staffOnly := auth.Group("")
-			// staffOnly.Use(middleware.RequireStaff())
-			// staffOnly.POST("/custom-products", ...)
-
 			// 订单（Step 9）
-			// auth.POST("/orders", ...)
-			// auth.GET("/orders", ...)
-
 			// 慢直播（Step 12）
 			// 直播间（Step 13）
 			// LiveKit token（Step 11）
@@ -108,5 +114,5 @@ func (r *Router) Setup() *gin.Engine {
 	return r.engine
 }
 
-// 防止 jwt 包未被 import 时 go vet 报错（某些构建标签场景）
+// 防止 jwt 包未被 import 时 go vet 报错
 var _ = jwt.SigningMethodHS256

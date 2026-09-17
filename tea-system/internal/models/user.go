@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// JSONMap is a helper type for jsonb columns
+// JSONMap is a helper type for jsonb columns (object)
 type JSONMap map[string]interface{}
 
 func (j JSONMap) Value() (driver.Value, error) {
@@ -18,6 +18,25 @@ func (j *JSONMap) Scan(value interface{}) error {
 	bytes, ok := value.([]byte)
 	if !ok {
 		return errors.New("failed to unmarshal JSONMap value")
+	}
+	return json.Unmarshal(bytes, j)
+}
+
+// JSONArray is a helper type for jsonb columns (array of strings)
+type JSONArray []string
+
+func (j JSONArray) Value() (driver.Value, error) {
+	return json.Marshal(j)
+}
+
+func (j *JSONArray) Scan(value interface{}) error {
+	if value == nil {
+		*j = nil
+		return nil
+	}
+	bytes, ok := value.([]byte)
+	if !ok {
+		return errors.New("failed to unmarshal JSONArray value")
 	}
 	return json.Unmarshal(bytes, j)
 }
