@@ -44,7 +44,7 @@ async function reject() { await api.post(`/custom-products/${id}/review`, { appr
           <el-descriptions :column="2" border size="small">
             <el-descriptions-item label="Tea Type">{{ product.tea_type }}</el-descriptions-item>
             <el-descriptions-item label="Shape">{{ product.tea_shape }}</el-descriptions-item>
-            <el-descriptions-item label="Mountain">{{ product.mountain_location }}</el-descriptions-item>
+            <el-descriptions-item label="Tea Garden">{{ product.tea_garden_location }}</el-descriptions-item>
             <el-descriptions-item label="Master">{{ product.master_name }}</el-descriptions-item>
             <el-descriptions-item label="Source">{{ product.raw_tea_source }}</el-descriptions-item>
             <el-descriptions-item label="Inner Pack">{{ product.inner_packaging }}</el-descriptions-item>

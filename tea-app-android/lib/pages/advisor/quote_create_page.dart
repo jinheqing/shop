@@ -34,7 +34,7 @@ class _QuoteCreatePageState extends State<QuoteCreatePage> {
   String leadTime = '45 days from confirmation';
   String harvestDate = '';
   String roastingDate = '';
-  String mountainLocation = '';
+  String teaGardenLocation = '';
   String masterName = '';
   String storageLocation = '';
   int? sgsReportId;
@@ -67,7 +67,7 @@ class _QuoteCreatePageState extends State<QuoteCreatePage> {
       unitPrice: unitPrice, quantity: quantity, shippingCost: shippingCost,
       leadTime: leadTime,
       harvestDate: harvestDate, roastingDate: roastingDate,
-      mountainLocation: mountainLocation, masterName: masterName, storageLocation: storageLocation,
+      teaGardenLocation: teaGardenLocation, masterName: masterName, storageLocation: storageLocation,
       sgsReportId: sgsReportId, includeCustomLive: includeCustomLive, liveScheduledDate: liveScheduledDate,
     );
     // POST /api/v1/custom-products with JWT
@@ -125,7 +125,7 @@ class _QuoteCreatePageState extends State<QuoteCreatePage> {
     _field('Lead Time', initialValue: leadTime, onChanged: (v) => leadTime = v),
     _field('Harvest Date', onChanged: (v) => harvestDate = v, hint: 'YYYY-MM-DD'),
     _field('Roasting Date', onChanged: (v) => roastingDate = v, hint: 'YYYY-MM-DD'),
-    _field('Mountain Location', onChanged: (v) => mountainLocation = v),
+    _field('Mountain Location', onChanged: (v) => teaGardenLocation = v),
     _field('Master Name', onChanged: (v) => masterName = v),
     _field('Storage Location', onChanged: (v) => storageLocation = v),
   ]);

@@ -5,7 +5,7 @@ class SGSReportsPage extends StatelessWidget {
   const SGSReportsPage({super.key});
 
   final _reports = const [
-    {'batch': 'ICL-2026-003', 'product': '冰岛古树饼', 'date': '2026-02-18', 'status': 'passed', 'file': 'SGS_ICL_2026.pdf'},
+    {'batch': 'MG-2026-003', 'product': '邦东古树饼', 'date': '2026-02-18', 'status': 'passed', 'file': 'SGS_MG_2026.pdf'},
     {'batch': 'BZ-2026-007', 'product': '班章单株', 'date': '2026-02-22', 'status': 'passed', 'file': 'SGS_BZ_2026.pdf'},
     {'batch': 'JM-2026-012', 'product': '景迈乔木', 'date': '2026-02-25', 'status': 'pending', 'file': null},
   ];

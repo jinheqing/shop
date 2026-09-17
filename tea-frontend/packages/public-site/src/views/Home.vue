@@ -25,7 +25,7 @@ onMounted(async () => {
         Pu'er Tea,<br/>Traceable to the Mountain.
       </h1>
       <p class="text-lg md:text-xl text-white/80 max-w-2xl mb-10">
-        Scan the QR on every bespoke box. See the tea mountain, the master who rolled your leaves, and a live camera showing where it grew — 24 hours a day.
+        Scan the QR on every bespoke box. See the tea garden, the master who rolled your leaves, and a live camera showing where it grew — 24 hours a day.
       </p>
       <div class="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
         <RouterLink to="/bespoke" class="px-8 py-4 bg-white text-tea-900 rounded-full font-medium hover:bg-tea-100 transition text-center">
@@ -45,7 +45,7 @@ onMounted(async () => {
         <div class="text-center">
           <div class="w-16 h-16 bg-tea-100 rounded-full flex items-center justify-center text-2xl mx-auto mb-6">🏔️</div>
           <h3 class="font-serif text-xl mb-3">Cloud Mountain Sourced</h3>
-          <p class="text-tea-700 text-sm leading-relaxed">Every batch tagged with GPS coordinates of the tea plantation, master name, harvest date.</p>
+          <p class="text-tea-700 text-sm leading-relaxed">Every batch linked to its tea garden village, master name, and harvest date.</p>
         </div>
         <div class="text-center">
           <div class="w-16 h-16 bg-tea-100 rounded-full flex items-center justify-center text-2xl mx-auto mb-6">🔬</div>
@@ -55,7 +55,7 @@ onMounted(async () => {
         <div class="text-center">
           <div class="w-16 h-16 bg-tea-100 rounded-full flex items-center justify-center text-2xl mx-auto mb-6">📦</div>
           <h3 class="font-serif text-xl mb-3">Bespoke Blending</h3>
-          <p class="text-tea-700 text-sm leading-relaxed">Choose mountain, roast level, packaging. Your own tea — from leaf to cup — inside 45 days.</p>
+          <p class="text-tea-700 text-sm leading-relaxed">Choose tea garden, roast level, packaging. Your own tea — from leaf to cup — inside 45 days.</p>
         </div>
       </div>
     </div>
@@ -73,9 +73,9 @@ onMounted(async () => {
       </div>
       <div class="grid md:grid-cols-3 gap-6">
         <div v-for="p in (presets.length ? presets : [
-          { name: '冰岛老寨', location: '云南临沧', camera_rtmp_url: 'rtmp://localhost:1935/slow/iceland' },
-          { name: '班章村', location: '云南勐海', camera_rtmp_url: 'rtmp://localhost:1935/slow/banzhang' },
-          { name: '景迈山', location: '云南澜沧', camera_rtmp_url: 'rtmp://localhost:1935/slow/jingmai' },
+          { name: '云南省临沧市临翔区邦东乡曼岗村茶园', location: '临沧', camera_rtmp_url: 'rtmp://localhost:1935/slow/manzhang' },
+          { name: '云南省西双版纳州勐海县布朗山乡班章村茶园', location: '勐海', camera_rtmp_url: 'rtmp://localhost:1935/slow/banzhang' },
+          { name: '云南省普洱市澜沧拉祜族自治县惠民镇景迈村茶园', location: '澜沧', camera_rtmp_url: 'rtmp://localhost:1935/slow/jingmai' },
         ])" :key="p.name" class="relative rounded-2xl overflow-hidden card-hover group">
           <div class="aspect-video bg-tea-900 flex items-center justify-center text-tea-200">
             <div class="text-center">
@@ -101,14 +101,14 @@ onMounted(async () => {
       <h2 class="font-serif text-3xl md:text-4xl text-tea-900 mb-12">Our Bespoke Collection</h2>
       <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
         <RouterLink v-for="cp in (featured.length ? featured : [
-          { id: 1, product_token: 'demo-1', title: '冰岛古树饼', mountain_location: '云南冰岛', master_name: '李师傅', unit_price: 68.5, tea_type: 'raw_puer' },
-          { id: 2, product_token: 'demo-2', title: '班章熟砖', mountain_location: '云南勐海', master_name: '张师傅', unit_price: 120, tea_type: 'ripe_puer' },
-          { id: 3, product_token: 'demo-3', title: '景迈金瓜', mountain_location: '云南澜沧', master_name: '王师傅', unit_price: 88, tea_type: 'raw_puer' },
+          { id: 1, product_token: 'demo-1', title: '邦东古树饼', tea_garden_location: '云南省临沧市临翔区邦东乡曼岗村茶园', master_name: '李师傅', unit_price: 68.5, tea_type: 'raw_puer' },
+          { id: 2, product_token: 'demo-2', title: '班章熟砖', tea_garden_location: '云南省西双版纳州勐海县布朗山乡班章村茶园', master_name: '张师傅', unit_price: 120, tea_type: 'ripe_puer' },
+          { id: 3, product_token: 'demo-3', title: '景迈金瓜', tea_garden_location: '云南省普洱市澜沧拉祜族自治县惠民镇景迈村茶园', master_name: '王师傅', unit_price: 88, tea_type: 'raw_puer' },
         ])" :key="cp.id" :to="`/bespoke/${cp.product_token || 'demo-' + cp.id}`" class="group block card-hover rounded-2xl overflow-hidden border border-tea-100 bg-white">
           <div class="aspect-[4/3] bg-gradient-to-br from-tea-800 to-tea-500 flex items-center justify-center text-5xl group-hover:scale-105 transition-transform duration-500">🍵</div>
           <div class="p-6">
             <h3 class="font-serif text-lg text-tea-900 mb-1">{{ cp.title }}</h3>
-            <p class="text-xs text-tea-500 mb-3">{{ cp.mountain_location }} · Master {{ cp.master_name }}</p>
+            <p class="text-xs text-tea-500 mb-3">{{ cp.tea_garden_location }} · Master {{ cp.master_name }}</p>
             <div class="flex items-center justify-between">
               <span class="text-tea-800 font-medium">£{{ cp.unit_price }}</span>
               <span class="text-xs text-tea-600 group-hover:text-tea-900">View →</span>

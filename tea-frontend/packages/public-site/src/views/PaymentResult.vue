@@ -28,7 +28,7 @@ onMounted(async () => {
           <div class="text-xs text-tea-500 mb-1">Order Reference</div>
           <div class="font-mono font-semibold text-lg">{{ order.order_no }}</div>
           <div class="mt-3 text-sm"><strong>{{ order.custom_product_snapshot?.title }}</strong></div>
-          <div class="text-sm text-tea-600">{{ order.custom_product_snapshot?.mountain_location }}</div>
+          <div class="text-sm text-tea-600">{{ order.custom_product_snapshot?.tea_garden_location }}</div>
           <div class="mt-3 font-serif text-xl">£{{ order.total_amount }}</div>
         </div>
         <div class="space-y-3 text-sm text-tea-600">

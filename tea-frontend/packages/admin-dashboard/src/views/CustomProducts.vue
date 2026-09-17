@@ -22,7 +22,7 @@ const form = reactive({
   // 价格 (4)
   unit_price: 0, quantity: 1, shipping_cost: 0, lead_time: '45 days from confirmation',
   // 溯源 (5)
-  harvest_date: '', roasting_date: '', mountain_location: '', master_name: '', storage_location: '',
+  harvest_date: '', roasting_date: '', tea_garden_location: '', master_name: '', storage_location: '',
   // SGS (1)
   sgs_report_id: null as number | null,
   // 直播 (2)
@@ -33,8 +33,8 @@ async function load() {
   try { const d: any = await api.get('/custom-products'); list.value = d?.items || d || [] }
   catch {
     list.value = [
-      { id: 16, title: '凤凰山大乌岽古树普洱生茶', tea_type: 'raw_puer', tea_shape: 'cake', tea_shape_weight: 357, mountain_location: '广东省潮州市凤凰镇大乌岽村', master_name: '李师傅', status: 'published', version: 1, product_token: 'XK92AB38...', unit_price: 188, quantity: 2, total_amount: 376, harvest_date: '2026-04-15', roasting_date: '2026-05-20', raw_tea_source: '广东省潮州市凤凰镇大乌岽村，树龄 800 年', custom_requirement: '想要古树生普，压制 357g 饼，茉莉花香熏制' },
-      { id: 18, title: '冰岛老寨古树熟普', tea_type: 'ripe_puer', tea_shape: 'brick', tea_shape_weight: 500, mountain_location: '云南临沧', master_name: '王师傅', status: 'draft', version: 1, product_token: null, unit_price: 120, quantity: 3, total_amount: 360, harvest_date: '2026-03-28', roasting_date: '2026-06-10', raw_tea_source: '云南临沧冰岛老寨 300 年古树', custom_requirement: '熟普砖茶，便于存放' },
+      { id: 16, title: '潮州凤凰单丛古树茶', tea_type: 'raw_puer', tea_shape: 'cake', tea_shape_weight: 357, tea_garden_location: '广东省潮州市潮安区凤凰镇大乌岽村茶园', master_name: '李师傅', status: 'published', version: 1, product_token: 'XK92AB38...', unit_price: 188, quantity: 2, total_amount: 376, harvest_date: '2026-04-15', roasting_date: '2026-05-20', raw_tea_source: '广东省潮州市凤凰镇大乌岽村，树龄 800 年', custom_requirement: '想要古树生普，压制 357g 饼，茉莉花香熏制' },
+      { id: 18, title: '临沧邦东古树熟茶', tea_type: 'ripe_puer', tea_shape: 'brick', tea_shape_weight: 500, tea_garden_location: '云南省临沧市临翔区邦东乡曼岗村茶园', master_name: '王师傅', status: 'draft', version: 1, product_token: null, unit_price: 120, quantity: 3, total_amount: 360, harvest_date: '2026-03-28', roasting_date: '2026-06-10', raw_tea_source: '云南省临沧市临翔区邦东乡曼岗村，茶园树龄 300 年', custom_requirement: '熟普砖茶，便于存放' },
     ]
   }
 }
@@ -49,7 +49,7 @@ async function submit() {
   open.value = false; editingId.value = null; load()
 }
 function openNew() {
-  Object.assign(form, { title: '', raw_tea_source: '', custom_requirement: '', tea_type: 'raw_puer', tea_shape: 'cake', tea_shape_weight: 357, smoked_with_flower: false, flower_type: 'jasmine', inner_packaging: '', outer_packaging: '', product_card_text: '', product_card_format: 'vertical', qr_code_position: 'outer_back', unit_price: 0, quantity: 1, shipping_cost: 0, lead_time: '', harvest_date: '', roasting_date: '', mountain_location: '', master_name: '', storage_location: '', sgs_report_id: null, include_custom_live: false, live_scheduled_date: '' })
+  Object.assign(form, { title: '', raw_tea_source: '', custom_requirement: '', tea_type: 'raw_puer', tea_shape: 'cake', tea_shape_weight: 357, smoked_with_flower: false, flower_type: 'jasmine', inner_packaging: '', outer_packaging: '', product_card_text: '', product_card_format: 'vertical', qr_code_position: 'outer_back', unit_price: 0, quantity: 1, shipping_cost: 0, lead_time: '', harvest_date: '', roasting_date: '', tea_garden_location: '', master_name: '', storage_location: '', sgs_report_id: null, include_custom_live: false, live_scheduled_date: '' })
   editingId.value = null; open.value = true
 }
 function openEdit(row: any) { editingId.value = row.id; Object.assign(form, row); open.value = true }
@@ -76,7 +76,7 @@ function total() {
       <el-table-column prop="title" label="Title" min-width="260" />
       <el-table-column prop="tea_type" label="Type" width="130" />
       <el-table-column prop="tea_shape" label="Shape" width="100" />
-      <el-table-column prop="mountain_location" label="Mountain" width="220" />
+      <el-table-column prop="tea_garden_location" label="Tea Garden" width="220" />
       <el-table-column prop="master_name" label="Master" width="120" />
       <el-table-column prop="status" label="Status" width="110">
         <template #default="{ row }">
@@ -104,7 +104,7 @@ function total() {
     <el-form :model="form" label-width="160px">
       <!-- Group 1: 基本信息 -->
       <el-divider content-position="left">📝 Basic Info (4)</el-divider>
-      <el-form-item label="Title" required><el-input v-model="form.title" placeholder="凤凰山大乌岽古树普洱生茶" /></el-form-item>
+      <el-form-item label="Title" required><el-input v-model="form.title" placeholder="潮州凤凰单丛古树茶" /></el-form-item>
       <el-form-item label="Raw Tea Source" required><el-input v-model="form.raw_tea_source" type="textarea" :rows="2" /></el-form-item>
       <el-form-item label="Customer Requirement" required><el-input v-model="form.custom_requirement" type="textarea" :rows="2" /></el-form-item>
 
@@ -183,7 +183,7 @@ function total() {
       <!-- Group 6: 溯源 -->
       <el-divider content-position="left">🏔️ Traceability (5)</el-divider>
       <el-row :gutter="12">
-        <el-col :span="12"><el-form-item label="Mountain Location" required><el-input v-model="form.mountain_location" placeholder="云南临沧冰岛老寨" /></el-form-item></el-col>
+        <el-col :span="12"><el-form-item label="Tea Garden Location" required><el-input v-model="form.tea_garden_location" placeholder="云南省临沧市临翔区邦东乡曼岗村茶园" /></el-form-item></el-col>
         <el-col :span="12"><el-form-item label="Master Name" required><el-input v-model="form.master_name" /></el-form-item></el-col>
       </el-row>
       <el-row :gutter="12">

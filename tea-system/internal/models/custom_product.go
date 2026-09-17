@@ -45,7 +45,7 @@ type CustomProduct struct {
 	// 溯源字段
 	HarvestDate     time.Time `gorm:"column:harvest_date;not null;type:date" json:"harvest_date"`
 	RoastingDate    time.Time `gorm:"column:roasting_date;not null;type:date" json:"roasting_date"`
-	MountainLocation string   `gorm:"column:mountain_location;not null;size:200" json:"mountain_location"`
+	TeaGardenLocation string   `gorm:"column:tea_garden_location;not null;size:200" json:"tea_garden_location"`
 	MasterName      string    `gorm:"column:master_name;not null;size:100" json:"master_name"`
 	StorageLocation string    `gorm:"column:storage_location;not null;size:200" json:"storage_location"`
 	SgsReportID     *uint64   `gorm:"column:sgs_report_id" json:"sgs_report_id,omitempty"`

@@ -6,7 +6,7 @@ export interface CustomProduct {
   title: string
   tea_type: string
   tea_shape: string
-  mountain_location?: string
+  tea_garden_location?: string
   master_name?: string
   raw_tea_source?: string
   unit_price: number

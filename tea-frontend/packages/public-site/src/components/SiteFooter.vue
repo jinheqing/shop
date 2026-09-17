@@ -5,14 +5,14 @@
       <div class="grid md:grid-cols-5 gap-10">
         <div class="md:col-span-2">
           <div class="flex items-center gap-2 mb-4"><span class="text-3xl">🍃</span><span class="font-serif text-2xl">UK Tea House</span></div>
-          <p class="text-sm text-tea-300 leading-relaxed max-w-sm">Single-origin Pu'er tea, traceable from cloud mountain to cup. Live-streamed farms, SGS-certified, bespoke blended for you inside 45 days.</p>
+          <p class="text-sm text-tea-300 leading-relaxed max-w-sm">Single-origin Pu'er tea, traceable from cloud tea garden to cup. Live-streamed farms, SGS-certified, bespoke blended for you inside 45 days.</p>
           <div class="mt-6 text-xs text-tea-400">Mayfair, London W1J · hello@ukteahouse.co.uk · +44 20 7946 0958</div>
         </div>
         <div>
           <h4 class="font-medium mb-4 text-white">Shop</h4>
           <ul class="space-y-2 text-sm">
             <li><RouterLink to="/bespoke" class="hover:text-white">Bespoke Blending</RouterLink></li>
-            <li><RouterLink to="/mountains" class="hover:text-white">Tea Mountains</RouterLink></li>
+            <li><RouterLink to="/tea-gardens" class="hover:text-white">Tea Gardens</RouterLink></li>
             <li><RouterLink to="/live" class="hover:text-white">Live Cameras</RouterLink></li>
             <li><RouterLink to="/quality" class="hover:text-white">SGS Quality</RouterLink></li>
           </ul>

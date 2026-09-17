@@ -9,9 +9,9 @@ class SlowPresetsPage extends StatefulWidget {
 
 class _SlowPresetsPageState extends State<SlowPresetsPage> {
   final _presets = <Map<String, dynamic>>[
-    {'id': 1, 'name': '冰岛老寨', 'location': '云南临沧', 'status': 'live', 'camera_rtmp_url': 'rtmp://192.168.1.10/live/iceland', 'start_time': '2026-03-01 06:00'},
+    {'id': 1, 'name': '云南省临沧市临翔区邦东乡曼岗村茶园', 'location': '云南临沧', 'status': 'live', 'camera_rtmp_url': 'rtmp://192.168.1.10/live/iceland', 'start_time': '2026-03-01 06:00'},
     {'id': 2, 'name': '班章春茶林', 'location': '云南勐海', 'status': 'live', 'camera_rtmp_url': 'rtmp://192.168.1.11/live/banzhang', 'start_time': '2026-03-15 05:30'},
-    {'id': 3, 'name': '景迈山晒场', 'location': '云南澜沧', 'status': 'idle', 'camera_rtmp_url': 'rtmp://192.168.1.12/live/jingmai', 'start_time': null},
+    {'id': 3, 'name': '云南省普洱市澜沧拉祜族自治县惠民镇景迈村茶园', 'location': '云南澜沧', 'status': 'idle', 'camera_rtmp_url': 'rtmp://192.168.1.12/live/jingmai', 'start_time': null},
   ];
 
   void _toggleStatus(int i) {

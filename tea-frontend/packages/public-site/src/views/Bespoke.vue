@@ -7,7 +7,7 @@ const forms = ref<HTMLFormElement | null>(null)
 const step = ref(1)
 const data = ref({
   tea_type: 'raw_puer',
-  mountain: '',
+  teaGarden: '',
   roast: 'light',
   shape: 'cake',
   weight: 357,
@@ -17,7 +17,7 @@ const data = ref({
   message: '',
 })
 
-const mountains = ['冰岛老寨', '班章村', '景迈山', '老班章', '南糯山', '忙肺村']
+const teaGardens = ['云南省临沧市临翔区邦东乡曼岗村茶园', '云南省西双版纳州勐海县布朗山乡班章村茶园', '云南省普洱市澜沧拉祜族自治县惠民镇景迈村茶园', '云南省西双版纳州勐海县勐海镇贺开村茶园', '云南省临沧市临翔区南美乡多依村茶园', '云南省普洱市澜沧拉祜族自治县惠民镇翁基村茶园']
 const teaTypes = [{v:'raw_puer', l:'生普洱 Raw Pu\'er'},{v:'ripe_puer', l:'熟普洱 Ripe Pu\'er'}]
 const roasts = [{v:'light', l:'轻火 Light Roast'},{v:'medium', l:'中火 Medium Roast'},{v:'heavy', l:'重火 Heavy Roast'}]
 const shapes = [{v:'cake', l:'饼 Tea Cake'},{v:'brick', l:'砖 Tea Brick'},{v:'tuo', l:'沱 Tuo Cha'},{v:'golden_brick', l:'金砖 Golden Brick'}]
@@ -35,9 +35,9 @@ const submit = async () => {
       shipping_cost: 120,
       inner_packaging: data.value.inner_packaging,
       outer_packaging: data.value.outer_packaging,
-      mountain_location: data.value.mountain,
+      tea_garden_location: data.value.teaGarden,
       master_name: '李师傅',
-      raw_tea_source: data.value.mountain,
+      raw_tea_source: data.value.teaGarden,
       custom_requirement: data.value.message,
     }, { headers: { Authorization: `Bearer ${r.data.access_token}` } })
     alert('✅ Bespoke request submitted! Your advisor will contact you within 24h.')
@@ -80,9 +80,9 @@ const submit = async () => {
               </button>
             </div>
             <label class="block text-sm font-medium text-tea-900 mb-2">Preferred Mountain</label>
-            <select v-model="data.mountain" class="w-full px-4 py-3 rounded-xl border border-tea-200 mb-6 focus:border-tea-600 focus:outline-none">
+            <select v-model="data.teaGarden" class="w-full px-4 py-3 rounded-xl border border-tea-200 mb-6 focus:border-tea-600 focus:outline-none">
               <option value="">Not sure — let the master choose</option>
-              <option v-for="m in mountains" :key="m" :value="m">{{ m }}</option>
+              <option v-for="m in teaGardens" :key="m" :value="m">{{ m }}</option>
             </select>
             <button type="submit" class="w-full py-3 bg-tea-700 text-white rounded-xl font-medium hover:bg-tea-800 transition">Continue →</button>
           </template>

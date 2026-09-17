@@ -4,9 +4,9 @@ import { ElMessage } from 'element-plus'
 import { api } from '@/api/client'
 
 const codes = ref<any[]>([
-  { id: 1, custom_product_id: 16, product_token: 'XK92AB38M7f2...f3A', mountain_location: '冰岛老寨', master_name: '王师傅', qr_code_position: 'outer_back', generated_at: '2026-09-17T13:40:00Z', public_url: '/trace/XK92AB38M7f2' },
-  { id: 2, custom_product_id: 18, product_token: 'PHX91KL5N8b1...a7D', mountain_location: '凤凰山大乌岽', master_name: '李师傅', qr_code_position: 'outer_front', generated_at: '2026-09-17T12:00:00Z', public_url: '/trace/PHX91KL5N8b1' },
-  { id: 3, custom_product_id: 20, product_token: 'JM72QR3T6V...e9F', mountain_location: '景迈山', master_name: '李师傅', qr_code_position: 'hidden', generated_at: '2026-09-16T09:00:00Z', public_url: '/trace/JM72QR3T6V' },
+  { id: 1, custom_product_id: 16, product_token: 'XK92AB38M7f2...f3A', tea_garden_location: '曼岗村茶园', master_name: '王师傅', qr_code_position: 'outer_back', generated_at: '2026-09-17T13:40:00Z', public_url: '/trace/XK92AB38M7f2' },
+  { id: 2, custom_product_id: 18, product_token: 'PHX91KL5N8b1...a7D', tea_garden_location: '凤凰山大乌岽', master_name: '李师傅', qr_code_position: 'outer_front', generated_at: '2026-09-17T12:00:00Z', public_url: '/trace/PHX91KL5N8b1' },
+  { id: 3, custom_product_id: 20, product_token: 'JM72QR3T6V...e9F', tea_garden_location: '翁基村茶园', master_name: '李师傅', qr_code_position: 'hidden', generated_at: '2026-09-16T09:00:00Z', public_url: '/trace/JM72QR3T6V' },
 ])
 
 async function generate(productId: number) { await api.post(`/qrcodes/generate`, { custom_product_id: productId }); ElMessage.success('QR code regenerated') }
@@ -18,7 +18,7 @@ async function print(id: number) { ElMessage.success('🖨️ Print batch QR she
       <el-button type="primary">+ Generate QR for Product</el-button>
     </div></template>
     <el-alert type="info" :closable="false" class="mb-4">
-      Each bespoke product gets a unique QR. Scanning opens the public traceability page — GPS, master, harvest date, live camera embed.
+      Each bespoke product gets a unique QR. Scanning opens the public traceability page — Tea garden village, master, harvest date, live camera embed.
     </el-alert>
     <el-table :data="codes" stripe>
       <el-table-column label="QR Preview" width="90">
@@ -27,7 +27,7 @@ async function print(id: number) { ElMessage.success('🖨️ Print batch QR she
         </template>
       </el-table-column>
       <el-table-column label="Product" width="250">
-        <template #default="{ row }"><div class="font-medium">Product #{{ row.custom_product_id }}</div><div class="text-xs text-slate-500">{{ row.mountain_location }} · {{ row.master_name }}</div></template>
+        <template #default="{ row }"><div class="font-medium">Product #{{ row.custom_product_id }}</div><div class="text-xs text-slate-500">{{ row.tea_garden_location }} · {{ row.master_name }}</div></template>
       </el-table-column>
       <el-table-column label="Public URL / Token" min-width="280">
         <template #default="{ row }">

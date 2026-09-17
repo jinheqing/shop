@@ -17,9 +17,9 @@ func NewSiteContentHandler(db *gorm.DB) *SiteContentHandler { return &SiteConten
 // GET /site-contents — 公开读取所有 CMS 内容
 func (h *SiteContentHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"items": []gin.H{
-		{"page_key": "home", "section_key": "hero", "content": gin.H{"headline": "Pu'er Tea, Traceable to the Mountain."}},
-		{"page_key": "tea_mountains", "section_key": "intro", "content": gin.H{"heading": "Six Mountains. One Promise."}},
-		{"page_key": "bespoke", "section_key": "how_it_works", "content": gin.H{"steps": []string{"Pick mountain & roast", "Choose packaging", "We quote within 24h", "Tea arrives in 45 days"}}},
+		{"page_key": "home", "section_key": "hero", "content": gin.H{"headline": "Pu'er Tea, Traceable to the Tea Garden."}},
+		{"page_key": "tea_gardens", "section_key": "intro", "content": gin.H{"heading": "Six Tea Gardens. One Promise."}},
+		{"page_key": "bespoke", "section_key": "how_it_works", "content": gin.H{"steps": []string{"Pick tea garden & roast", "Choose packaging", "We quote within 24h", "Tea arrives in 45 days"}}},
 		{"page_key": "quality", "section_key": "intro", "content": gin.H{"heading": "Independently Tested. Always."}},
 	}})
 }

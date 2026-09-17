@@ -12,7 +12,7 @@ onMounted(load)
       All staff actions are logged to a separate audit database. Immutable. GDPR-compliant.
     </el-alert>
     <el-table :data="list.length?list:[
-      { id: 1, staff_id: 4, action: 'custom_product.create', target_type: 'custom_product', target_id: 16, detail: { title: '冰岛古树饼' }, ip_address: '::1', user_agent: 'curl/8.5.0', created_at: '2026-09-17T13:27:42Z' },
+      { id: 1, staff_id: 4, action: 'custom_product.create', target_type: 'custom_product', target_id: 16, detail: { title: '邦东古树饼' }, ip_address: '::1', user_agent: 'curl/8.5.0', created_at: '2026-09-17T13:27:42Z' },
       { id: 2, staff_id: 4, action: 'custom_product.publish', target_type: 'custom_product', target_id: 16, detail: { product_token: 'XK92...f3A' }, ip_address: '::1', user_agent: 'curl/8.5.0', created_at: '2026-09-17T13:27:43Z' },
       { id: 3, staff_id: 4, action: 'order.create', target_type: 'order', target_id: 9, detail: { order_no: 'ORD-20260917-398535' }, ip_address: '::1', user_agent: 'curl/8.5.0', created_at: '2026-09-17T13:34:39Z' },
       { id: 4, staff_id: 4, action: 'payment.init', target_type: 'order', target_id: 9, detail: { gateway: '2checkout' }, ip_address: '::1', user_agent: 'curl/8.5.0', created_at: '2026-09-17T13:34:40Z' },

@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import { api } from '@/api/client'
 
 const rooms = ref<any[]>([
-  { id: 1, room_name: '24/7 冰岛老寨慢直播', room_type: 'slow_preset', status: 'live', scheduled_start: null, host_staff_id: null },
+  { id: 1, room_name: '24/7 曼岗村茶园慢直播', room_type: 'slow_preset', status: 'live', scheduled_start: null, host_staff_id: null },
   { id: 5, room_name: '凤凰山大乌岽 · 品鉴会', room_type: 'obs_tasting', status: 'scheduled', scheduled_start: '2026-09-20T20:00:00Z', host_staff_id: 5 },
   { id: 7, room_name: 'James 先生 · 定制茶交付验货', room_type: 'delivery_inspection', status: 'scheduled', scheduled_start: '2026-09-22T14:00:00Z', host_staff_id: 5, order_id: 9 },
   { id: 8, room_name: 'Sarah 女士 · 私享咨询', room_type: 'customer_request', status: 'scheduled', scheduled_start: '2026-09-24T18:00:00Z', host_staff_id: 6 },

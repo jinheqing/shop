@@ -29,7 +29,7 @@ class CustomProduct {
   final String leadTime;                                       // 17
   @JsonKey(name: 'harvest_date') final String harvestDate;     // 18
   @JsonKey(name: 'roasting_date') final String roastingDate;   // 19
-  @JsonKey(name: 'mountain_location') final String mountainLocation; // 20
+  @JsonKey(name: 'tea_garden_location') final String teaGardenLocation; // 20
   @JsonKey(name: 'master_name') final String masterName;       // 21
   @JsonKey(name: 'storage_location') final String storageLocation; // 22
   @JsonKey(name: 'sgs_report_id') final int? sgsReportId;      // 23
@@ -51,7 +51,7 @@ class CustomProduct {
     required this.unitPrice, required this.quantity, this.shippingCost = 0,
     required this.leadTime,
     required this.harvestDate, required this.roastingDate,
-    required this.mountainLocation, required this.masterName, required this.storageLocation,
+    required this.teaGardenLocation, required this.masterName, required this.storageLocation,
     this.sgsReportId, this.includeCustomLive = false, this.liveScheduledDate,
     this.totalAmount, this.status, this.sku,
   });
@@ -66,7 +66,7 @@ class CustomProduct {
     'unit_price': unitPrice, 'quantity': quantity, 'shipping_cost': shippingCost,
     'lead_time': leadTime,
     'harvest_date': harvestDate, 'roasting_date': roastingDate,
-    'mountain_location': mountainLocation, 'master_name': masterName,
+    'tea_garden_location': teaGardenLocation, 'master_name': masterName,
     'storage_location': storageLocation, 'sgs_report_id': sgsReportId,
     'include_custom_live': includeCustomLive, 'live_scheduled_date': liveScheduledDate,
   };

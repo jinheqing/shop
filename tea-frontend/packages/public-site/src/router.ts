@@ -3,8 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 export const routes = [
   // Core public pages
   { path: '/', name: 'home', component: () => import('@/views/Home.vue'), meta: { title: 'UK Tea House' } },
-  { path: '/mountains', name: 'mountains', component: () => import('@/views/Mountains.vue'), meta: { title: 'Tea Mountains' } },
-  { path: '/mountains/:slug', name: 'mountain-detail', component: () => import('@/views/MountainDetail.vue'), props: true, meta: { title: 'Mountain Detail' } },
+  { path: '/tea-gardens', name: 'tea-gardens', component: () => import('@/views/TeaGardens.vue'), meta: { title: 'Tea Garden Stories' } },
   { path: '/live', name: 'live', component: () => import('@/views/Live.vue'), meta: { title: 'Live Tea Cameras' } },
   { path: '/quality', name: 'quality', component: () => import('@/views/Quality.vue'), meta: { title: 'SGS Quality Assurance' } },
   { path: '/bespoke', name: 'bespoke', component: () => import('@/views/Bespoke.vue'), meta: { title: 'Bespoke Blending' } },

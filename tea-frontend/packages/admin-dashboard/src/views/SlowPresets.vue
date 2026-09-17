@@ -45,8 +45,8 @@ async function del(id: number) { await api.delete(`/slow-presets/${id}`); load()
 
   <el-dialog v-model="open" title="New Slow-Live Preset" width="480px">
     <el-form :model="form" label-width="100px">
-      <el-form-item label="Name"><el-input v-model="form.name" placeholder="冰岛老寨" /></el-form-item>
-      <el-form-item label="Location"><el-input v-model="form.location" placeholder="云南临沧" /></el-form-item>
+      <el-form-item label="Name"><el-input v-model="form.name" placeholder="云南省临沧市临翔区邦东乡曼岗村茶园" /></el-form-item>
+      <el-form-item label="Location"><el-input v-model="form.location" placeholder="临沧" /></el-form-item>
       <el-form-item label="Description"><el-input v-model="form.description" type="textarea" /></el-form-item>
       <el-form-item label="RTMP URL"><el-input v-model="form.camera_rtmp_url" placeholder="rtmp://camera-ip/live/key" /></el-form-item>
     </el-form>

@@ -37,7 +37,7 @@ class _ChatPageState extends State<ChatPage> {
       // Fallback: load demo messages
       setState(() {
         _messages.addAll([
-          {'content': '你好！我是冰岛老寨的王师傅 🍵', 'translated_content': 'Hello! I\'m Master Wang from Iceland Old Village', 'sender_role': 'advisor'},
+          {'content': '你好！我是曼岗村的王师傅 🍵', 'translated_content': 'Hello! I\'m Master Wang from Mangang Village', 'sender_role': 'advisor'},
           {'content': 'Hi Master Wang — how are the trees this season?', 'sender_role': 'user'},
           {'content': '今年雨水好，茶芽肥壮。预计3月底开始采摘 🌱', 'translated_content': 'Great rain this year, plump buds. Harvest starts late March', 'sender_role': 'advisor'},
         ]);

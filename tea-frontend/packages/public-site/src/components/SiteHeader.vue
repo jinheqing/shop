@@ -12,7 +12,7 @@ const token = localStorage.getItem('user_token')
       </RouterLink>
       <nav class="hidden md:flex items-center gap-7 text-sm text-tea-700">
         <RouterLink to="/bespoke" class="hover:text-tea-900">Bespoke</RouterLink>
-        <RouterLink to="/mountains" class="hover:text-tea-900">Mountains</RouterLink>
+        <RouterLink to="/tea-gardens" class="hover:text-tea-900">Tea Gardens</RouterLink>
         <RouterLink to="/live" class="hover:text-tea-900">Live</RouterLink>
         <RouterLink to="/quality" class="hover:text-tea-900">Quality</RouterLink>
         <RouterLink to="/about" class="hover:text-tea-900">About</RouterLink>

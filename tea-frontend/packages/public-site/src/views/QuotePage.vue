@@ -36,12 +36,12 @@ onMounted(async () => {
       </div>
 
       <div class="grid md:grid-cols-2 gap-8 mb-10">
-        <!-- LEFT: Tea mountain visualization -->
+        <!-- LEFT: Tea garden visualization -->
         <div class="bg-gradient-to-br from-tea-700 to-tea-900 rounded-3xl p-8 text-white relative overflow-hidden">
           <div class="absolute top-0 right-0 text-[180px] opacity-10 leading-none">🏔️</div>
           <div class="relative">
             <div class="text-xs tracking-widest text-tea-200 mb-2">FROM THE MOUNTAIN</div>
-            <h1 class="font-serif text-4xl leading-tight mb-6">{{ product.mountain_location }}</h1>
+            <h1 class="font-serif text-4xl leading-tight mb-6">{{ product.tea_garden_location }}</h1>
             <div class="space-y-3 text-tea-100 text-sm">
               <div class="flex items-center gap-2">
                 <span>👨‍🍳</span><span><strong>Master:</strong> {{ product.master_name }}</span>

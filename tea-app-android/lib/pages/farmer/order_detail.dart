@@ -15,7 +15,7 @@ class FarmerOrderDetailPage extends StatelessWidget {
         Container(color: Colors.green.shade50, padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const Text('ORD-20260917-398535', style: TextStyle(fontFamily: 'monospace', fontSize: 13, color: Colors.green)),
           const SizedBox(height: 8),
-          const Text('冰岛古树饼 · 357g × 12', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+          const Text('邦东古树饼 · 357g × 12', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
           const Text('Customer: Mr. James L. · London, UK', style: TextStyle(color: Colors.grey)),
         ])),
@@ -28,7 +28,7 @@ class FarmerOrderDetailPage extends StatelessWidget {
             ),
         ])),
         _section('🍵 Production Checklist', Column(children: [
-          _checkbox('Picked from Iceland Old Village (GPS verified)', true),
+          _checkbox('Picked from ManGang Village Tea Garden, verified', true),
           _checkbox('Withered for 12h at 24°C', true),
           _checkbox('Rolled by Master Wang 8x', true),
           _checkbox('Sun-dried 3 days', false),
@@ -39,7 +39,7 @@ class FarmerOrderDetailPage extends StatelessWidget {
           Row(children: [Expanded(child: Container(height: 140, color: Colors.black, alignment: Alignment.center, child: const Column(mainAxisSize: MainAxisSize.min, children: [
             Icon(Icons.videocam, color: Colors.green[400], size: 32),
             SizedBox(height: 4),
-            Text('LIVE · 冰岛晒场', style: TextStyle(color: Colors.green[400])),
+            Text('LIVE · 曼岗村晒场', style: TextStyle(color: Colors.green[400])),
           ])))]),
           const SizedBox(height: 8),
           ElevatedButton.icon(onPressed: () {}, icon: const Icon(Icons.videocam), label: const Text('Open Live Camera'),

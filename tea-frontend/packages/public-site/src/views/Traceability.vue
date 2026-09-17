@@ -12,8 +12,8 @@ onMounted(async () => {
   try { product.value = await api.get(`/custom-products/by-token/${token}`) }
   catch {
     product.value = {
-      title: '冰岛古树饼',
-      mountain_location: '冰岛老寨 · 云南临沧',
+      title: '邦东古树饼',
+      tea_garden_location: '云南省临沧市临翔区邦东乡曼岗村茶园',
       master_name: '王师傅',
       harvest_date: '2026-04-12',
       roasting_date: '2026-05-20',
@@ -22,7 +22,6 @@ onMounted(async () => {
       tea_shape: 'Cake · 357g',
       product_card_text: '凤凰山大乌岽 · 古树单丛 · 2026 春茶',
       sgs_report_no: 'SGS-ICL-2026-003',
-      gps: '23.93°N, 100.15°E',
       stream_url: 'rtmp://localhost:1935/slow/iceland',
     }
   } finally { loading.value = false }
@@ -39,7 +38,7 @@ onMounted(async () => {
             LIVE · 24/7 FROM THE TEA MOUNTAIN
           </div>
           <div class="text-6xl mb-4">📷</div>
-          <div class="text-sm text-tea-300">Live stream from {{ product?.mountain_location }}</div>
+          <div class="text-sm text-tea-300">Live stream from {{ product?.tea_garden_location }}</div>
         </div>
       </div>
       <div class="absolute bottom-8 left-0 right-0 text-center">
@@ -49,14 +48,13 @@ onMounted(async () => {
 
     <section class="max-w-4xl mx-auto px-6 py-16">
       <h2 class="font-serif text-3xl text-center mb-4">🔍 Trace Your Tea</h2>
-      <p class="text-center text-tea-300 mb-12">From cloud mountain to your cup. Every step verified.</p>
+      <p class="text-center text-tea-300 mb-12">From tea garden to your cup. Every step verified.</p>
 
       <el-timeline :size="large">
         <el-timeline-item :timestamp="product?.harvest_date" color="success">
           <div class="bg-tea-900/50 rounded-xl p-5">
             <div class="text-lg font-serif mb-1">🌱 Harvested</div>
-            <div class="text-tea-200 text-sm">Picked from {{ product?.mountain_location }}</div>
-            <div class="text-xs text-tea-400 mt-2">GPS: {{ product?.gps }}</div>
+            <div class="text-tea-200 text-sm">Picked from {{ product?.tea_garden_location }}</div>
             <div class="text-xs text-tea-400">Master: {{ product?.master_name }}</div>
           </div>
         </el-timeline-item>

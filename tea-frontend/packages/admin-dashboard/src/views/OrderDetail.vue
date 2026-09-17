@@ -78,7 +78,7 @@ const timeline = computed(() => {
           <el-descriptions :column="2" border size="small">
             <el-descriptions-item label="Title">{{ order.custom_product_snapshot?.title }}</el-descriptions-item>
             <el-descriptions-item label="Tea Type">{{ order.custom_product_snapshot?.tea_type }}</el-descriptions-item>
-            <el-descriptions-item label="Mountain">{{ order.custom_product_snapshot?.mountain_location }}</el-descriptions-item>
+            <el-descriptions-item label="Tea Garden">{{ order.custom_product_snapshot?.tea_garden_location }}</el-descriptions-item>
             <el-descriptions-item label="Master">{{ order.custom_product_snapshot?.master_name }}</el-descriptions-item>
             <el-descriptions-item label="Inner Pack">{{ order.custom_product_snapshot?.inner_packaging }}</el-descriptions-item>
             <el-descriptions-item label="Outer Pack">{{ order.custom_product_snapshot?.outer_packaging }}</el-descriptions-item>

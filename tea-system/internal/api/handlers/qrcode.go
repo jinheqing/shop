@@ -46,7 +46,7 @@ func (h *QRCodeHandler) GetTrace(c *gin.Context) {
 	token := c.Param("token")
 	var cp struct {
 		Title               string `json:"title"`
-		MountainLocation    string `json:"mountain_location"`
+		TeaGardenLocation    string `json:"tea_garden_location"`
 		MasterName          string `json:"master_name"`
 		HarvestDate         string `json:"harvest_date"`
 		RoastingDate        string `json:"roasting_date"`
@@ -55,7 +55,7 @@ func (h *QRCodeHandler) GetTrace(c *gin.Context) {
 		TeaShape            string `json:"tea_shape"`
 	}
 	if err := h.DB.Table("custom_products").
-		Select("title, mountain_location, master_name, harvest_date, roasting_date, storage_location, tea_type, tea_shape").
+		Select("title, tea_garden_location, master_name, harvest_date, roasting_date, storage_location, tea_type, tea_shape").
 		Where("product_token = ?", token).
 		Scan(&cp).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "trace not found"})

@@ -20,8 +20,8 @@ onMounted(async () => {
   } catch (e) {
     // Demo fallback
     product.value = {
-      id: 1, product_token: token, title: '冰岛古树饼', tea_type: 'raw_puer', tea_shape: 'cake',
-      mountain_location: '云南冰岛老寨', master_name: '李师傅', raw_tea_source: '云南冰岛',
+      id: 1, product_token: token, title: '邦东古树饼', tea_type: 'raw_puer', tea_shape: 'cake',
+      tea_garden_location: '云南省临沧市临翔区邦东乡曼岗村茶园', master_name: '李师傅', raw_tea_source: '云南省临沧市临翔区邦东乡曼岗村茶园',
       unit_price: 68.5, quantity: 42, shipping_cost: 120, lead_time: '45 days',
       harvest_date: '2024-04-15', roasting_date: '2024-08-20', status: 'published', version: 1,
       inner_packaging: '棉纸', outer_packaging: '木箱',
@@ -79,7 +79,7 @@ const buy = async () => {
       <!-- DETAILS -->
       <div class="lg:col-span-3">
         <h1 class="font-serif text-4xl text-tea-900 mb-2">{{ product.title }}</h1>
-        <p class="text-tea-600 mb-6">{{ product.mountain_location }} · Master {{ product.master_name }}</p>
+        <p class="text-tea-600 mb-6">{{ product.tea_garden_location }} · Master {{ product.master_name }}</p>
 
         <div class="prose prose-sm text-tea-800 leading-relaxed mb-8">
           <p><strong>Harvest:</strong> {{ product.harvest_date }}</p>

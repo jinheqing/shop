@@ -51,7 +51,7 @@ type CustomProductCreateRequest struct {
 	LeadTime          string  `json:"lead_time" binding:"required"`
 	HarvestDate       string  `json:"harvest_date" binding:"required"`
 	RoastingDate      string  `json:"roasting_date" binding:"required"`
-	MountainLocation  string  `json:"mountain_location" binding:"required"`
+	TeaGardenLocation  string  `json:"tea_garden_location" binding:"required"`
 	MasterName        string  `json:"master_name" binding:"required"`
 	StorageLocation   string  `json:"storage_location" binding:"required"`
 
@@ -93,7 +93,7 @@ type CustomProductUpdateRequest struct {
 	LeadTime          *string  `json:"lead_time,omitempty"`
 	HarvestDate       *string  `json:"harvest_date,omitempty"`
 	RoastingDate      *string  `json:"roasting_date,omitempty"`
-	MountainLocation  *string  `json:"mountain_location,omitempty"`
+	TeaGardenLocation  *string  `json:"tea_garden_location,omitempty"`
 	MasterName        *string  `json:"master_name,omitempty"`
 	StorageLocation   *string  `json:"storage_location,omitempty"`
 	SgsReportID       *uint64  `json:"sgs_report_id,omitempty"`
@@ -171,7 +171,7 @@ func (h *CustomProductHandler) Create(c *gin.Context) {
 		LeadTime:         req.LeadTime,
 		HarvestDate:      harvest,
 		RoastingDate:     roasting,
-		MountainLocation: req.MountainLocation,
+		TeaGardenLocation: req.TeaGardenLocation,
 		MasterName:       req.MasterName,
 		StorageLocation:  req.StorageLocation,
 		SgsReportID:      req.SgsReportID,
@@ -406,8 +406,8 @@ func buildUpdatePatch(req CustomProductUpdateRequest) (map[string]interface{}, e
 		}
 		patch["roasting_date"] = t
 	}
-	if v := req.MountainLocation; v != nil {
-		patch["mountain_location"] = *v
+	if v := req.TeaGardenLocation; v != nil {
+		patch["tea_garden_location"] = *v
 	}
 	if v := req.MasterName; v != nil {
 		patch["master_name"] = *v

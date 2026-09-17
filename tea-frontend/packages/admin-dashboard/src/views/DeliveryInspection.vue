@@ -3,9 +3,9 @@ import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 
 const inspections = ref<any[]>([
-  { id: 1, live_room_id: 7, order_id: 9, order_no: 'ORD-20260917-398535', user_name: 'James Lovelace', product_title: '冰岛古树饼', scheduled_start: '2026-09-22T14:00:00Z', status: 'scheduled', livekit_token_for_host: 'eyJhbGciOi...', livekit_token_for_viewers: 'eyJhbGciOi...' },
+  { id: 1, live_room_id: 7, order_id: 9, order_no: 'ORD-20260917-398535', user_name: 'James Lovelace', product_title: '邦东古树饼', scheduled_start: '2026-09-22T14:00:00Z', status: 'scheduled', livekit_token_for_host: 'eyJhbGciOi...', livekit_token_for_viewers: 'eyJhbGciOi...' },
   { id: 2, live_room_id: 12, order_id: 11, order_no: 'ORD-20260918-112233', user_name: '陳曉珊', product_title: '凤凰山大乌岽单丛', scheduled_start: '2026-09-30T10:00:00Z', status: 'scheduled' },
-  { id: 3, live_room_id: 5, order_id: 8, order_no: 'ORD-20260916-112233', user_name: 'Sarah Whitfield', product_title: '班章古树普洱', scheduled_start: '2026-09-18T09:00:00Z', status: 'completed', recording_url: 'https://cdn.ourdomain.com/recordings/room5.mp4' },
+  { id: 3, live_room_id: 5, order_id: 8, order_no: 'ORD-20260916-112233', user_name: 'Sarah Whitfield', product_title: '布朗山古树普洱', scheduled_start: '2026-09-18T09:00:00Z', status: 'completed', recording_url: 'https://cdn.ourdomain.com/recordings/room5.mp4' },
 ])
 
 async function autoCreate(orderId: number) {

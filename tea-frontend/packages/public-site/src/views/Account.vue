@@ -40,7 +40,7 @@ function logout() { localStorage.removeItem('user_token'); router.push('/') }
                 <div>
                   <div class="font-mono text-xs text-tea-500 mb-1">{{ o.order_no }}</div>
                   <div class="font-serif text-lg">{{ o.custom_product_snapshot?.title }}</div>
-                  <div class="text-sm text-tea-600">{{ o.custom_product_snapshot?.mountain_location }} · {{ o.custom_product_snapshot?.master_name }}</div>
+                  <div class="text-sm text-tea-600">{{ o.custom_product_snapshot?.tea_garden_location }} · {{ o.custom_product_snapshot?.master_name }}</div>
                 </div>
                 <div class="text-right">
                   <div class="font-serif text-xl">£{{ o.total_amount }}</div>

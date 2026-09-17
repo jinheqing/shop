@@ -5,9 +5,9 @@ import { api } from '@/api/client'
 
 const sections = ref<any[]>([
   { id: 1, page_key: 'home', section_key: 'hero', title: 'Home → Hero Banner', content: { headline: 'Pu\'er Tea, Traceable to the Mountain.', subheadline: 'Single origin, SGS certified, 24/7 live streamed from Yunnan.', cta_text: 'Create Your Bespoke →', cta_link: '/bespoke' }, updated_by: 'Admin Root', updated_at: '2026-09-15T10:00:00Z' },
-  { id: 2, page_key: 'home', section_key: 'live_strip', title: 'Home → Live Strip Heading', content: { heading: 'Live From the Tea Mountains', subheading: 'Watch your tea being picked, rolled and sun-dried in real time.' }, updated_by: 'Admin Root', updated_at: '2026-09-15T10:00:00Z' },
-  { id: 3, page_key: 'tea_mountains', section_key: 'intro', title: 'Tea Mountains → Intro', content: { heading: 'Six Mountains. One Promise.', body: 'Iceland · Banzhang · Jingmai · Nanruo · Mangpeng · Laobanzhang — each GPS tagged, master identified.' }, updated_by: 'Admin Root', updated_at: '2026-09-15T10:00:00Z' },
-  { id: 4, page_key: 'bespoke', section_key: 'how_it_works', title: 'Bespoke → How It Works', content: { steps: [ '1. Pick mountain & roast', '2. Choose packaging', '3. We quote within 24h', '4. Tea arrives in 45 days' ] }, updated_by: 'Admin Root', updated_at: '2026-09-14T09:00:00Z' },
+  { id: 2, page_key: 'home', section_key: 'live_strip', title: 'Home → Live Strip Heading', content: { heading: 'Live From the Tea Gardens', subheading: 'Watch your tea being picked, rolled and sun-dried in real time.' }, updated_by: 'Admin Root', updated_at: '2026-09-15T10:00:00Z' },
+  { id: 3, page_key: 'tea_gardens', section_key: 'intro', title: 'Tea Gardens → Intro', content: { heading: 'Six Tea Gardens. One Promise.', body: '曼岗 · 景迈 · 大乌岽 · 贺开 · 翁基 · 多依 — 每片茶园精确到村，师傅实名。' }, updated_by: 'Admin Root', updated_at: '2026-09-15T10:00:00Z' },
+  { id: 4, page_key: 'bespoke', section_key: 'how_it_works', title: 'Bespoke → How It Works', content: { steps: [ '1. Pick tea garden & roast', '2. Choose packaging', '3. We quote within 24h', '4. Tea arrives in 45 days' ] }, updated_by: 'Admin Root', updated_at: '2026-09-14T09:00:00Z' },
   { id: 5, page_key: 'quality', section_key: 'intro', title: 'Quality → SGS Intro', content: { heading: 'Independently Tested. Always.', body: 'Every batch tested for pesticides, heavy metals, microbiology, flavonoid profile.' }, updated_by: 'Admin Root', updated_at: '2026-09-13T14:00:00Z' },
 ])
 
