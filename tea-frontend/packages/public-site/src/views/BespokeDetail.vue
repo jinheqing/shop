@@ -21,7 +21,7 @@ onMounted(async () => {
     // Demo fallback
     product.value = {
       id: 1, product_token: token, title: '邦东古树饼', tea_type: 'raw_puer', tea_shape: 'cake',
-      tea_garden_location: '云南省临沧市临翔区邦东乡曼岗村茶园', master_name: '李师傅', raw_tea_source: '云南省临沧市临翔区邦东乡曼岗村茶园',
+      tea_garden_location: '云南省 · 临沧市', master_name: '李师傅', raw_tea_source: '云南省 · 临沧市',
       unit_price: 68.5, quantity: 42, shipping_cost: 120, lead_time: '45 days',
       harvest_date: '2024-04-15', roasting_date: '2024-08-20', status: 'published', version: 1,
       inner_packaging: '棉纸', outer_packaging: '木箱',

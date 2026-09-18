@@ -12,6 +12,7 @@ import (
 	"tea-system/internal/models"
 	"tea-system/internal/repository"
 	"tea-system/internal/service"
+	"tea-system/internal/util"
 )
 
 // LiveRoomHandler — 直播间 CRUD + 状态机
@@ -420,7 +421,7 @@ func (h *LiveRoomHandler) PublicLiveRooms(c *gin.Context) {
 			RoomID:      r.RoomID,
 			RoomName:    r.RoomName,
 			RoomType:    r.RoomType,
-			Location:    r.Location,
+			Location:    util.SanitizeGardenLocation(r.Location),
 			Description: r.Description,
 			Status:      r.Status,
 		})

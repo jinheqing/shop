@@ -13,7 +13,7 @@ onMounted(async () => {
   catch {
     product.value = {
       title: '邦东古树饼',
-      tea_garden_location: '云南省临沧市临翔区邦东乡曼岗村茶园',
+      tea_garden_location: '云南省 · 临沧市',
       master_name: '王师傅',
       harvest_date: '2026-04-12',
       roasting_date: '2026-05-20',

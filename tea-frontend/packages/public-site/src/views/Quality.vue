@@ -12,9 +12,9 @@ async function load() {
     if (got.length) { reports.value = got; return }
   } catch {
     reports.value = [
-      { report_number: 'SGS-2025-YN-001', tea_garden: '曼岗村茶园', pesticide_nd_limit: 'ND (≤0.01 ppm)', heavy_metals: 'ND', microbiology: 'Passed', status: 'Passed', issued_at: '2025-04-15' },
-      { report_number: 'SGS-2025-YN-002', tea_garden: '景迈村茶园', pesticide_nd_limit: 'ND (≤0.01 ppm)', heavy_metals: 'ND', microbiology: 'Passed', status: 'Passed', issued_at: '2025-04-12' },
-      { report_number: 'SGS-2025-YN-003', tea_garden: '班章村茶园', pesticide_nd_limit: 'ND (≤0.01 ppm)', heavy_metals: 'ND', microbiology: 'Passed', status: 'Passed', issued_at: '2025-03-28' },
+      { report_number: 'SGS-2025-YN-001', tea_garden: '云南省 · 临沧市', pesticide_nd_limit: 'ND (≤0.01 ppm)', heavy_metals: 'ND', microbiology: 'Passed', status: 'Passed', issued_at: '2025-04-15' },
+      { report_number: 'SGS-2025-YN-002', tea_garden: '云南省 · 普洱市', pesticide_nd_limit: 'ND (≤0.01 ppm)', heavy_metals: 'ND', microbiology: 'Passed', status: 'Passed', issued_at: '2025-04-12' },
+      { report_number: 'SGS-2025-YN-003', tea_garden: '云南省 · 西双版纳州', pesticide_nd_limit: 'ND (≤0.01 ppm)', heavy_metals: 'ND', microbiology: 'Passed', status: 'Passed', issued_at: '2025-03-28' },
     ]
   } finally { loading.value = false }
 }

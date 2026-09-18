@@ -31,9 +31,9 @@ onMounted(async () => {
         <h2 class="font-serif text-3xl text-tea-900 mb-8">🌱 24/7 Garden Cameras</h2>
         <div class="grid md:grid-cols-3 gap-6">
           <div v-for="p in (presets.length ? presets : [
-            { name: '云南省临沧市临翔区邦东乡曼岗村茶园', location: '临沧', camera_rtmp_url: 'rtmp://localhost:1935/slow/manzhang', status: 'live' },
-            { name: '云南省西双版纳州勐海县布朗山乡班章村茶园', location: '勐海', camera_rtmp_url: 'rtmp://localhost:1935/slow/banzhang', status: 'live' },
-            { name: '云南省普洱市澜沧拉祜族自治县惠民镇景迈村茶园', location: '澜沧', camera_rtmp_url: 'rtmp://localhost:1935/slow/jingmai', status: 'live' },
+            { name: '云南省 · 临沧市 · 云雾茶区', location: '临沧', camera_rtmp_url: 'rtmp://localhost:1935/slow/manzhang', status: 'live' },
+            { name: '云南省 · 西双版纳州 · 布朗山茶区', location: '西双版纳', camera_rtmp_url: 'rtmp://localhost:1935/slow/banzhang', status: 'live' },
+            { name: '云南省 · 普洱市 · 澜沧茶区', location: '普洱', camera_rtmp_url: 'rtmp://localhost:1935/slow/jingmai', status: 'live' },
           ])" :key="p.name" class="rounded-2xl overflow-hidden card-hover bg-white border border-tea-100">
             <div class="relative aspect-video bg-tea-900 flex items-center justify-center text-tea-200">
               <div class="text-center">

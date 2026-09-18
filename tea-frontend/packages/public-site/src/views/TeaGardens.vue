@@ -13,12 +13,12 @@ async function load() {
     if (got.length) { gardens.value = got; return }
   } catch (e) {
     gardens.value = [
-      { name: '云南省临沧市临翔区邦东乡曼岗村茶园', location: '临沧 · 云南', description: '古树普洱核心产区，海拔 1800m+，终年云雾缭绕', camera_rtmp_url: 'rtmp://localhost:1935/slow/manzhang' },
-      { name: '云南省西双版纳州勐海县布朗山乡班章村茶园', location: '勐海 · 云南', description: '班章王者之地，乔木古树，浓烈霸道', camera_rtmp_url: 'rtmp://localhost:1935/slow/banzhang' },
-      { name: '云南省普洱市澜沧拉祜族自治县惠民镇景迈村茶园', location: '澜沧 · 云南', description: '景迈千年万亩古茶园，布朗族与傣族世代守护', camera_rtmp_url: 'rtmp://localhost:1935/slow/jingmai' },
-      { name: '云南省西双版纳州勐海县勐海镇贺开村茶园', location: '勐海 · 云南', description: '贺开古树茶园，茶气醇厚，回甘持久' },
-      { name: '云南省临沧市临翔区南美乡多依村茶园', location: '临沧 · 云南', description: '南美大雪山，雪水灌溉，甜柔清雅' },
-      { name: '云南省普洱市澜沧拉祜族自治县惠民镇翁基村茶园', location: '澜沧 · 云南', description: '翁基布朗族古寨，传统手工制茶' },
+      { name: '云南省 · 临沧市 · 云雾茶区', location: '临沧 · 云南', description: '古树普洱核心产区，高海拔终年云雾缭绕', camera_rtmp_url: 'rtmp://localhost:1935/slow/manzhang' },
+      { name: '云南省 · 西双版纳州 · 布朗山茶区', location: '西双版纳 · 云南', description: '王者之地，乔木古树，浓烈霸道', camera_rtmp_url: 'rtmp://localhost:1935/slow/banzhang' },
+      { name: '云南省 · 普洱市 · 澜沧茶区', location: '普洱 · 云南', description: '千年万亩古茶园，布朗族与傣族世代守护', camera_rtmp_url: 'rtmp://localhost:1935/slow/jingmai' },
+      { name: '云南省 · 西双版纳州 · 勐海茶区', location: '西双版纳 · 云南', description: '古树茶园，茶气醇厚，回甘持久' },
+      { name: '云南省 · 临沧市 · 雪山茶区', location: '临沧 · 云南', description: '大雪山，雪水灌溉，甜柔清雅' },
+      { name: '云南省 · 普洱市 · 澜沧茶区', location: '普洱 · 云南', description: '布朗族古寨，传统手工制茶' },
     ]
   } finally { loading.value = false }
 }

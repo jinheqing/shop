@@ -22,7 +22,7 @@ const data = ref({
   contact_name: '',
 })
 
-const teaGardens = ['云南省临沧市临翔区邦东乡曼岗村茶园', '云南省西双版纳州勐海县布朗山乡班章村茶园', '云南省普洱市澜沧拉祜族自治县惠民镇景迈村茶园', '云南省西双版纳州勐海县勐海镇贺开村茶园', '云南省临沧市临翔区南美乡多依村茶园', '云南省普洱市澜沧拉祜族自治县惠民镇翁基村茶园']
+const teaGardens = ['云南省 · 临沧市 · 云雾茶区', '云南省 · 西双版纳州 · 布朗山茶区', '云南省 · 普洱市 · 澜沧茶区', '云南省 · 西双版纳州 · 勐海茶区', '云南省 · 临沧市 · 雪山茶区', '云南省 · 普洱市 · 澜沧茶区']
 const teaTypes = [{v:'raw_puer', l:'生普洱 Raw Pu\'er'},{v:'ripe_puer', l:'熟普洱 Ripe Pu\'er'}]
 const roasts = [{v:'light', l:'轻火 Light Roast'},{v:'medium', l:'中火 Medium Roast'},{v:'heavy', l:'重火 Heavy Roast'}]
 const shapes = [{v:'cake', l:'饼 Tea Cake'},{v:'brick', l:'砖 Tea Brick'},{v:'tuo', l:'沱 Tuo Cha'},{v:'golden_brick', l:'金砖 Golden Brick'}]

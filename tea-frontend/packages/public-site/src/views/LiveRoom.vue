@@ -42,7 +42,7 @@ onMounted(async () => {
 
   const DEMO = {
     id: 999, room_id: 'demo-gongfu', room_name: 'Gongfu · Morning Ceremony', room_type: 'live',
-    status: 'live', location: 'Yunnan · Lincang · Manzhang Village', camera_rtmp_url: 'rtmp://localhost:1935/live/demo'
+    status: 'live', location: 'Yunnan · Lincang · Tea Mountain', camera_rtmp_url: 'rtmp://localhost:1935/live/demo'
   }
   await selectRoom(rooms.value[0] || DEMO)
   sessionTimer = window.setInterval(() => { sessionElapsed.value++ }, 1000)
@@ -182,7 +182,7 @@ const formattedElapsed = computed(() => {
             ref="v => null"
             class="lux-video-placeholder"
             autoplay muted playsinline loop
-            :poster="`data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 450'><rect fill='%230B0A09' width='800' height='450'/><text x='400' y='210' font-family='Georgia' font-size='24' fill='%23C5A572' text-anchor='middle' opacity='0.45'>Manzhang Garden · 临沧 邦东乡</text><text x='400' y='250' font-family='Georgia' font-size='14' fill='%238A8578' text-anchor='middle' opacity='0.6'>rtmp://live.ukteahouse.co.uk/{{ activeRoom?.room_id || 'demo' }}</text></svg>`"
+            :poster="`data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 450'><rect fill='%230B0A09' width='800' height='450'/><text x='400' y='210' font-family='Georgia' font-size='24' fill='%23C5A572' text-anchor='middle' opacity='0.45'>Yunnan · Tea Mountain</text><text x='400' y='250' font-family='Georgia' font-size='14' fill='%238A8578' text-anchor='middle' opacity='0.6'>rtmp://live.ukteahouse.co.uk/{{ activeRoom?.room_id || 'demo' }}</text></svg>`"
           >
           </video>
 
@@ -238,7 +238,7 @@ const formattedElapsed = computed(() => {
       -->
       <section class="lux-stage-caption">
         <h1 class="lux-caption-title">{{ activeRoom?.room_name || 'Gongfu · Morning Ceremony' }}</h1>
-        <p class="lux-caption-sub">A curated moment from Manzhang Village · Slow Camera · 24/7</p>
+        <p class="lux-caption-sub">A curated moment from the tea mountains of Yunnan · Slow Camera · 24/7</p>
       </section>
     </main>
 
@@ -265,11 +265,11 @@ const formattedElapsed = computed(() => {
       </div>
 
       <div class="lux-panel">
-        <h2 class="lux-panel-title uppercase-caps">Garden Address</h2>
+        <h2 class="lux-panel-title uppercase-caps">Garden Region</h2>
         <address class="lux-address">
-          <span>Manzhang · Bangdong Township</span>
-          <span>Lincang District · Yunnan Province</span>
-          <span>China · 100.13°E 23.87°N</span>
+          <span>Yunnan · Lincang</span>
+          <span>Tea Mountains · High Elevation</span>
+          <span>Province of Yunnan · China</span>
         </address>
       </div>
 

@@ -8,8 +8,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 
+	"tea-system/internal/models"
 	"tea-system/internal/repository"
 	"tea-system/internal/service"
+	"tea-system/internal/util"
 )
 
 // SlowPresetHandler — 慢直播独立接口组（独立于 live_rooms）
@@ -63,6 +65,7 @@ func (h *SlowPresetHandler) List(c *gin.Context) {
 }
 
 // PublicList — GET /public/slow-presets（公开路由）
+// 和 live_room PublicList 一样，strip 敏感字段 + 脱敏 Location
 func (h *SlowPresetHandler) PublicList(c *gin.Context) {
 	items, err := h.svc.PublicList(c.Request.Context())
 	if err != nil {
@@ -70,7 +73,28 @@ func (h *SlowPresetHandler) PublicList(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "internal error"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"items": items})
+
+	type PublicSlowPreset struct {
+		ID          uint64 `json:"id"`
+		RoomID      string `json:"room_id"`
+		Name        string `json:"name"`
+		Location    string `json:"location,omitempty"`
+		Description string `json:"description,omitempty"`
+		Status      string `json:"status"`
+	}
+	public := make([]PublicSlowPreset, 0, len(items))
+	for _, r := range items {
+		public = append(public, PublicSlowPreset{
+			ID:          r.ID,
+			RoomID:      r.RoomID,
+			Name:        r.RoomName,
+			Location:    util.SanitizeGardenLocation(r.Location),
+			Description: r.Description,
+			Status:      r.Status,
+		})
+	}
+	_ = models.LiveRoom{} // 确保 models import 被使用
+	c.JSON(http.StatusOK, gin.H{"items": public})
 }
 
 // Update — PUT /slow-presets/:id

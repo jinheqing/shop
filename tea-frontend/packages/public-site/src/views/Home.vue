@@ -79,9 +79,9 @@ onMounted(async () => {
       </div>
       <div class="grid md:grid-cols-3 gap-6">
         <div v-for="p in (presets.length ? presets : [
-          { name: '云南省临沧市临翔区邦东乡曼岗村茶园', location: '临沧', camera_rtmp_url: 'rtmp://localhost:1935/slow/manzhang' },
-          { name: '云南省西双版纳州勐海县布朗山乡班章村茶园', location: '勐海', camera_rtmp_url: 'rtmp://localhost:1935/slow/banzhang' },
-          { name: '云南省普洱市澜沧拉祜族自治县惠民镇景迈村茶园', location: '澜沧', camera_rtmp_url: 'rtmp://localhost:1935/slow/jingmai' },
+          { name: '云南省 · 临沧市 · 云雾茶区', location: '临沧', camera_rtmp_url: 'rtmp://localhost:1935/slow/manzhang' },
+          { name: '云南省 · 西双版纳州 · 布朗山茶区', location: '西双版纳', camera_rtmp_url: 'rtmp://localhost:1935/slow/banzhang' },
+          { name: '云南省 · 普洱市 · 澜沧茶区', location: '普洱', camera_rtmp_url: 'rtmp://localhost:1935/slow/jingmai' },
         ])" :key="p.name" class="relative rounded-2xl overflow-hidden card-hover group">
           <div class="aspect-video bg-tea-900 flex items-center justify-center text-tea-200">
             <div class="text-center">
@@ -107,9 +107,9 @@ onMounted(async () => {
       <h2 class="font-display text-3xl md:text-4xl text-tea-900 mb-12">Our Bespoke Collection</h2>
       <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
         <RouterLink v-for="cp in (featured.length ? featured : [
-          { id: 1, product_token: 'demo-1', title: '邦东古树饼', tea_garden_location: '云南省临沧市临翔区邦东乡曼岗村茶园', master_name: '李师傅', unit_price: 68.5, tea_type: 'raw_puer' },
-          { id: 2, product_token: 'demo-2', title: '班章熟砖', tea_garden_location: '云南省西双版纳州勐海县布朗山乡班章村茶园', master_name: '张师傅', unit_price: 120, tea_type: 'ripe_puer' },
-          { id: 3, product_token: 'demo-3', title: '景迈金瓜', tea_garden_location: '云南省普洱市澜沧拉祜族自治县惠民镇景迈村茶园', master_name: '王师傅', unit_price: 88, tea_type: 'raw_puer' },
+          { id: 1, product_token: 'demo-1', title: '邦东古树饼', tea_garden_location: '云南省 · 临沧市', master_name: '李师傅', unit_price: 68.5, tea_type: 'raw_puer' },
+          { id: 2, product_token: 'demo-2', title: '班章熟砖', tea_garden_location: '云南省 · 西双版纳州', master_name: '张师傅', unit_price: 120, tea_type: 'ripe_puer' },
+          { id: 3, product_token: 'demo-3', title: '景迈金瓜', tea_garden_location: '云南省 · 普洱市', master_name: '王师傅', unit_price: 88, tea_type: 'raw_puer' },
         ])" :key="cp.id" :to="`/bespoke/${cp.product_token || 'demo-' + cp.id}`" class="group block card-hover rounded-2xl overflow-hidden border border-tea-100 bg-white">
           <div class="aspect-[4/3] bg-gradient-to-br from-tea-800 to-tea-500 flex items-center justify-center text-5xl group-hover:scale-105 transition-transform duration-500">🍵</div>
           <div class="p-6">
