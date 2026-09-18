@@ -1,0 +1,28 @@
+# Go backend — 减 build context 体积
+# 默认 Dockerfile 在 tea-system/ 目录下执行 COPY
+
+# 二进制 + vendor
+server
+*.exe
+vendor/
+
+# 数据
+storage/
+migrations/  # 用 AutoMigrate，SQL 文件不走 Docker build
+
+# 敏感
+.env
+.env.local
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 临时/日志
+*.log
+*.tmp

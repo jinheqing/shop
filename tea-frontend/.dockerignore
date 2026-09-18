@@ -1,0 +1,26 @@
+# Frontend monorepo — 减 build context 体积
+# 默认 Dockerfile 在 tea-frontend/ 目录下执行 COPY
+
+# 大目录 — Dockerfile 里会先 COPY package.json 再 pnpm install
+node_modules/
+.pnpm-store/
+dist/
+**/dist/
+
+# 源码里的测试/类型检查产物
+packages/*/coverage/
+packages/*/.vite/
+
+# 敏感
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
