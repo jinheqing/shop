@@ -411,7 +411,7 @@ function clearCaptions() { captions.value = [] }
 </script>
 
 <template>
-  <div class="detail-root">
+  <div class="detail-root pt-20">
     <!-- ========== 加载中 ========== -->
     <div v-if="loading" class="lux-loading">
       <span class="lux-loading-mark uppercase-caps">Curating · Session</span>

@@ -59,7 +59,7 @@ function resolveUrl(url: string) {
 </script>
 
 <template>
-  <div class="ac-root">
+  <div class="ac-root pt-20">
     <!-- Header -->
     <header class="ac-head">
       <div class="ac-head-inner">

@@ -28,7 +28,7 @@ onMounted(async () => {
 })
 </script>
 <template>
-  <div class="min-h-screen bg-black text-white">
+  <div class="min-h-screen bg-black text-white pt-20">
     <!-- Live Camera Hero -->
     <section class="relative h-[60vh] bg-gradient-to-b from-black via-tea-950 to-black">
       <div class="absolute inset-0 flex items-center justify-center">

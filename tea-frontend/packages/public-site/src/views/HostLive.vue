@@ -286,7 +286,7 @@ function stopAudioCapture() {
 
 <template>
   <!-- ========= 手机端 H5 布局：竖屏 16:9 主视频 + 下方控制条 ========= -->
-  <div class="host-root">
+  <div class="host-root pt-20">
     <!-- 开播前配置缺失提示 -->
     <div v-if="!canStart" class="host-setup">
       <h1 class="host-setup-title">🎬 Host Setup</h1>

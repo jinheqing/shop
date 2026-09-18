@@ -166,7 +166,7 @@ const formattedElapsed = computed(() => {
     · 交互 slow 600ms ease-out, 像高级丝绒移动
     · 衬线 serif 大字 + 小型 CAPS label — typography as architecture
   -->
-  <div class="lux-root">
+  <div class="lux-root pt-20">
     
     <!-- 
       ===== 顶部品牌带 — 1px 香槟金线分隔, 小型 SERIF CAPS =====
