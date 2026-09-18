@@ -157,7 +157,7 @@ func (c *Client) handleJoinConversation(payload interface{}) {
 		return
 	}
 	c.conversationIDs[p.ConversationID] = true
-	c.hub.SubscribeConversation(p.ConversationID, c.userID)
+	c.hub.SubscribeConversation(p.ConversationID, c.userID, c.userType)
 }
 
 // handleLeaveConversation — 取消订阅会话
@@ -181,7 +181,7 @@ func (c *Client) handleJoinRoom(payload interface{}) {
 	if err := json.Unmarshal(raw, &p); err != nil || p.RoomID == "" {
 		return
 	}
-	c.hub.SubscribeBarrage(p.RoomID, c.userID)
+	c.hub.SubscribeBarrage(p.RoomID, c.userID, c.userType)
 }
 
 // handleLeaveRoom — 取消订阅直播间弹幕
@@ -218,7 +218,7 @@ func (c *Client) handleSendMessage(payload interface{}) {
 
 	// 自动订阅会话（首次发消息时）
 	c.conversationIDs[p.ConversationID] = true
-	c.hub.SubscribeConversation(p.ConversationID, c.userID)
+	c.hub.SubscribeConversation(p.ConversationID, c.userID, c.userType)
 
 	if p.MessageType == "" {
 		p.MessageType = "text"

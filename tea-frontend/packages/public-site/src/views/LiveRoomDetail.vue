@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '@/api/client'
 
@@ -12,21 +12,56 @@ const visibility = ref<string>('registered')
 
 const roomId = computed(() => route.params.id as string | undefined)
 
+// ============ LiveKit ============
+const lkClient = ref<any>(null)
+const lkConnected = ref(false)
+const lkJoinLoading = ref(false)
+const hasLiveKitSDK = ref(false)
+const remoteVideoEl = ref<HTMLVideoElement | null>(null)
+
+// ============ 字幕 / 翻译 ============
+const asrWS = ref<WebSocket | null>(null)
+const asrConnected = ref(false)
+const microphoneEnabled = ref(false)
+const audioStream = ref<MediaStream | null>(null)
+const audioProcessor = ref<ScriptProcessorNode | null>(null)
+const audioSource = ref<MediaStreamAudioSourceNode | null>(null)
+
+// 字幕队列（时间戳有序，latest 在最后）
+const captions = ref<Array<{
+  id: number
+  type: 'partial' | 'final'
+  speaker: 'host' | 'me'
+  text: string
+  translation?: string
+  lang: string
+  ts: number
+}>>([])
+let captionSeq = 0
+
+const showTranslation = ref(true)
+const sourceLang = ref<'zh' | 'en' | 'auto'>('auto')
+
+const targetLang = computed(() => {
+  if (sourceLang.value === 'zh') return 'en'
+  if (sourceLang.value === 'en') return 'zh'
+  return 'auto'
+})
+
+const isLoggedIn = () => !!localStorage.getItem('user_token')
+
 onMounted(async () => {
   if (!roomId.value) { error.value = 'Missing room ID'; loading.value = false; return }
   try {
-    // 带 auth header 尝试访问（后端 LiveAccessMiddleware 会处理可见性）
     const data: any = await api.get(`/live-rooms/${roomId.value}`)
     room.value = data
     visibility.value = data?.visibility || 'registered'
   } catch (err: any) {
     const status = err?.code || 0
     if (status === 403 || (typeof err === 'string' && err.includes('not accessible'))) {
-      // 403 → restricted
       visibility.value = 'restricted'
       error.value = 'restricted'
     } else if (status === 401) {
-      // 401 → registered + 未登录
       visibility.value = 'registered'
       error.value = 'login_required'
     } else {
@@ -35,14 +70,183 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+
+  try {
+    const mod = await import('livekit-client').catch(() => null)
+    if (mod?.Room) { hasLiveKitSDK.value = true }
+  } catch {}
 })
 
-const isLoggedIn = () => !!localStorage.getItem('user_token')
+onUnmounted(() => {
+  leaveLiveKit()
+  closeASR()
+})
 
 function goLogin() {
   const redirect = encodeURIComponent(route.fullPath)
   router.push({ path: '/magic-link', query: { redirect } })
 }
+
+// ============ LiveKit join (subscribe-only viewer) ============
+async function joinLiveKit() {
+  if (!hasLiveKitSDK.value || !room.value) { alert('LiveKit SDK unavailable'); return }
+  lkJoinLoading.value = true
+  try {
+    const identity = localStorage.getItem('user_token')
+      ? 'viewer-' + room.value.room_id
+      : 'guest-' + room.value.room_id
+    const resp: any = await api.post('/livekit/token', { room_name: room.value.room_id, identity })
+    const token = resp?.token
+    if (!token) throw new Error('no token')
+    const { Room, RoomEvent, VideoPresets } = await import('livekit-client')
+    const r = new Room({ autoSubscribe: true, dynacast: true, videoCaptureDefaults: { resolution: VideoPresets.h720 } })
+    lkClient.value = r
+
+    // 订阅远端视频轨（host 发布的）
+    r.on(RoomEvent.TrackSubscribed, (track: any, _pub: any, participant: any) => {
+      if (track.kind === 'video' && remoteVideoEl.value) {
+        const el = track.attach()
+        remoteVideoEl.value.appendChild(el)
+      }
+    })
+    r.on(RoomEvent.TrackUnsubscribed, (track: any) => {
+      try { track.detach() } catch {}
+    })
+
+    await r.connect(import.meta.env.VITE_LIVEKIT_URL || 'wss://tea.livekit.cloud', token)
+    lkConnected.value = true
+  } catch (e: any) {
+    alert('LiveKit connect failed: ' + (e?.message || String(e)))
+  } finally { lkJoinLoading.value = false }
+}
+
+async function leaveLiveKit() {
+  try {
+    await lkClient.value?.disconnect()
+  } catch {}
+  lkConnected.value = false
+  // detach 所有挂在 video 元素上的旧 track
+  if (remoteVideoEl.value) {
+    remoteVideoEl.value.innerHTML = ''
+  }
+}
+
+// ============ ASR + 翻译插件 ============
+// 前端采集麦克风 PCM → tea-translate /translate/asr-stream WS
+// 得到 partial（实时识别）和 final（识别+翻译）字幕
+
+function asrWSURL() {
+  // tea-translate 直接暴露 /translate/asr-stream
+  // 或走 Go 代理：这里直接直连 translate 服务（默认 8090）
+  const host = window.location.hostname || 'localhost'
+  const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
+  return `${proto}://${host}:8090/translate/asr-stream`
+}
+
+async function openASR() {
+  if (asrWS.value?.readyState === WebSocket.OPEN) return
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: { channelCount: 1, sampleRate: 16000, echoCancellation: true, noiseSuppression: true },
+      video: false,
+    })
+    audioStream.value = stream
+    microphoneEnabled.value = true
+
+    // 建立到 tea-translate 的 WebSocket
+    asrWS.value = new WebSocket(asrWSURL())
+    asrWS.value.binaryType = 'arraybuffer'
+
+    asrWS.value.onopen = () => {
+      asrConnected.value = true
+      // 首帧发配置
+      const cfg = { target_lang: targetLang.value === 'auto' ? 'auto' : targetLang.value }
+      asrWS.value?.send(JSON.stringify(cfg))
+      startAudioCapture(stream)
+    }
+    asrWS.value.onmessage = (ev) => {
+      try {
+        const msg = JSON.parse(ev.data)
+        if (msg.type === 'partial') {
+          pushCaption({ type: 'partial', speaker: 'me', text: msg.text, lang: 'auto', ts: Date.now() })
+        } else if (msg.type === 'final') {
+          pushCaption({
+            type: 'final', speaker: 'me',
+            text: msg.text,
+            translation: msg.translation,
+            lang: 'auto', ts: Date.now(),
+          })
+        }
+      } catch {}
+    }
+    asrWS.value.onclose = () => {
+      asrConnected.value = false
+      stopAudioCapture()
+    }
+    asrWS.value.onerror = () => {
+      asrConnected.value = false
+    }
+  } catch (e: any) {
+    alert('Microphone access failed: ' + (e?.message || String(e)))
+  }
+}
+
+function closeASR() {
+  stopAudioCapture()
+  try { asrWS.value?.close() } catch {}
+  asrWS.value = null
+  asrConnected.value = false
+  microphoneEnabled.value = false
+}
+
+async function toggleASR() {
+  if (asrConnected.value) closeASR()
+  else await openASR()
+}
+
+function startAudioCapture(stream: MediaStream) {
+  if (!asrWS.value) return
+  const ctx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 })
+  const source = ctx.createMediaStreamSource(stream)
+  const processor = ctx.createScriptProcessor(4096, 1, 1)
+
+  processor.onaudioprocess = (ev) => {
+    if (asrWS.value?.readyState !== WebSocket.OPEN) return
+    const input = ev.inputBuffer.getChannelData(0)
+    // float32 → int16 PCM
+    const int16 = new Int16Array(input.length)
+    for (let i = 0; i < input.length; i++) {
+      const s = Math.max(-1, Math.min(1, input[i]))
+      int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF
+    }
+    asrWS.value.send(int16.buffer)
+  }
+
+  source.connect(processor)
+  processor.connect(ctx.destination) // keep flowing
+  audioSource.value = source
+  audioProcessor.value = processor
+}
+
+function stopAudioCapture() {
+  try { audioProcessor.value?.disconnect() } catch {}
+  try { audioSource.value?.disconnect() } catch {}
+  audioProcessor.value = null
+  audioSource.value = null
+  audioStream.value?.getTracks().forEach(t => t.stop())
+  audioStream.value = null
+  microphoneEnabled.value = false
+}
+
+function pushCaption(cap: Omit<typeof captions.value[number], 'id'>) {
+  captions.value.push({ id: ++captionSeq, ...cap })
+  // 只保留最近 50 条 final + 最近 3 条 partial，避免刷屏
+  const finals = captions.value.filter(c => c.type === 'final').slice(-50)
+  const partials = captions.value.filter(c => c.type === 'partial').slice(-3)
+  captions.value = [...finals, ...partials]
+}
+
+function clearCaptions() { captions.value = [] }
 </script>
 
 <template>
@@ -101,18 +305,63 @@ function goLogin() {
         <span class="lux-live-title uppercase-caps">{{ room.room_name || 'Private Session' }}</span>
         <span class="lux-live-visibility lux-live-visibility--{{ visibility }} uppercase-caps">{{ visibility }}</span>
       </header>
+
+      <!-- 主视频舞台 -->
       <div class="lux-live-stage">
-        <div class="lux-video-placeholder" style="
-          background: #0B0A09;
-          display: flex; align-items: center; justify-content: center;
-          font-family: 'Cormorant Garamond', serif;
-          color: #C5A572; font-size: 18px; letter-spacing: 0.15em;
-          border-radius: 2px;
-          min-height: 400px;
-        ">
-          Live stream · Connecting
+        <!-- LiveKit 远端视频 -->
+        <div v-if="lkConnected" ref="remoteVideoEl" class="lux-video-host"></div>
+
+        <!-- PIP: 本地摄像头（只在 host 权限时有用） -->
+        <video v-show="lkConnected" autoplay muted playsinline class="lux-video-pip" />
+
+        <!-- 未连接时的占位 -->
+        <div v-if="!lkConnected" class="lux-video-placeholder">
+          <span class="lux-placeholder-text">Live stream · Awaiting connection</span>
+        </div>
+
+        <!-- 字幕叠层（舞台下缘） -->
+        <div v-if="captions.length" class="lux-caption-overlay">
+          <template v-for="(cap, i) in captions.slice(-3)" :key="cap.id">
+            <div :class="['lux-caption-line', cap.type === 'partial' ? 'lux-caption-line--partial' : '']">
+              <span class="lux-caption-src">{{ cap.text }}</span>
+              <span v-if="showTranslation && cap.translation" class="lux-caption-dst">— {{ cap.translation }}</span>
+            </div>
+          </template>
         </div>
       </div>
+
+      <!-- 控制条 -->
+      <div class="lux-controls">
+        <button v-if="!lkConnected" @click="joinLiveKit" :disabled="lkJoinLoading" class="lux-btn lux-btn-primary">
+          <span class="uppercase-caps">{{ lkJoinLoading ? 'Connecting...' : 'Join · Broadcast' }}</span>
+        </button>
+        <template v-else>
+          <button @click="leaveLiveKit" class="lux-btn lux-btn-ghost">
+            <span class="uppercase-caps">Leave</span>
+          </button>
+        </template>
+
+        <!-- 翻译插件按钮 -->
+        <button :class="['lux-btn', asrConnected ? 'lux-btn-active' : 'lux-btn-ghost']" @click="toggleASR">
+          <span class="uppercase-caps">{{ asrConnected ? 'Listening · Live' : 'Translate · Speech' }}</span>
+        </button>
+
+        <div v-if="asrConnected" class="lux-lang-switch">
+          <button :class="['lux-lang-btn', sourceLang === 'auto' && 'lux-lang-btn--active']" @click="sourceLang = 'auto'">Auto</button>
+          <button :class="['lux-lang-btn', sourceLang === 'zh' && 'lux-lang-btn--active']" @click="sourceLang = 'zh'">中文</button>
+          <button :class="['lux-lang-btn', sourceLang === 'en' && 'lux-lang-btn--active']" @click="sourceLang = 'en'">EN</button>
+          <button class="lux-lang-btn" @click="showTranslation = !showTranslation">
+            {{ showTranslation ? 'Hide Trans' : 'Show Trans' }}
+          </button>
+          <button class="lux-lang-btn" @click="clearCaptions">Clear</button>
+        </div>
+
+        <span class="lux-status-pill" :class="asrConnected ? 'lux-status-pill--on' : 'lux-status-pill--off'">
+          <span class="lux-status-dot"></span>
+          {{ asrConnected ? 'ASR Streaming' : 'ASR Offline' }}
+        </span>
+      </div>
+
       <p class="lux-live-desc">{{ room.description || 'A curated private session.' }}</p>
     </div>
   </div>
@@ -127,92 +376,127 @@ function goLogin() {
   font-family: 'Inter', sans-serif;
   color: #1a1714;
   padding: 48px 32px;
-  max-width: 960px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 .uppercase-caps { text-transform: uppercase; letter-spacing: 0.28em; }
 
-.lux-loading {
-  height: 60vh; display: flex; align-items: center; justify-content: center;
-}
-.lux-loading-mark {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 14px; color: #C5A572;
-}
+/* ====== Loading / Denied ====== */
+.lux-loading { height: 60vh; display: flex; align-items: center; justify-content: center; }
+.lux-loading-mark { font-family: 'Cormorant Garamond', serif; font-size: 14px; color: #C5A572; }
 
-.lux-denied {
-  height: 60vh; display: flex; align-items: center; justify-content: center;
-}
+.lux-denied { height: 60vh; display: flex; align-items: center; justify-content: center; }
 .lux-denied-card {
-  text-align: center;
-  padding: 64px 48px;
-  border: 1px solid #D8D0C4;
-  border-radius: 2px;
-  background: #F8F5EF;
-  max-width: 520px;
+  text-align: center; padding: 64px 48px;
+  border: 1px solid #D8D0C4; border-radius: 2px;
+  background: #F8F5EF; max-width: 520px;
 }
-.lux-denied-title {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 16px; font-weight: 500;
-  color: #C5A572;
-  margin: 0 0 24px;
-}
-.lux-denied-body {
-  font-size: 15px; line-height: 1.7;
-  color: #44403a;
-  font-family: 'Cormorant Garamond', serif;
-  margin: 0 0 32px;
-}
-.lux-denied-sub {
-  font-size: 12px; color: #8a8578;
-  margin-top: 20px;
-}
+.lux-denied-title { font-family: 'Cormorant Garamond', serif; font-size: 16px; font-weight: 500; color: #C5A572; margin: 0 0 24px; }
+.lux-denied-body { font-size: 15px; line-height: 1.7; color: #44403a; font-family: 'Cormorant Garamond', serif; margin: 0 0 32px; }
+.lux-denied-sub { font-size: 12px; color: #8a8578; margin-top: 20px; }
 
+/* ====== Buttons ====== */
 .lux-btn {
-  padding: 14px 32px;
-  border-radius: 2px;
-  font-size: 11px; font-weight: 400;
-  cursor: pointer;
-  transition: all 600ms ease-out;
-  letter-spacing: 0.15em;
+  padding: 14px 32px; border-radius: 2px;
+  font-size: 11px; font-weight: 400; cursor: pointer;
+  transition: all 600ms ease-out; letter-spacing: 0.15em;
   font-family: 'Inter', sans-serif;
 }
-.lux-btn-primary {
-  background: #0B0A09; color: #C5A572;
-  border: 1px solid #0B0A09;
-}
+.lux-btn-primary { background: #0B0A09; color: #C5A572; border: 1px solid #0B0A09; }
 .lux-btn-primary:hover { background: #2A2520; }
-.lux-btn-ghost {
-  background: transparent; color: #0B0A09;
-  border: 1px solid #0B0A09;
-}
+.lux-btn-ghost { background: transparent; color: #0B0A09; border: 1px solid #0B0A09; }
 .lux-btn-ghost:hover { background: rgba(11,10,9,0.05); }
+.lux-btn-active { background: #4a7c59; color: #F8F5EF; border: 1px solid #4a7c59; }
 .lux-btn-label { font-family: 'Cormorant Garamond', serif; font-size: 13px; }
 
+/* ====== Live Header ====== */
 .lux-live-bar {
   display: flex; align-items: center; gap: 14px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #D8D0C4;
-  margin-bottom: 24px;
+  padding-bottom: 20px; border-bottom: 1px solid #D8D0C4; margin-bottom: 24px;
 }
-.lux-live-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: #C5A572;
-}
-.lux-live-title {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 14px; color: #0B0A09;
-}
-.lux-live-visibility {
-  margin-left: auto;
-  font-size: 10px; color: #8a8578;
-}
+.lux-live-dot { width: 8px; height: 8px; border-radius: 50%; background: #C5A572; }
+.lux-live-title { font-family: 'Cormorant Garamond', serif; font-size: 14px; color: #0B0A09; }
+.lux-live-visibility { margin-left: auto; font-size: 10px; color: #8a8578; }
 .lux-live-visibility--restricted { color: #B4645A; }
 .lux-live-visibility--public { color: #4a7c59; }
-.lux-live-stage { margin-bottom: 20px; }
+
+/* ====== Video Stage ====== */
+.lux-live-stage {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: #0B0A09;
+  border: 1px solid rgba(197,165,114,0.18);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+.lux-video-placeholder {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+}
+.lux-placeholder-text {
+  font-family: 'Cormorant Garamond', serif;
+  color: #C5A572; font-size: 18px; letter-spacing: 0.15em; opacity: 0.5;
+}
+.lux-video-host {
+  width: 100%; height: 100%; object-fit: cover;
+}
+.lux-video-pip {
+  position: absolute; right: 16px; bottom: 80px;
+  width: 120px; height: 80px; border: 1px solid rgba(197,165,114,0.4);
+  border-radius: 2px; object-fit: cover; background: #2A2520;
+}
+
+/* ====== 字幕叠层 ====== */
+.lux-caption-overlay {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 20px 32px 60px;
+  background: linear-gradient(transparent 0%, rgba(11,10,9,0.85) 100%);
+  pointer-events: none;
+  display: flex; flex-direction: column; gap: 4px;
+  text-align: center;
+}
+.lux-caption-line {
+  font-family: 'Cormorant Garamond', serif;
+  color: #F8F5EF; font-size: 22px; line-height: 1.3;
+  text-shadow: 0 2px 16px rgba(0,0,0,0.6);
+  transition: opacity 300ms;
+}
+.lux-caption-line--partial { opacity: 0.6; font-style: italic; }
+.lux-caption-dst {
+  color: #C5A572; font-size: 18px; letter-spacing: 0.02em;
+  margin-left: 8px;
+}
+
+/* ====== Controls ====== */
+.lux-controls {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+  padding-bottom: 20px; border-bottom: 1px solid #D8D0C4; margin-bottom: 20px;
+}
+.lux-lang-switch {
+  display: flex; gap: 4px; margin-left: auto;
+}
+.lux-lang-btn {
+  padding: 6px 14px; font-size: 10px; letter-spacing: 0.12em;
+  border: 1px solid #D8D0C4; background: transparent; color: #44403a;
+  border-radius: 2px; cursor: pointer; text-transform: uppercase;
+  font-family: 'Inter', sans-serif; font-weight: 400;
+}
+.lux-lang-btn--active { border-color: #C5A572; color: #C5A572; }
+.lux-status-pill {
+  font-size: 10px; letter-spacing: 0.15em;
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 12px; border-radius: 2px;
+  border: 1px solid #D8D0C4;
+  font-family: 'Inter', sans-serif;
+  text-transform: uppercase;
+}
+.lux-status-pill--on { color: #4a7c59; border-color: #4a7c59; }
+.lux-status-pill--off { color: #8a8578; }
+.lux-status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
 .lux-live-desc {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 16px; line-height: 1.6;
-  color: #44403a;
+  font-size: 16px; line-height: 1.6; color: #44403a;
 }
 </style>

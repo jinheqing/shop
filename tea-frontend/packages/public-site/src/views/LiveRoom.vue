@@ -79,7 +79,9 @@ async function ensureRoomChat() {
     conv = list.find((c: any) => c.title === `room-${roomID.value}`)
   } catch {}
   if (!conv) {
-    try { conv = await api.post('/conversations', { title: `room-${roomID.value}`, conversation_type: 'group' }) as any } catch {}
+    // 新建 group 会话 — 后端 Create 要求 other_staff_id/other_user_id 二选一
+    // 这里给自己也创建一条订阅（staff_id=0 占位，或传任意有效 staff id）
+    try { conv = await api.post('/conversations', { title: `room-${roomID.value}`, other_staff_id: 1 }) as any } catch {}
   }
   if (!conv) return
   chatOpen.value = true
@@ -90,9 +92,11 @@ async function ensureRoomChat() {
   } catch { chatMessages.value = [] }
   const token = localStorage.getItem('user_token') || localStorage.getItem('staff_token')
   if (!token) return
-  const host = window.location.hostname
+  // 与 Chat.vue 同一后端路由：/ws/im 注册在根路由，不在 /api/v1 分组
+  const host = window.location.host
+  const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
   chatWS.value?.close()
-  chatWS.value = new WebSocket(`ws://${host}:8080/api/v1/ws/im?token=${token}`)
+  chatWS.value = new WebSocket(`${proto}://${host}/ws/im?token=${token}`)
   chatWS.value.onopen = () => { wsConnected.value = true; chatWS.value?.send(JSON.stringify({ type: 'join_conversation', payload: { conversation_id: conv.id } })) }
   chatWS.value.onclose = () => { wsConnected.value = false }
   chatWS.value.onmessage = (ev) => {
@@ -121,9 +125,11 @@ async function joinLiveKit() {
   if (!hasLiveKitSDK.value) { alert('LiveKit SDK unavailable. Configure VITE_LIVEKIT_URL.'); return }
   lkJoinLoading.value = true
   try {
-    const resp: any = await api.get('/livekit/token')
-    const token = resp?.token || resp?.access_token
-    if (!token) throw new Error('no token')
+    // 后端 POST /livekit/token 要求 body: { room_name, identity }
+    const identity = localStorage.getItem('user_token') ? 'viewer-' + roomID.value : 'guest-' + roomID.value
+    const resp: any = await api.post('/livekit/token', { room_name: roomID.value, identity })
+    const token = resp?.token
+    if (!token) throw new Error('no token returned')
     const { Room, RoomEvent, VideoPresets } = await import('livekit-client')
     const room = new Room({ videoCaptureDefaults: { resolution: VideoPresets.h720 } })
     lkClient.value = room
