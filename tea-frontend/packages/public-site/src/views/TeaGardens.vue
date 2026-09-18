@@ -9,7 +9,8 @@ const loading = ref(true)
 async function load() {
   try {
     const d: any = await api.get('/public/slow-presets')
-    gardens.value = d?.items || d || []
+    const got = d?.items || d || []
+    if (got.length) { gardens.value = got; return }
   } catch (e) {
     gardens.value = [
       { name: '云南省临沧市临翔区邦东乡曼岗村茶园', location: '临沧 · 云南', description: '古树普洱核心产区，海拔 1800m+，终年云雾缭绕', camera_rtmp_url: 'rtmp://localhost:1935/slow/manzhang' },

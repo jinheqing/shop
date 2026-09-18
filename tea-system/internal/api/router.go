@@ -89,6 +89,8 @@ func (r *Router) Setup() *gin.Engine {
 		v1.GET("/public/slow-presets", r.h.SlowPreset.PublicList)
 		v1.POST("/live-rooms/customer-request", r.h.LiveRoom.CustomerRequest)
 		v1.GET("/public/sgs-reports", r.h.SgsReport.PublicList)
+                v1.GET("/public/live-rooms", r.h.LiveRoom.PublicLiveRooms)
+                v1.GET("/custom-products/published", r.h.CustomProduct.Published)
 
 		// ---------- 支付 Webhook ----------
 		v1.POST("/webhooks/2checkout", r.h.Payment.Handle2CheckoutWebhook)

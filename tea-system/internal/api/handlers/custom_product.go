@@ -531,3 +531,18 @@ func (h *CustomProductHandler) GetByToken(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, p)
 }
+
+// Published — GET /custom-products/published（公开查询已发布定制茶）
+func (h *CustomProductHandler) Published(c *gin.Context) {
+	items, total, err := h.repo.List(c.Request.Context(), repository.ListFilter{
+		Status: "published",
+		Page:   1,
+		Size:   20,
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("custom_product: published list failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "internal error"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"items": items, "total": total})
+}

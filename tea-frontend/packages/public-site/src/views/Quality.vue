@@ -8,7 +8,8 @@ const loading = ref(true)
 async function load() {
   try {
     const d: any = await api.get('/public/sgs-reports')
-    reports.value = d?.items || d || []
+    const got = d?.items || d || []
+    if (got.length) { reports.value = got; return }
   } catch {
     reports.value = [
       { report_number: 'SGS-2025-YN-001', tea_garden: '曼岗村茶园', pesticide_nd_limit: 'ND (≤0.01 ppm)', heavy_metals: 'ND', microbiology: 'Passed', status: 'Passed', issued_at: '2025-04-15' },

@@ -390,3 +390,40 @@ func (h *LiveRoomHandler) SystemCreate(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, room)
 }
+
+// PublicLiveRooms — GET /public/live-rooms（公开查询，仅暴露安全字段）
+func (h *LiveRoomHandler) PublicLiveRooms(c *gin.Context) {
+	items, _, err := h.svc.List(c.Request.Context(), repository.LiveRoomListFilter{
+		Status: "live",
+		Page:   1,
+		Size:   50,
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("live_room: public list failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "internal error"})
+		return
+	}
+	// Strip sensitive fields
+	type PublicRoom struct {
+		ID          uint64 `json:"id"`
+		RoomID      string `json:"room_id"`
+		RoomName    string `json:"room_name"`
+		RoomType    string `json:"room_type"`
+		Location    string `json:"location,omitempty"`
+		Description string `json:"description,omitempty"`
+		Status      string `json:"status"`
+	}
+	public := make([]PublicRoom, 0, len(items))
+	for _, r := range items {
+		public = append(public, PublicRoom{
+			ID:          r.ID,
+			RoomID:      r.RoomID,
+			RoomName:    r.RoomName,
+			RoomType:    r.RoomType,
+			Location:    r.Location,
+			Description: r.Description,
+			Status:      r.Status,
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{"items": public})
+}

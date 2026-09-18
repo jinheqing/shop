@@ -11,7 +11,7 @@ export interface LiveRoom {
   peak_viewers?: number
 }
 
-export const getSlowPresets = () => api.get<any, any[]>('/slow-presets')
-export const listLiveRooms = () => api.get<any, { items: LiveRoom[] }>('/live-rooms')
+export const getSlowPresets = () => api.get<any, any[]>('/public/slow-presets')
+export const listLiveRooms = () => api.get<any, { items: LiveRoom[] }>('/public/live-rooms')
 export const getLivekitToken = (roomName: string, identity: string) =>
   api.post<any, any>('/livekit/token', { room_name: roomName, identity })
