@@ -20,7 +20,7 @@ type SiteContentHandler struct {
 
 func NewSiteContentHandler(db *gorm.DB) *SiteContentHandler { return &SiteContentHandler{DB: db} }
 
-// List — GET /site-contents
+// List — GET /site-contents (staff only, 带 page_key 过滤)
 func (h *SiteContentHandler) List(c *gin.Context) {
 	key := c.Query("page_key")
 	var items []models.SiteContent
@@ -34,6 +34,28 @@ func (h *SiteContentHandler) List(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"items": items, "total": len(items)})
+}
+
+// GetPublic — GET /public/site-contents/:key (公开, 不需要登录)
+// 前端 Home/About 等页面用来动态拉取 CMS 配置的首页内容
+func (h *SiteContentHandler) GetPublic(c *gin.Context) {
+	key := c.Param("key")
+	if key == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "key required"})
+		return
+	}
+
+	// 只返回 is_published = true 的条目
+	var items []models.SiteContent
+	if err := h.DB.Where("page_key = ? AND is_published = ?", key, true).
+		Order("section_key").
+		Limit(100).
+		Find(&items).Error; err != nil {
+		log.Error().Err(err).Str("key", key).Msg("site_content: public lookup failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "lookup failed"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"items": items})
 }
 
 // Update — PUT /site-contents/:id
