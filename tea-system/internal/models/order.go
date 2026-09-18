@@ -41,10 +41,10 @@ type Order struct {
 	UpdatedAt             time.Time `gorm:"column:updated_at;not null" json:"updated_at"`
 	DeletedAt             *time.Time `gorm:"column:deleted_at" json:"-"`
 
-	User          *User         `gorm:"foreignKey:UserID" json:"user,omitempty"`
-	Staff         *Staff        `gorm:"foreignKey:StaffID" json:"staff,omitempty"`
-	CustomProduct *CustomProduct `gorm:"foreignKey:CustomProductID" json:"custom_product,omitempty"`
-	LiveRoom      *LiveRoom     `gorm:"foreignKey:LiveRoomID" json:"live_room,omitempty"`
+	User          *User         `gorm:"-:migration;foreignKey:UserID" json:"user,omitempty"`
+	Staff         *Staff        `gorm:"-:migration;foreignKey:StaffID" json:"staff,omitempty"`
+	CustomProduct *CustomProduct `gorm:"-:migration;foreignKey:CustomProductID" json:"custom_product,omitempty"`
+	LiveRoom      *LiveRoom     `gorm:"-:migration;foreignKey:LiveRoomID" json:"live_room,omitempty"`
 }
 
 func (Order) TableName() string {

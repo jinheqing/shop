@@ -64,7 +64,7 @@ type User struct {
 	DeletedAt             *time.Time `gorm:"column:deleted_at" json:"-"`
 
 	// Associations
-	PreferredAdvisor *Staff `gorm:"foreignKey:PreferredAdvisorID" json:"preferred_advisor,omitempty"`
+	PreferredAdvisor *Staff `gorm:"-:migration;foreignKey:PreferredAdvisorID" json:"preferred_advisor,omitempty"`
 }
 
 func (User) TableName() string {

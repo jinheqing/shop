@@ -255,7 +255,7 @@
       </el-alert>
 
       <!-- 方案选择 -->
-      <el-tabs v-model="goLiveRoom?.push_source || 'app_webrtc'">
+      <el-tabs :model-value="goLiveRoom?.push_source || 'app_webrtc'" @update:model-value="(v) => { if(goLiveRoom) goLiveRoom.push_source = v }">
         <!-- === 手机 App WebRTC 推流 (推荐, 支持连麦+翻译) === -->
         <el-tab-pane label="📱 Mobile App WebRTC" name="app_webrtc">
           <div class="text-xs text-slate-500 mb-3">

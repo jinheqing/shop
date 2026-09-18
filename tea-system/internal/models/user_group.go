@@ -18,7 +18,7 @@ type UserGroup struct {
 	DeletedAt   *time.Time `gorm:"column:deleted_at" json:"-"`
 
 	// 成员列表（optional preload）
-	Members []UserGroupMember `gorm:"foreignKey:GroupID" json:"members,omitempty"`
+	Members []UserGroupMember `gorm:"-:migration;foreignKey:GroupID" json:"members,omitempty"`
 }
 
 func (UserGroup) TableName() string {
@@ -33,7 +33,7 @@ type UserGroupMember struct {
 	AddedAt        time.Time `gorm:"column:added_at;not null" json:"added_at"`
 	AddedByStaffID *uint64   `gorm:"column:added_by_staff_id" json:"added_by_staff_id,omitempty"`
 
-	User *User `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	User *User `gorm:"-:migration;foreignKey:UserID" json:"user,omitempty"`
 }
 
 func (UserGroupMember) TableName() string {

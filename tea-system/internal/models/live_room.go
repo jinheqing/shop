@@ -67,9 +67,9 @@ type LiveRoom struct {
 	UpdatedAt             time.Time  `gorm:"column:updated_at;not null" json:"updated_at"`
 	DeletedAt             *time.Time `gorm:"column:deleted_at" json:"-"`
 
-	Order               *Order               `gorm:"foreignKey:OrderID" json:"order,omitempty"`
-	HostStaff           *Staff               `gorm:"foreignKey:HostStaffID" json:"host_staff,omitempty"`
-	TranslationSession  *TranslationSession  `gorm:"foreignKey:TranslationSessionID" json:"translation_session,omitempty"`
+	Order               *Order               `gorm:"-:migration;foreignKey:OrderID" json:"order,omitempty"`
+	HostStaff           *Staff               `gorm:"-:migration;foreignKey:HostStaffID" json:"host_staff,omitempty"`
+	TranslationSession  *TranslationSession  `gorm:"-:migration;foreignKey:TranslationSessionID" json:"translation_session,omitempty"`
 }
 
 func (LiveRoom) TableName() string {

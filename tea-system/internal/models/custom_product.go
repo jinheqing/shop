@@ -66,9 +66,9 @@ type CustomProduct struct {
 	UpdatedAt time.Time `gorm:"column:updated_at;not null" json:"updated_at"`
 	DeletedAt *time.Time `gorm:"column:deleted_at" json:"-"`
 
-	CreatedByStaff *Staff     `gorm:"foreignKey:CreatedByStaffID" json:"created_by_staff,omitempty"`
-	ReviewedByStaff *Staff    `gorm:"foreignKey:ReviewedByStaffID" json:"reviewed_by_staff,omitempty"`
-	SgsReport      *SgsReport `gorm:"foreignKey:SgsReportID" json:"sgs_report,omitempty"`
+	CreatedByStaff *Staff     `gorm:"-:migration;foreignKey:CreatedByStaffID" json:"created_by_staff,omitempty"`
+	ReviewedByStaff *Staff    `gorm:"-:migration;foreignKey:ReviewedByStaffID" json:"reviewed_by_staff,omitempty"`
+	SgsReport      *SgsReport `gorm:"-:migration;foreignKey:SgsReportID" json:"sgs_report,omitempty"`
 }
 
 func (CustomProduct) TableName() string {

@@ -20,7 +20,7 @@ type Recording struct {
 	EndedAt         *time.Time `gorm:"column:ended_at" json:"ended_at,omitempty"`
 	CreatedAt       time.Time  `gorm:"column:created_at;not null" json:"created_at"`
 
-	LiveRoom *LiveRoom `gorm:"foreignKey:LiveRoomID" json:"live_room,omitempty"`
+	LiveRoom *LiveRoom `gorm:"-:migration;foreignKey:LiveRoomID" json:"live_room,omitempty"`
 }
 
 func (Recording) TableName() string {

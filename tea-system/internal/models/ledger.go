@@ -23,7 +23,7 @@ type DeclarationLedger struct {
 	CreatedAt                time.Time  `gorm:"column:created_at;not null" json:"created_at"`
 	UpdatedAt                time.Time  `gorm:"column:updated_at;not null" json:"updated_at"`
 
-	Order *Order `gorm:"foreignKey:OrderID" json:"order,omitempty"`
+	Order *Order `gorm:"-:migration;foreignKey:OrderID" json:"order,omitempty"`
 }
 
 func (DeclarationLedger) TableName() string {
@@ -45,7 +45,7 @@ type ForeignExchangeLedger struct {
 	CreatedAt            time.Time  `gorm:"column:created_at;not null" json:"created_at"`
 	UpdatedAt            time.Time  `gorm:"column:updated_at;not null" json:"updated_at"`
 
-	Order *Order `gorm:"foreignKey:OrderID" json:"order,omitempty"`
+	Order *Order `gorm:"-:migration;foreignKey:OrderID" json:"order,omitempty"`
 }
 
 func (ForeignExchangeLedger) TableName() string {

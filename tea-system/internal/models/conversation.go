@@ -15,8 +15,8 @@ type Conversation struct {
 	UpdatedAt       time.Time `gorm:"column:updated_at;not null" json:"updated_at"`
 	DeletedAt       *time.Time `gorm:"column:deleted_at" json:"-"`
 
-	Participants []ConversationParticipant `gorm:"foreignKey:ConversationID" json:"participants,omitempty"`
-	Messages     []Message                `gorm:"foreignKey:ConversationID" json:"messages,omitempty"`
+	Participants []ConversationParticipant `gorm:"-:migration;foreignKey:ConversationID" json:"participants,omitempty"`
+	Messages     []Message                `gorm:"-:migration;foreignKey:ConversationID" json:"messages,omitempty"`
 }
 
 func (Conversation) TableName() string {

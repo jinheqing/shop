@@ -63,12 +63,17 @@ func main() {
 
 	// ── 4. AutoMigrate 建表 ──
 	log.Info().Msg("🔨 Running AutoMigrate...")
+	// PostgreSQL: 同事务内 FK 约束检查绕过
+	db.Business.Exec("SET session_replication_role = 'replica'")
+	db.Audit.Exec("SET session_replication_role = 'replica'")
 	if err := db.Business.AutoMigrate(models.AllModels...); err != nil {
 		log.Fatal().Err(err).Msg("❌ Business DB AutoMigrate failed")
 	}
 	if err := db.Audit.AutoMigrate(models.AuditModels...); err != nil {
 		log.Fatal().Err(err).Msg("❌ Audit DB AutoMigrate failed")
 	}
+	db.Business.Exec("SET session_replication_role = 'origin'")
+	db.Audit.Exec("SET session_replication_role = 'origin'")
 	log.Info().Msg("✅ AutoMigrate complete")
 
 	// ── 5. 从 DB 加载运行时覆盖 + 创建默认管理员 ──
@@ -94,11 +99,11 @@ func main() {
 		cfg.JWT.Secret, cfg.JWT.StaffExpireMin, cfg.JWT.UserExpireMin, cfg.JWT.RefreshExpireDay,
 	)
 	mfaSvc := service.NewMFAService(staffRepo)
-	mailSvc := service.NewMailService(cfg.Mail.APIKey, cfg.App.Domain, cfg.Mail.From)
+	mailSvc := service.NewMailService(cfg.Mail.APIKey, cfg.App.Domain, cfg.Mail.FromAddr)
 	magicLinkSvc := service.NewMagicLinkService(rdb, mailSvc, cfg.App.Domain)
 
 	lkSvc := service.NewLiveKitService(cfg.LiveKit.URL, cfg.LiveKit.APIKey, cfg.LiveKit.APISecret)
-	translateSvc := service.NewTranslateService(cfg.Translate.URL)
+	translateSvc := service.NewTranslateService(cfg.TranslateServiceURL)
 	paymentSvc := service.NewPaymentService(cfg.Payment.BaseURL, cfg.Payment.APIKey, cfg.Payment.APISecret)
 
 	orderSM := service.NewOrderStateMachine()
@@ -115,10 +120,10 @@ func main() {
 
 	// IM WebSocket Hub
 	imHub := im.NewHub()
-	go imHub.Run()
+	go imHub.Start()
 
 	// ── 8. 构造 Handlers ──
-	h := &handlers.Handlers{
+	h := &api.Handlers{
 		Health:    handlers.NewHealthHandler(cfg.Server.Version),
 		StaffAuth: handlers.NewStaffAuthHandler(staffRepo, userRepo, passwordSvc, jwtSvc, mfaSvc, rdb, db.Audit),
 		UserAuth:  handlers.NewUserAuthHandler(userRepo, passwordSvc, jwtSvc, magicLinkSvc, db.Business),
@@ -139,9 +144,9 @@ func main() {
 		SlowPreset: handlers.NewSlowPresetHandler(slowPresetSvc),
 		LiveRoom:   handlers.NewLiveRoomHandler(liveRoomSvc),
 
-		Node: handlers.NewNodeHandler(nodeDeployer, healthChecker, nodeRepo, cfg.Node.WGIPStart, cfg.Node.WGIPPrefix),
+		Node: handlers.NewNodeHandler(nodeDeployer, healthChecker, nodeRepo, cfg.Node.DefaultWGIPStart, cfg.Node.WGIPPrefix),
 
-		Translate:     handlers.NewTranslateHandler(cfg.Translate.URL),
+		Translate:     handlers.NewTranslateHandler(cfg.TranslateServiceURL),
 		QRCode:        handlers.NewQRCodeHandler(db.Business),
 		DSAR:          handlers.NewDSARHandler(db.Business),
 		SiteContent:   handlers.NewSiteContentHandler(db.Business),
