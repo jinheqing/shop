@@ -53,6 +53,15 @@ func (h *TranslateHandler) Status(c *gin.Context) {
 }
 
 // GET /translate/asr — WebSocket ASR endpoint marker
+// 前端直连 tea-translate 的 WebSocket（不走 Go 代理），这里只返回 marker + 完整地址
 func (h *TranslateHandler) ASR(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"ws_endpoint": "/ws/translate/asr", "note": "upgrade connection in client"})
+	if h.FastAPIURL == "" {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "translate engine not configured"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"ws_endpoint": h.FastAPIURL + "/translate/asr-stream",
+		"note":        "connect WebSocket with binary int16 PCM audio",
+		"sample_rate": 16000,
+	})
 }

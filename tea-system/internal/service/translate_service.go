@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -37,8 +38,17 @@ type translateRequest struct {
 }
 
 // translateResponse — FastAPI /translate/text 响应体
+// Python 侧 ok() 会把数据包一层: {"code":0, "message":"ok", "data": {...}}
+// 但我们也兼容直接返回 {"translation":"xxx"} 的裸响应（防后续有人改了包装）
 type translateResponse struct {
 	Translation string `json:"translation"`
+
+	// Python ok() 包装层
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Data    *struct {
+		Translation string `json:"translation"`
+	} `json:"data"`
 }
 
 // Translate — 翻译文本。失败时返回空 string + error（调用方决定是否降级）
@@ -65,13 +75,33 @@ func (s *TranslateService) Translate(ctx context.Context, text, sourceLang, targ
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return "", io.EOF // 非 200 视为失败
+	raw, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
 	}
 
-	var out translateResponse
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
-		return "", err
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("translate http %d: %s", resp.StatusCode, string(raw))
+	}
+
+	// 先尝试 Python ok() 包装层
+	var wrapped struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+		Data    *struct {
+			Translation string `json:"translation"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(raw, &wrapped); err == nil && wrapped.Data != nil && wrapped.Data.Translation != "" {
+		return wrapped.Data.Translation, nil
+	}
+
+	// 再尝试裸响应 {"translation":"xxx"}
+	var out struct {
+		Translation string `json:"translation"`
+	}
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return "", fmt.Errorf("translate json parse: %w", err)
 	}
 	return out.Translation, nil
 }
