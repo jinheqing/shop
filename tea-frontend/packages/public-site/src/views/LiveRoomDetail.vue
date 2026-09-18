@@ -194,7 +194,12 @@ async function joinLiveKit() {
     }
 
     const { Room, RoomEvent, VideoPresets } = await import('livekit-client')
-    const r = new Room({ autoSubscribe: true, dynacast: true, videoCaptureDefaults: { resolution: VideoPresets.h720 } })
+    const r = new Room({
+      autoSubscribe: true,
+      dynacast: false,
+      adaptiveStream: true,
+      videoCaptureDefaults: { resolution: VideoPresets.h720, frameRate: 30 },
+    })
     lkClient.value = r
 
     r.on(RoomEvent.TrackSubscribed, (track: any, _pub: any, participant: any) => {
@@ -378,8 +383,25 @@ function stopAudioCapture() {
 }
 
 function pushCaption(cap: Omit<typeof captions.value[number], 'id'>) {
+  // ===== 字幕新鲜度（经验 #100024139: 以新鲜度而非完整序列做背压丢弃）=====
+  // final 到达 → 覆盖同 speaker 旧 partial（新 partial 语义上就是该 final 的草稿）
+  // partial 超过 2.5s → 直接丢弃（保证字幕永远不落后于画面）
+  const FRESH_PARTIAL_MS = 2500
+  const NOW = Date.now()
+  if (cap.type === 'final') {
+    captions.value = captions.value.filter(c => !(c.speaker === cap.speaker && c.type === 'partial'))
+  }
+  captions.value = captions.value.filter(c => {
+    if (c.type === 'partial') {
+      if (NOW - c.ts > FRESH_PARTIAL_MS) return false
+      if (cap.type === 'final' && c.speaker === cap.speaker) return false
+    }
+    return true
+  })
+
   captions.value.push({ id: ++captionSeq, ...cap })
-  // 只保留最近 50 条 final + 最近 3 条 partial，避免刷屏
+
+  // 硬上限兜底
   const finals = captions.value.filter(c => c.type === 'final').slice(-50)
   const partials = captions.value.filter(c => c.type === 'partial').slice(-3)
   captions.value = [...finals, ...partials]

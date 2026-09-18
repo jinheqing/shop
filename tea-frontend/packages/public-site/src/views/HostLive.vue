@@ -115,7 +115,13 @@ function handleBarrage(p: any) {
 async function startBroadcast() {
   try {
     const { Room, RoomEvent, VideoPresets } = await import('livekit-client')
-    const room = new Room({ autoSubscribe: false, dynacast: true, videoCaptureDefaults: { resolution: VideoPresets.h720 } })
+    const room = new Room({
+      autoSubscribe: false,
+      dynacast: false,
+      adaptiveStream: true,
+      videoCaptureDefaults: { resolution: VideoPresets.h720, frameRate: 30 },
+      publishDefaults: { simulcast: false, videoCodec: 'vp8' },
+    })
     lkClient.value = room
 
     // 远端 guest 视频（连麦观众 publish 进来后）

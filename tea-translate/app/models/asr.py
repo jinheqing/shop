@@ -76,25 +76,35 @@ class WhisperASR:
         return text, lang
 
     def transcribe_realtime(self, audio_bytes: bytes, sample_rate: int = 16000) -> str:
-        """实时片段识别。
+        """实时片段识别（低延迟模式）。
 
-        将传入的 PCM 原始字节（int16, mono）写成临时文件后调用 ``transcribe``。
-        这是一个简化实现，生产环境可替换为 streaming VAD + 增量解码。
+        不传临时文件 → 直接传 numpy 数组 → 零磁盘 IO。
+        vad_filter=False: 假设调用方已经做了 VAD（ws_asr.py 自己实现 RMS VAD），
+          省掉 Silero VAD 预处理 ~100-200ms。
+        beam_size=1: 贪心解码，最快。
+        no_speech_threshold=0.6: 低于该值视为静音（Whisper 默认 0.6）。
+        log_prob_threshold=-1.0: 接受概率较低的片段（短音频可能识别不准）。
         """
         self._ensure_loaded()
 
-        # 16-bit PCM -> float32 numpy
         if len(audio_bytes) == 0:
             return ""
 
         audio = np.frombuffer(audio_bytes, dtype=np.int16).astype(np.float32) / 32768.0
 
-        # faster_whisper 也接受 numpy 数组 + 采样率
+        # 全 0 = 静音，直接跳过（省一次 Whisper 调用）
+        if not audio.any():
+            return ""
+
         segments, _info = self._model.transcribe(
             audio,
             language=None,
             beam_size=1,
-            vad_filter=True,
+            vad_filter=False,                    # 调用方已做 VAD，省 ~100-200ms
+            no_speech_threshold=0.6,             # Whisper 默认值，显式声明
+            log_prob_threshold=-1.0,             # 接受短音频片段
+            condition_on_previous_text=False,    # 实时模式关掉上下文依赖，省内存
+            initial_prompt=None,
         )
         return "".join(seg.text for seg in segments).strip()
 
