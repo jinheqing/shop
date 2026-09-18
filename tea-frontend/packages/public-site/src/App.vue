@@ -10,9 +10,9 @@ import ConciergeWidget from '@/components/ConciergeWidget.vue'
   <div class="min-h-screen flex flex-col">
     <SiteHeader />
     <main class="flex-1">
-      <RouterView v-slot="{ Component }">
-        <transition name="fade" mode="out-in">
-          <component :is="Component" />
+      <RouterView v-slot="{ Component, route }">
+        <transition name="fade">
+          <component :is="Component" :key="route.fullPath" />
         </transition>
       </RouterView>
     </main>
