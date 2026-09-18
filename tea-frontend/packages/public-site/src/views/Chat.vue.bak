@@ -31,13 +31,9 @@ const messages = ref<ChatMsg[]>([])
 const input = ref('')
 const ws = ref<WebSocket | null>(null)
 const wsConnected = ref(false)
-const isLoggedIn = ref(!!localStorage.getItem('user_token'))
-// 监听登录状态变化（localStorage 非响应式，需手动监听）
-window.addEventListener('storage', (e) => {
-  if (e.key === 'user_token') isLoggedIn.value = !!e.newValue
-})
+const isLoggedIn = computed(() => !!localStorage.getItem('user_token'))
 const sidebarOpen = ref(true)
-const mobileSidebar = ref(false)
+const emojiPickerOpen = ref(false)
 const showUploadMenu = ref(false)
 const showCardMenu = ref(false)
 const uploading = ref(false)
@@ -47,6 +43,12 @@ const showTranslation = ref<Record<number, boolean>>({})
 const scrollRef = ref<HTMLElement | null>(null)
 
 // ============ Emoji Set (lightweight, no external dep) ============
+const EMOJIS = [
+  '😀','😂','🤣','😊','😍','🥰','😘','😎','🤔','😢','😭','😡','🥳','😴','🤗','😇',
+  '👍','👎','👏','🙏','💪','✌️','🤝','👀','❤️','💔','💕','💖','💯','🔥','✨','🌟',
+  '☕','🍵','🍃','🌿','🌸','🌹','🍜','🥟','🧧','🎋','🏮','🫖','🍵','🫙','🍶','🥢',
+  '🎁','🎉','🥳','🎊','💐','🏆','📦','📮','💰','💷','💴','💵','🪙','📜','📄','📎'
+]
 
 // ============ 我是谁（从 localStorage token 类型推断） ============
 // JWT payload 里有 subject_type: "user" | "staff"，用 token key 名直接推断即可
@@ -123,6 +125,7 @@ async function loadConvs() {
 async function selectConv(c: any) {
   active.value = c
   showCardMenu.value = false
+  emojiPickerOpen.value = false
   if (!c) return
   try {
     const resp = await api.get(`/conversations/${c.id}/messages`) as any
@@ -196,6 +199,7 @@ function send() {
   if (atts.length > 0 && atts.every(a => a.type === 'image')) msgType = 'image'
   else if (atts.length > 0 && atts.every(a => a.type === 'video')) msgType = 'video'
   else if (atts.length > 0) msgType = 'file'
+  else if (content && [...content].every(c => isEmoji(c) || /\s/.test(c))) msgType = 'emoji'
 
   const cid = makeClientID()
   const payload = {
@@ -217,9 +221,12 @@ function send() {
 
   input.value = ''
   pendingAttachments.value = []
+  emojiPickerOpen.value = false
 }
 
 // ============ Emoji ============
+function insertEmoji(e: string) { input.value += e }
+function isEmoji(c: string) { return /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}]/u.test(c) }
 
 // ============ Translation Toggle ============
 function toggleTranslation(id: number) { showTranslation.value[id] = !showTranslation.value[id] }
@@ -276,7 +283,6 @@ async function sendOrderCard() {
 
 // ============ Lifecycle ============
 onMounted(async () => {
-  isLoggedIn.value = !!localStorage.getItem('user_token')
   if (!isLoggedIn.value) return
   await loadConvs()
   if (!convs.value.length) {
@@ -291,6 +297,8 @@ onMounted(async () => {
 onUnmounted(() => { ws.value?.close() })
 </script>
 
+
+<!-- ============ Inline MessageBubble Sub-component ============ -->
 <script lang="ts">
 import { defineComponent, computed, h } from 'vue'
 
@@ -389,7 +397,9 @@ export const MessageBubble = defineComponent({
         // Content text
         if (m.content && m.content.trim()) {
           // emoji-only: big
+          const bigEmoji = m.message_type === 'emoji'
           children.push(h('div', {
+            class: `${bigEmoji ? 'text-4xl leading-none' : 'text-sm leading-relaxed'} whitespace-pre-wrap break-words`,
             innerHTML: escapeHtml(m.content)
           }))
         }
@@ -430,163 +440,130 @@ function escapeHtml(s: string) {
 </script>
 
 <template>
-  <div class="chat-page min-h-screen bg-gradient-to-b from-tea-50 to-white">
-
-    <!-- 未登录引导页 -->
-    <div v-if="!isLoggedIn" class="pt-24 px-4 text-center">
-      <div class="max-w-md mx-auto">
-        <div class="text-6xl mb-5">🫖</div>
-        <h1 class="font-serif text-3xl text-tea-900 mb-3">Speak with your Tea Advisor</h1>
-        <p class="text-tea-600 text-sm leading-relaxed mb-8">
-          Sign in to chat with a Pu'er tea expert. Bespoke blending, garden stories,
-          and instant answers — in English or Chinese.
-        </p>
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <router-link to="/magic-link?redirect=/chat"
-                       class="w-full sm:w-auto px-6 py-3 bg-tea-700 text-white rounded-xl font-medium hover:bg-tea-800 transition">
-            Sign in to Chat →
-          </router-link>
-          <router-link to="/about"
-                       class="w-full sm:w-auto px-5 py-3 text-tea-700 hover:bg-tea-50 rounded-xl transition text-sm border border-tea-200">
-            Learn about us
-          </router-link>
+  <div class="pt-16 min-h-screen bg-gradient-to-br from-tea-50 via-white to-tea-50">
+    <div class="max-w-6xl mx-auto px-4 md:px-6 py-6">
+      <div class="mb-4 flex items-center gap-3">
+        <button @click="sidebarOpen = !sidebarOpen" class="md:hidden p-2 rounded-lg hover:bg-tea-100">☰</button>
+        <div>
+          <h1 class="font-serif text-2xl md:text-3xl text-tea-900">💬 Chat with Your Advisor</h1>
+          <p class="text-sm text-tea-600">Real-time messaging — text, images, files, video · auto-translated between English & Chinese</p>
         </div>
+        <span class="ml-auto flex items-center gap-1 text-xs px-3 py-1 rounded-full" :class="wsConnected ? 'bg-green-100 text-green-700' : 'bg-tea-100 text-tea-500'">
+          <span class="w-1.5 h-1.5 rounded-full" :class="wsConnected ? 'bg-green-500 animate-pulse' : 'bg-tea-400'"></span>
+          {{ wsConnected ? 'Online' : 'Offline' }}
+        </span>
       </div>
-    </div>
 
-    <!-- 已登录：聊天主界面 -->
-    <div v-else class="flex flex-col h-screen pt-14 md:pt-0">
-
-      <!-- 顶部栏 -->
-      <header class="flex items-center gap-3 px-3 md:px-6 py-3 border-b border-tea-100 bg-white sticky top-0 z-20">
-        <button @click="mobileSidebar = true" class="md:hidden p-2 -ml-1 rounded-lg hover:bg-tea-100 text-tea-700" aria-label="Conversations">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        </button>
-        <div class="flex-1 min-w-0">
-          <div class="flex items-center gap-2">
-            <div class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-tea-600 to-tea-800 text-white flex items-center justify-center text-sm font-medium flex-shrink-0">🍃</div>
-            <div class="min-w-0">
-              <h1 class="font-serif text-base md:text-lg text-tea-900 truncate">Tea Advisor</h1>
-              <div class="flex items-center gap-1.5 text-[11px] text-tea-500">
-                <span class="w-1.5 h-1.5 rounded-full" :class="wsConnected ? 'bg-green-500 animate-pulse' : 'bg-tea-300'"></span>
-                {{ wsConnected ? 'Online · replies in minutes' : 'Reconnecting...' }}
-              </div>
+      <div class="bg-white rounded-2xl shadow-sm border border-tea-100 overflow-hidden">
+        <div class="flex h-[calc(100vh-140px)] min-h-[560px]">
+          <!-- Sidebar: Conversations -->
+          <aside v-if="sidebarOpen" class="w-60 md:w-64 border-r bg-tea-50/60 overflow-auto flex-shrink-0">
+            <div class="p-3 border-b bg-white/80 text-xs font-semibold text-tea-700 uppercase tracking-wider">Conversations</div>
+            <div v-for="c in convs" :key="c.id" @click="selectConv(c)"
+                 :class="['p-3 border-b cursor-pointer transition text-sm', active?.id === c.id ? 'bg-tea-700 text-white' : 'hover:bg-tea-100 text-tea-800']">
+              <div class="font-medium">Conversation #{{ c.id }}</div>
+              <div class="text-xs opacity-70 mt-0.5">2 participants</div>
             </div>
-          </div>
-        </div>
-      </header>
+          </aside>
 
-      <!-- 主体 -->
-      <div class="flex flex-1 min-h-0">
-
-        <!-- PC 左侧会话列表 -->
-        <aside class="hidden md:flex w-64 lg:w-72 flex-col border-r border-tea-100 bg-tea-50/40">
-          <div class="px-4 py-3 border-b border-tea-100 text-xs font-semibold text-tea-600 uppercase tracking-wider">Conversations</div>
-          <div class="flex-1 overflow-y-auto">
-            <div v-if="convs.length === 0" class="p-6 text-center text-sm text-tea-400">Loading conversations...</div>
-            <button v-for="c in convs" :key="c.id" @click="selectConv(c)"
-                    :class="['w-full text-left px-4 py-3 border-b border-tea-100/60 transition',
-                             active?.id === c.id ? 'bg-tea-700 text-white' : 'hover:bg-tea-100/60 text-tea-800']">
-              <div class="font-medium text-sm">Conversation #{{ c.id }}</div>
-              <div :class="['text-xs mt-0.5', active?.id === c.id ? 'text-tea-200' : 'text-tea-500']">With your tea advisor</div>
-            </button>
-          </div>
-        </aside>
-
-        <!-- 手机底部弹出会话列表 -->
-        <div v-if="mobileSidebar" class="md:hidden fixed inset-0 z-40" @click.self="mobileSidebar = false">
-          <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="mobileSidebar = false"></div>
-          <div class="absolute bottom-0 inset-x-0 max-h-[70vh] bg-white rounded-t-2xl shadow-xl flex flex-col">
-            <div class="flex items-center justify-between px-5 py-4 border-b border-tea-100">
-              <span class="font-semibold text-tea-800">Conversations</span>
-              <button @click="mobileSidebar = false" class="w-8 h-8 rounded-full bg-tea-100 hover:bg-tea-200 flex items-center justify-center text-tea-600">×</button>
-            </div>
-            <div class="flex-1 overflow-y-auto">
-              <button v-for="c in convs" :key="c.id" @click="selectConv(c); mobileSidebar = false"
-                      :class="['w-full text-left px-5 py-4 border-b border-tea-50 transition flex items-center gap-3',
-                               active?.id === c.id ? 'bg-tea-50' : '']">
-                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-tea-500 to-tea-700 text-white flex items-center justify-center text-sm flex-shrink-0">🍃</div>
-                <div class="flex-1 min-w-0">
-                  <div class="font-medium text-sm text-tea-800">Conversation #{{ c.id }}</div>
-                  <div class="text-xs text-tea-500">Your tea advisor</div>
+          <!-- Chat Area -->
+          <section class="flex-1 flex flex-col min-w-0">
+            <div class="flex-1 overflow-auto p-4 md:p-6 bg-slate-50" ref="scrollRef">
+              <div v-if="!isLoggedIn" class="text-center mt-16">
+                <div class="text-5xl mb-4">🫖</div>
+                <h2 class="font-serif text-2xl text-tea-900 mb-2">Speak with your Tea Advisor</h2>
+                <p class="text-tea-600 text-sm mb-6 max-w-md mx-auto">
+                  Sign in to chat with a Pu'er tea expert. Bespoke blending, garden stories,
+                  and instant answers — in English or Chinese.
+                </p>
+                <div class="flex items-center justify-center gap-3">
+                  <router-link to="/magic-link?redirect=/chat"
+                               class="px-6 py-2.5 bg-tea-700 text-white rounded-xl font-medium hover:bg-tea-800 transition">
+                    Sign in to Chat →
+                  </router-link>
+                  <router-link to="/about"
+                               class="px-5 py-2.5 text-tea-700 hover:bg-tea-50 rounded-xl transition text-sm">
+                    Learn more
+                  </router-link>
                 </div>
-                <div v-if="active?.id === c.id" class="w-2 h-2 rounded-full bg-tea-600"></div>
-              </button>
-            </div>
-          </div>
-        </div>
+              </div>
 
-        <!-- 聊天区 -->
-        <section class="flex-1 flex flex-col min-w-0 bg-slate-50/50">
-          <div class="flex-1 overflow-y-auto px-3 sm:px-6 py-4 md:py-6" ref="scrollRef">
-            <div v-if="!active" class="h-full flex items-center justify-center">
-              <div class="text-center text-tea-400">
+              <div v-else-if="!active" class="text-center text-tea-500 mt-20">
                 <div class="text-5xl mb-3">💬</div>
-                <p class="text-sm">Loading your conversation...</p>
+                Select a conversation to start chatting →
               </div>
-            </div>
-            <div v-else class="max-w-3xl mx-auto space-y-2.5 md:space-y-3">
-              <div v-if="messages.length === 0" class="flex justify-start mb-4">
-                <div class="max-w-[85%] md:max-w-[70%] rounded-2xl rounded-tl-sm px-4 py-3 bg-white border border-tea-100 shadow-sm">
-                  <p class="text-sm text-tea-800 leading-relaxed">
-                    👋 Hi! I'm your personal tea advisor. Ask me about Pu'er blends, traceability, SGS reports,
-                    or anything about Yunnan tea gardens · 你好！我是你的普洱茶顾问 😊
-                  </p>
+
+              <div v-else class="space-y-3 max-w-3xl mx-auto">
+                <div v-for="(m, i) in messages" :key="m.id || m.client_msg_id || i"
+                     :class="['flex', m.sender_type === 'me' ? 'justify-end' : 'justify-start']">
+                  <MessageBubble :msg="m" :show-translation="showTranslation[m.id!]" @toggle-translation="toggleTranslation(m.id!)" />
                 </div>
               </div>
-              <div v-for="(m, i) in messages" :key="m.id || m.client_msg_id || i"
-                   :class="['flex', m.sender_type === 'me' ? 'justify-end' : 'justify-start']">
-                <MessageBubble :msg="m" :show-translation="showTranslation[m.id!]" @toggle-translation="toggleTranslation(m.id!)" />
-              </div>
             </div>
-          </div>
 
-          <!-- 附件预览 -->
-          <div v-if="pendingAttachments.length" class="border-t border-tea-100 bg-white px-3 md:px-4 py-2.5 flex gap-2 flex-wrap">
-            <div v-for="(a, i) in pendingAttachments" :key="i" class="relative group">
-              <img v-if="a.type === 'image'" :src="a.url" class="h-14 w-14 object-cover rounded-lg border border-tea-200" />
-              <div v-else class="h-14 w-14 rounded-lg bg-tea-50 border border-tea-200 flex flex-col items-center justify-center text-[10px] text-tea-600">
-                <span class="text-base">{{ a.type === 'video' ? '🎬' : '📎' }}</span>
+            <!-- Pending attachments preview -->
+            <div v-if="pendingAttachments.length" class="border-t bg-tea-50/50 px-4 py-3 flex gap-3 flex-wrap">
+              <div v-for="(a, i) in pendingAttachments" :key="i" class="relative group">
+                <img v-if="a.type === 'image'" :src="a.url" class="h-16 w-16 object-cover rounded-lg border" />
+                <div v-else class="h-16 w-16 rounded-lg bg-white border flex flex-col items-center justify-center text-xs text-tea-600">
+                  <span>{{ a.type === 'video' ? '🎬' : '📎' }}</span>
+                  <span class="truncate px-1 w-full text-center">{{ a.name }}</span>
+                </div>
+                <button @click="removePendingAttachment(i)" class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs opacity-0 group-hover:opacity-100 transition">×</button>
               </div>
-              <button @click="removePendingAttachment(i)" class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white text-xs leading-none opacity-0 group-hover:opacity-100 transition">×</button>
+              <span class="text-xs text-tea-600 self-center">{{ pendingAttachments.length }} file(s) attached</span>
             </div>
-          </div>
 
-          <!-- 输入区 -->
-          <div class="border-t border-tea-100 bg-white px-3 md:px-4 py-2.5 md:py-3 pb-[env(safe-area-inset-bottom)]">
-            <div class="flex items-end gap-2">
-              <div class="relative flex-shrink-0">
-                <button @click="showUploadMenu = !showUploadMenu; showCardMenu = false" title="Attach" class="p-2 md:p-2.5 hover:bg-tea-100 rounded-lg transition text-tea-500">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+            <!-- Input Area -->
+            <div class="border-t p-3 md:p-4 bg-white">
+              <div class="flex items-end gap-2">
+                <!-- Toolbar -->
+                <div class="flex items-center gap-1 text-tea-500">
+                  <button @click="emojiPickerOpen = !emojiPickerOpen; showUploadMenu = false; showCardMenu = false" title="Emoji" class="p-2 hover:bg-tea-100 rounded-lg transition relative">😊</button>
+                  <button @click="showUploadMenu = !showUploadMenu; emojiPickerOpen = false; showCardMenu = false" title="Upload" class="p-2 hover:bg-tea-100 rounded-lg transition relative">📎</button>
+                  <button @click="showCardMenu = !showCardMenu; showUploadMenu = false; emojiPickerOpen = false" title="Send Quote/Order" class="p-2 hover:bg-tea-100 rounded-lg transition relative">💳</button>
+                </div>
+
+                <!-- Text input -->
+                <div class="flex-1 relative">
+                  <textarea v-model="input" @keyup.enter.exact.prevent="send" @paste="onPaste" rows="1"
+                            placeholder="Type a message... (paste image to attach)"
+                            class="w-full px-4 py-2.5 rounded-xl border border-tea-200 focus:border-tea-600 focus:outline-none resize-none text-sm bg-tea-50/30 leading-relaxed"></textarea>
+                </div>
+
+                <button @click="send" :disabled="!input.trim() && !pendingAttachments.length"
+                        class="px-6 py-2.5 bg-tea-700 text-white rounded-xl font-medium hover:bg-tea-800 transition disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap text-sm">
+                  Send
                 </button>
-                <div v-if="showUploadMenu" class="absolute bottom-full mb-2 left-0 bg-white border border-tea-100 rounded-xl shadow-xl p-1.5 z-30 w-36">
-                  <label class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-tea-50 cursor-pointer text-sm text-tea-700">
-                    🖼️ Image<input type="file" accept="image/*" class="hidden" @change="(e) => { handleFiles(e.target.files, 'image'); showUploadMenu = false }" />
-                  </label>
-                  <label class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-tea-50 cursor-pointer text-sm text-tea-700">
-                    🎬 Video<input type="file" accept="video/*" class="hidden" @change="(e) => { handleFiles(e.target.files, 'video'); showUploadMenu = false }" />
-                  </label>
-                  <label class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-tea-50 cursor-pointer text-sm text-tea-700">
-                    📎 File<input type="file" class="hidden" @change="(e) => { handleFiles(e.target.files, 'file'); showUploadMenu = false }" />
-                  </label>
+              </div>
+
+              <!-- Emoji picker popover -->
+              <div v-if="emojiPickerOpen" class="absolute bg-white border rounded-xl shadow-lg p-3 z-10 mt-1 max-w-[320px]">
+                <div class="grid grid-cols-8 gap-1 text-xl">
+                  <button v-for="e in EMOJIS" :key="e" @click="insertEmoji(e); emojiPickerOpen = false" class="hover:bg-tea-50 rounded p-1 transition text-center">{{ e }}</button>
                 </div>
               </div>
-              <div class="flex-1 min-w-0">
-                <textarea v-model="input" @keyup.enter.exact.prevent="send" @paste="onPaste" rows="1"
-                          placeholder="Type a message..."
-                          class="w-full px-3.5 md:px-4 py-2 md:py-2.5 rounded-xl border border-tea-200 focus:border-tea-500 focus:outline-none focus:ring-2 focus:ring-tea-100 resize-none text-sm bg-tea-50/50 leading-relaxed max-h-32"></textarea>
+
+              <!-- Upload menu -->
+              <div v-if="showUploadMenu" class="absolute bg-white border rounded-xl shadow-lg p-2 z-10 mt-1 flex flex-col gap-1 text-sm w-36">
+                <label class="cursor-pointer hover:bg-tea-50 px-3 py-2 rounded-lg">🖼️ Upload Image<input type="file" accept="image/*" class="hidden" @change="(e:any) => handleFiles(e.target.files, 'image')" /></label>
+                <label class="cursor-pointer hover:bg-tea-50 px-3 py-2 rounded-lg">🎬 Upload Video<input type="file" accept="video/*" class="hidden" @change="(e:any) => handleFiles(e.target.files, 'video')" /></label>
+                <label class="cursor-pointer hover:bg-tea-50 px-3 py-2 rounded-lg">📎 Upload File<input type="file" class="hidden" @change="(e:any) => handleFiles(e.target.files, 'file')" /></label>
               </div>
-              <button @click="send" :disabled="!input.trim() && !pendingAttachments.length"
-                      class="flex-shrink-0 px-4 md:px-5 py-2 md:py-2.5 bg-tea-700 text-white rounded-xl font-medium hover:bg-tea-800 active:bg-tea-900 transition disabled:opacity-40 disabled:cursor-not-allowed text-sm flex items-center gap-1.5">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
-                <span class="hidden sm:inline">Send</span>
-              </button>
+
+              <!-- Card menu -->
+              <div v-if="showCardMenu" class="absolute bg-white border rounded-xl shadow-lg p-2 z-10 mt-1 flex flex-col gap-1 text-sm w-40">
+                <button @click="sendQuoteCard" class="hover:bg-tea-50 px-3 py-2 rounded-lg text-left">📋 Send Quote Card</button>
+                <button @click="sendOrderCard" class="hover:bg-tea-50 px-3 py-2 rounded-lg text-left">🧾 Send Order Card</button>
+              </div>
+
+              <!-- Upload progress -->
+              <div v-if="uploading" class="mt-2 h-1.5 bg-tea-100 rounded overflow-hidden">
+                <div class="h-full bg-tea-600 transition-all" :style="{ width: uploadProgress + '%' }"></div>
+              </div>
             </div>
-            <div v-if="uploading" class="mt-2 h-1 bg-tea-100 rounded-full overflow-hidden">
-              <div class="h-full bg-tea-600 transition-all duration-200" :style="{ width: uploadProgress + '%' }"></div>
-            </div>
-          </div>
-        </section>
+          </section>
+        </div>
       </div>
     </div>
   </div>
