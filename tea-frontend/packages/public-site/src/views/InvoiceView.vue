@@ -39,7 +39,7 @@ onMounted(async () => {
           <div>
             <div class="text-xs text-tea-500 mb-1">Product</div>
             <div class="text-sm text-tea-800">{{ inv.custom_product_snapshot?.title }}</div>
-            <div class="text-xs text-tea-500 mt-1">Mountain: {{ inv.custom_product_snapshot?.tea_garden_location }} · Master: {{ inv.custom_product_snapshot?.master_name }}</div>
+            <div class="text-xs text-tea-500 mt-1">Tea Garden: {{ inv.custom_product_snapshot?.tea_garden_location }} · Master: {{ inv.custom_product_snapshot?.master_name }}</div>
           </div>
         </div>
         <table class="w-full text-sm">

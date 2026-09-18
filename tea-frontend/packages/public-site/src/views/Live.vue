@@ -14,14 +14,14 @@ onMounted(async () => {
   <div class="pt-20 min-h-screen">
     <section class="bg-tea-900 text-tea-50 py-20">
       <div class="max-w-6xl mx-auto px-6">
-        <h1 class="font-serif text-5xl md:text-6xl mb-4">Live From the Tea Mountains.</h1>
+        <h1 class="font-serif text-5xl md:text-6xl mb-4">Live From the Tea Gardens.</h1>
         <p class="text-lg text-tea-300 max-w-2xl">24/7 slow-live cameras show the tea growing. Taste sessions streamed by appointment. Watch your own bespoke tea as it's being roasted.</p>
       </div>
     </section>
 
     <section class="py-16 bg-tea-50">
       <div class="max-w-7xl mx-auto px-6">
-        <h2 class="font-serif text-3xl text-tea-900 mb-8">🌱 24/7 Mountain Cameras</h2>
+        <h2 class="font-serif text-3xl text-tea-900 mb-8">🌱 24/7 Garden Cameras</h2>
         <div class="grid md:grid-cols-3 gap-6">
           <div v-for="p in (presets.length ? presets : [
             { name: '云南省临沧市临翔区邦东乡曼岗村茶园', location: '临沧', camera_rtmp_url: 'rtmp://localhost:1935/slow/manzhang', status: 'live' },

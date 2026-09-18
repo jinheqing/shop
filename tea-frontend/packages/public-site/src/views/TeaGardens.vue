@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { RouterLink } from 'vue-router'
 import { ref, onMounted } from 'vue'
 import { api } from '../api/client'
 
@@ -10,37 +11,70 @@ async function load() {
     const d: any = await api.get('/public/slow-presets')
     gardens.value = d?.items || d || []
   } catch (e) {
-    // Fallback demo — will be replaced by real data once backend runs
     gardens.value = [
-      { name: '云南省临沧市临翔区邦东乡曼岗村茶园', location: '临沧 · 云南', description: '古树普洱核心产区' },
-      { name: '广东省潮州市潮安区凤凰镇大乌岽村茶园', location: '潮州 · 广东', description: '凤凰单丛' },
+      { name: '云南省临沧市临翔区邦东乡曼岗村茶园', location: '临沧 · 云南', description: '古树普洱核心产区，海拔 1800m+，终年云雾缭绕', camera_rtmp_url: 'rtmp://localhost:1935/slow/manzhang' },
+      { name: '云南省西双版纳州勐海县布朗山乡班章村茶园', location: '勐海 · 云南', description: '班章王者之地，乔木古树，浓烈霸道', camera_rtmp_url: 'rtmp://localhost:1935/slow/banzhang' },
+      { name: '云南省普洱市澜沧拉祜族自治县惠民镇景迈村茶园', location: '澜沧 · 云南', description: '景迈千年万亩古茶园，布朗族与傣族世代守护', camera_rtmp_url: 'rtmp://localhost:1935/slow/jingmai' },
+      { name: '云南省西双版纳州勐海县勐海镇贺开村茶园', location: '勐海 · 云南', description: '贺开古树茶园，茶气醇厚，回甘持久' },
+      { name: '云南省临沧市临翔区南美乡多依村茶园', location: '临沧 · 云南', description: '南美大雪山，雪水灌溉，甜柔清雅' },
+      { name: '云南省普洱市澜沧拉祜族自治县惠民镇翁基村茶园', location: '澜沧 · 云南', description: '翁基布朗族古寨，传统手工制茶' },
     ]
-  } finally {
-    loading.value = false
-  }
+  } finally { loading.value = false }
 }
 onMounted(load)
 </script>
 
 <template>
-  <div class="max-w-6xl mx-auto py-10 px-4">
-    <h1 class="text-4xl font-bold mb-4">Our Tea Gardens</h1>
-    <p class="text-gray-600 mb-8">Direct from village-level tea gardens in Yunnan & Guangdong. Each garden has a 24/7 live camera.</p>
+  <div class="pt-20">
+    <!-- Hero -->
+    <section class="bg-tea-900 text-tea-50 py-20 md:py-28 relative overflow-hidden">
+      <div class="absolute inset-0 opacity-25" style="background-image: radial-gradient(circle at 25% 40%, rgba(212,160,79,0.25), transparent 50%);"></div>
+      <div class="max-w-5xl mx-auto px-6 text-center relative">
+        <h1 class="font-display font-semibold text-4xl md:text-6xl lg:text-7xl leading-tight mb-6 tracking-tight">
+          Our Tea <span class="italic">Gardens</span>
+        </h1>
+        <p class="text-lg md:text-xl text-tea-200 max-w-2xl mx-auto leading-relaxed">
+          Direct from village-level tea gardens across Yunnan &amp; Guangdong. Each garden has a 24/7 live camera so you can watch where your tea grew.
+        </p>
+      </div>
+    </section>
 
-    <div v-if="loading" class="text-center py-20 text-gray-400">Loading…</div>
+    <!-- Grid -->
+    <section class="py-16 md:py-20 bg-white">
+      <div class="max-w-6xl mx-auto px-6">
+        <div v-if="loading" class="text-center py-20 text-tea-500">Loading tea gardens…</div>
 
-    <div v-else class="grid md:grid-cols-2 gap-6">
-      <div v-for="g in gardens" :key="g.id || g.name" class="border rounded-lg p-5 shadow-sm hover:shadow-md transition">
-        <h3 class="text-lg font-semibold mb-2">{{ g.name || 'Unnamed Garden' }}</h3>
-        <p class="text-sm text-gray-500 mb-2">{{ g.location || g.region || '—' }}</p>
-        <p class="text-gray-700 text-sm mb-4">{{ g.description || 'Visit our live streams below to see this tea garden in action.' }}</p>
-        <div class="flex gap-2 text-xs">
-          <span v-if="g.status === 'live'" class="bg-red-600 text-white px-2 py-0.5 rounded flex items-center gap-1">
-            <span class="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span> LIVE
-          </span>
-          <a href="/live" class="text-emerald-700 hover:underline">Watch Live →</a>
+        <div v-else class="grid md:grid-cols-2 gap-6 md:gap-8">
+          <div v-for="(g, i) in gardens" :key="g.id || g.name"
+               class="group rounded-2xl overflow-hidden border border-tea-100 bg-white card-hover">
+            <!-- Visual placeholder -->
+            <div class="aspect-[16/9]"
+                 :class="[
+                   'flex items-center justify-center text-5xl relative',
+                   i % 3 === 0 ? 'bg-gradient-to-br from-tea-900 to-tea-600' :
+                   i % 3 === 1 ? 'bg-gradient-to-br from-tea-800 to-tea-500' :
+                                 'bg-gradient-to-br from-tea-700 to-tea-400'
+                 ]">
+              🏞️
+              <div v-if="g.camera_rtmp_url"
+                   class="absolute top-3 left-3 flex items-center gap-2 px-2.5 py-1 bg-red-600 text-white text-xs rounded-full font-medium shadow-sm">
+                <span class="w-1.5 h-1.5 rounded-full bg-white live-dot"></span> LIVE
+              </div>
+            </div>
+            <!-- Content -->
+            <div class="p-6">
+              <h3 class="font-display text-xl text-tea-900 mb-2 leading-snug">{{ g.name || 'Unnamed Garden' }}</h3>
+              <p class="text-sm text-tea-500 mb-3 font-medium">{{ g.location || g.region || '—' }}</p>
+              <p class="text-sm text-tea-700 leading-relaxed mb-4">{{ g.description || 'Visit our live streams below to see this tea garden in action.' }}</p>
+              <div class="flex items-center gap-2">
+                <RouterLink to="/live" class="inline-flex items-center gap-1 text-sm font-medium text-tea-800 hover:text-tea-950 transition">
+                  Watch Live →
+                </RouterLink>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
   </div>
 </template>
