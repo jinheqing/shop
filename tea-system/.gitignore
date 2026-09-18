@@ -1,11 +1,11 @@
-# Binaries
+# Binaries — 前导 / 只匹配本目录根下的文件/目录（不影响 cmd/server/）
+/server
+/migrate
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
-server
-migrate
 
 # Test binary
 *.test
@@ -29,6 +29,3 @@ vendor/
 # OS
 .DS_Store
 Thumbs.db
-
-# Migrate
-migrate
