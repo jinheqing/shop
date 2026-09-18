@@ -43,6 +43,11 @@ type Handlers struct {
 		CookieConsent  *handlers.CookieConsentHandler
 	SystemConfig    *handlers.SystemConfigHandler
 	Upload          *handlers.UploadHandler
+
+        // ===== 2026-09 会员体系新增 =====
+        UserGroup    *handlers.UserGroupHandler
+        ShortLink    *handlers.ShortLinkHandler
+        Recording    *handlers.RecordingHandler
 }
 
 type Router struct {
@@ -215,6 +220,33 @@ func (r *Router) Setup() *gin.Engine {
 
 			// QR Code
 			auth.POST("/qrcodes/generate", r.h.QRCode.Generate)
+                        // ===== 2026-09: 用户组 UserGroups =====
+                        auth.POST("/user-groups", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.Create)
+                        auth.GET("/user-groups", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.List)
+                        auth.GET("/user-groups/:id", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.Get)
+                        auth.PUT("/user-groups/:id", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.Update)
+                        auth.DELETE("/user-groups/:id", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.Delete)
+                        auth.POST("/user-groups/:id/members", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.AddMember)
+                        auth.POST("/user-groups/:id/members/bulk", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.BulkAdd)
+                        auth.DELETE("/user-groups/:id/members/:userId", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.RemoveMember)
+                        auth.GET("/user-groups/:id/members", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.ListMembers)
+                        auth.POST("/user-groups/auto-sync", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.AutoSync)
+                        auth.GET("/users/me/groups", r.h.UserGroup.ListMyGroups)
+
+                        // ===== 2026-09: 短链 ShortLinks =====
+                        auth.POST("/short-links", r.h.ShortLink.Create)
+                        auth.GET("/short-links", middleware.RequireRole("admin", "supervisor"), r.h.ShortLink.List)
+                        auth.GET("/short-links/:code", middleware.RequireRole("admin", "supervisor"), r.h.ShortLink.Get)
+                        auth.DELETE("/short-links/:id", middleware.RequireRole("admin", "supervisor"), r.h.ShortLink.Delete)
+                        auth.GET("/short-links/top-stats", middleware.RequireRole("admin", "supervisor"), r.h.ShortLink.TopStats)
+
+                        // ===== 2026-09: 回放 Recordings =====
+                        auth.GET("/recordings", middleware.RequireRole("admin", "supervisor"), r.h.Recording.List)
+                        auth.GET("/recordings/:id", middleware.LiveAccessMiddleware(r.db))
+                        auth.PUT("/recordings/:id/visibility", middleware.RequireRole("admin", "supervisor"), r.h.Recording.UpdateVisibility)
+                        auth.DELETE("/recordings/:id", middleware.RequireRole("admin", "supervisor"), r.h.Recording.Delete)
+                        auth.GET("/my/recordings", r.h.Recording.ListMine)
+
 
 			// 翻译引擎代理
 			auth.POST("/translate/text", r.h.Translate.TranslateText)
@@ -245,7 +277,10 @@ func (r *Router) Setup() *gin.Engine {
                 v1.POST("/upload", r.h.Upload.Upload)
 
 
-	r.engine.NoRoute(func(c *gin.Context) {
+
+	// ===== 2026-09: 公开短链重定向（不在 /api/v1 分组里）=====
+	r.engine.GET("/s/:code", r.h.ShortLink.Redirect)
+		r.engine.NoRoute(func(c *gin.Context) {
 		c.JSON(404, gin.H{"code": 404, "message": "route not found", "path": c.Request.URL.Path})
 	})
 	return r.engine

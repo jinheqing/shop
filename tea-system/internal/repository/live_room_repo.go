@@ -14,13 +14,15 @@ var ErrLiveRoomNotFound = errors.New("live room not found")
 
 // LiveRoomListFilter — 直播间列表过滤条件
 type LiveRoomListFilter struct {
-	RoomType string
-	Status   string
-	OrderID  *uint64
-	HostID   *uint64
-	Keyword  string // 模糊匹配 room_name / room_id
-	Page     int
-	Size     int
+	RoomType   string
+	Status     string
+	Visibility string
+	Type       string // 2026-09 新增：slow_live / scheduled / advisor / admin
+	OrderID    *uint64
+	HostID     *uint64
+	Keyword    string // 模糊匹配 room_name / room_id
+	Page       int
+	Size       int
 }
 
 // LiveRoomRepo — 直播间 CRUD
@@ -78,6 +80,12 @@ func (r *LiveRoomRepo) List(ctx context.Context, f LiveRoomListFilter) ([]models
 	}
 	if f.Status != "" {
 		q = q.Where("status = ?", f.Status)
+	}
+	if f.Visibility != "" {
+		q = q.Where("visibility = ?", f.Visibility)
+	}
+	if f.Type != "" {
+		q = q.Where("type = ?", f.Type)
 	}
 	if f.OrderID != nil {
 		q = q.Where("order_id = ?", *f.OrderID)

@@ -33,6 +33,9 @@ const routes = [
     { path: 'customer-requests', component: () => import('@/views/CustomerRequests.vue'), meta: { title: 'Customer Live Requests' } },
     { path: 'delivery-inspection', component: () => import('@/views/DeliveryInspection.vue'), meta: { title: 'Delivery Inspection' } },
     { path: 'livekit', component: () => import('@/views/LiveKitRooms.vue'), meta: { title: 'LiveKit Rooms' } },
+    { path: 'recordings', component: () => import('@/views/Recordings.vue'), meta: { title: 'Recordings' } },
+    { path: 'user-groups', component: () => import('@/views/UserGroups.vue'), meta: { title: 'User Groups' } },
+    { path: 'short-links', component: () => import('@/views/ShortLinks.vue'), meta: { title: 'Short Links' } },
     { path: 'slow-presets', component: () => import('@/views/SlowPresets.vue'), meta: { title: 'Slow Presets' } },
 
     // Infrastructure

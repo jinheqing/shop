@@ -9,6 +9,32 @@
     <el-alert type="warning" show-icon :closable="false" class="mb-3">
       ⚠ Location field will be auto-sanitized to prefecture level on public API. Do NOT enter exact village / coordinates.
     </el-alert>
+
+    <!-- Filter Bar -->
+    <div class="flex gap-2 mb-3 flex-wrap">
+      <el-select v-model="filter.visibility" placeholder="Visibility" clearable size="small" style="width:160px" @change="load">
+        <el-option label="Public (all visitors)" value="public" />
+        <el-option label="Registered users" value="registered" />
+        <el-option label="Restricted (selected)" value="restricted" />
+      </el-select>
+      <el-select v-model="filter.type" placeholder="Access Type" clearable size="small" style="width:160px" @change="load">
+        <el-option label="Slow Live" value="slow_live" />
+        <el-option label="Scheduled" value="scheduled" />
+        <el-option label="Advisor Room" value="advisor" />
+        <el-option label="Admin Room" value="admin" />
+      </el-select>
+      <el-select v-model="filter.status" placeholder="Status" clearable size="small" style="width:140px" @change="load">
+        <el-option label="Configuring" value="configuring" />
+        <el-option label="Scheduled" value="scheduled" />
+        <el-option label="Live" value="live" />
+        <el-option label="Offline" value="offline" />
+        <el-option label="Ended" value="ended" />
+      </el-select>
+      <el-input v-model="filter.keyword" placeholder="Search name/room_id" clearable size="small" style="width:220px" @keyup.enter="load" />
+      <el-button size="small" @click="load">🔍 Search</el-button>
+      <el-button size="small" text @click="resetFilter">Reset</el-button>
+    </div>
+
     <el-table :data="list" stripe>
       <el-table-column label="Cover" width="100">
         <template #default="{ row }">
@@ -23,26 +49,54 @@
           <el-tag size="small">{{ row.room_type }}</el-tag>
         </template>
       </el-table-column>
+      <!-- Visibility Column (NEW) -->
+      <el-table-column label="Visibility" width="150">
+        <template #default="{ row }">
+          <el-tag
+            :type="({public:'success', registered:'info', restricted:'danger'} as any)[row.visibility || 'registered']"
+            effect="dark" size="small">
+            {{ row.visibility || 'registered' }}
+          </el-tag>
+          <div v-if="row.visibility === 'restricted'" class="text-[10px] text-slate-400 mt-1">
+            {{ (row.visible_user_ids || []).length }} users · {{ (row.visible_group_ids || []).length }} groups
+          </div>
+        </template>
+      </el-table-column>
+      <!-- Access Type Column (NEW) -->
+      <el-table-column prop="type" label="Access" width="110">
+        <template #default="{ row }">
+          <span class="text-xs text-slate-500">{{ row.type || 'scheduled' }}</span>
+        </template>
+      </el-table-column>
       <el-table-column prop="status" label="Status" width="110">
         <template #default="{ row }">
           <el-tag :type="row.status === 'live' ? 'danger' : row.status === 'ended' ? 'success' : 'info'"
                    effect="dark" size="small">{{ row.status }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="scheduled_start" label="Scheduled" width="170" />
+      <el-table-column prop="scheduled_start" label="Scheduled" width="170">
+        <template #default="{ row }">{{ row.scheduled_start?.slice(0,16).replace('T',' ') || '—' }}</template>
+      </el-table-column>
       <el-table-column prop="location" label="Location" show-overflow-tooltip />
+      <el-table-column label="Rec." width="80">
+        <template #default="{ row }">
+          <el-tag v-if="row.enable_recording !== false" type="success" size="small" effect="plain">ON</el-tag>
+          <el-tag v-else size="small" effect="plain">OFF</el-tag>
+        </template>
+      </el-table-column>
       <el-table-column label="Recording" width="100">
         <template #default="{ row }">
           <el-link v-if="row.recording_url" type="primary" :href="resolveUrl(row.recording_url)" target="_blank" size="small">View</el-link>
           <span v-else class="text-slate-300 text-xs">—</span>
         </template>
       </el-table-column>
-      <el-table-column label="Actions" width="320">
+      <el-table-column label="Actions" width="340">
         <template #default="{ row }">
           <el-button size="small" v-if="row.status !== 'live'" type="success" @click="start(row)">Start</el-button>
           <el-button size="small" v-else type="warning" @click="end(row)">End</el-button>
           <el-button size="small" @click="copyKey(row)">Key</el-button>
           <el-button size="small" @click="openEdit(row)">Edit</el-button>
+          <el-button size="small" @click="openVisEdit(row)">👁 Vis</el-button>
           <el-button size="small" type="danger" @click="del(row.id)">Del</el-button>
         </template>
       </el-table-column>
@@ -50,7 +104,7 @@
   </el-card>
 
   <!-- Create / Edit Dialog -->
-  <el-dialog v-model="open" :title="isEditing ? 'Edit Live Room' : 'Create Live Room'" width="600px">
+  <el-dialog v-model="open" :title="isEditing ? 'Edit Live Room' : 'Create Live Room'" width="680px">
     <template v-if="!isEditing">
       <div class="mb-2 text-xs text-slate-500">Select a preset (matches backend RoomType constants)</div>
       <el-radio-group v-model="form.room_type" class="mb-4">
@@ -67,6 +121,48 @@
           <el-option label="App WebRTC" value="app_webrtc" />
         </el-select>
       </el-form-item>
+
+      <!-- NEW: Visibility -->
+      <el-form-item label="Visibility">
+        <el-radio-group v-model="form.visibility">
+          <el-radio-button value="public">🌐 Public</el-radio-button>
+          <el-radio-button value="registered">🔒 Registered</el-radio-button>
+          <el-radio-button value="restricted">👥 Restricted</el-radio-button>
+        </el-radio-group>
+        <div class="text-[11px] text-slate-400 mt-1">
+          public=任何人可看 · registered=登录即可 · restricted=必须在白名单用户或用户组里
+        </div>
+      </el-form-item>
+
+      <!-- NEW: Restricted access controls -->
+      <template v-if="form.visibility === 'restricted'">
+        <el-form-item label="Visible User IDs">
+          <el-select v-model="form.visible_user_ids" multiple filterable allow-create default-first-option style="width:100%"
+                     placeholder="Type user ID and press Enter">
+          </el-select>
+          <div class="text-[11px] text-slate-400">直接输入数字 ID 回车添加</div>
+        </el-form-item>
+        <el-form-item label="Visible Groups">
+          <el-select v-model="form.visible_group_ids" multiple style="width:100%" placeholder="Select user groups">
+            <el-option v-for="g in groups" :key="g.id" :value="String(g.id)" :label="g.name" />
+          </el-select>
+        </el-form-item>
+      </template>
+
+      <!-- NEW: Access Type + Enable Recording -->
+      <el-form-item label="Access Type">
+        <el-select v-model="form.type" style="width:100%">
+          <el-option label="Slow Live (24/7 camera)" value="slow_live" />
+          <el-option label="Scheduled (appointment)" value="scheduled" />
+          <el-option label="Advisor Private" value="advisor" />
+          <el-option label="Admin Only" value="admin" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="Enable Recording">
+        <el-switch v-model="form.enable_recording" />
+        <span class="ml-2 text-xs text-slate-400">结束后自动生成 Recording 回放（可单独配置可见性）</span>
+      </el-form-item>
+
       <el-form-item label="Order ID (optional)"><el-input-number v-model="form.order_id" :min="0" style="width:100%" /></el-form-item>
       <el-form-item label="Location">
         <el-input v-model="form.location" placeholder="云南省 · 临沧市" />
@@ -122,6 +218,33 @@
       <el-button type="primary" :loading="saving" @click="save">{{ isEditing ? 'Save Changes' : 'Create Room' }}</el-button>
     </template>
   </el-dialog>
+
+  <!-- Quick Visibility Dialog (shortcut) -->
+  <el-dialog v-model="openVis" :title="`Quick Visibility for #${editingVis?.id}`" width="520px">
+    <el-form :model="visForm" label-width="140px">
+      <el-form-item label="Visibility">
+        <el-radio-group v-model="visForm.visibility">
+          <el-radio-button value="public">🌐 Public</el-radio-button>
+          <el-radio-button value="registered">🔒 Registered</el-radio-button>
+          <el-radio-button value="restricted">👥 Restricted</el-radio-button>
+        </el-radio-group>
+      </el-form-item>
+      <template v-if="visForm.visibility === 'restricted'">
+        <el-form-item label="Visible User IDs">
+          <el-select v-model="visForm.visible_user_ids" multiple filterable allow-create default-first-option style="width:100%" />
+        </el-form-item>
+        <el-form-item label="Visible Groups">
+          <el-select v-model="visForm.visible_group_ids" multiple style="width:100%">
+            <el-option v-for="g in groups" :key="g.id" :value="String(g.id)" :label="g.name" />
+          </el-select>
+        </el-form-item>
+      </template>
+    </el-form>
+    <template #footer>
+      <el-button @click="openVis = false">Cancel</el-button>
+      <el-button type="primary" :loading="saving" @click="saveVis">Save Visibility</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
@@ -130,20 +253,36 @@ import { ElMessage } from 'element-plus'
 import { api, upload } from '@/api/client'
 
 const list = ref<any[]>([])
+const groups = ref<any[]>([])
 const open = ref(false)
+const openVis = ref(false)
 const isEditing = ref(false)
 const editingId = ref<number | null>(null)
+const editingVis = ref<any>(null)
 const uploadingCover = ref(false)
 const uploadingRec = ref(false)
 const saving = ref(false)
 const coverRef = ref<any>(null)
 const recRef = ref<any>(null)
 
+const filter = reactive({ visibility: '', type: '', status: '', keyword: '' })
+
 function triggerFile(ref: any) { ref?.click() }
 const form = reactive({
   room_name: '', room_type: 'obs_tasting', push_source: 'obs_rtmp',
   order_id: null as number | null, location: '', description: '',
-  cover_image: '', recording_url: ''
+  cover_image: '', recording_url: '',
+  // 2026-09 新增字段
+  visibility: 'registered',
+  type: 'scheduled',
+  visible_user_ids: [] as string[],
+  visible_group_ids: [] as string[],
+  enable_recording: true,
+})
+const visForm = reactive({
+  visibility: 'registered',
+  visible_user_ids: [] as string[],
+  visible_group_ids: [] as string[],
 })
 
 const presets = [
@@ -162,11 +301,25 @@ function resolveUrl(url: string): string {
   return base + url
 }
 
+function resetFilter() {
+  Object.assign(filter, { visibility: '', type: '', status: '', keyword: '' })
+  load()
+}
+
 async function load() {
   try {
-    const d: any = await api.get('/live-rooms')
+    const params: any = {}
+    if (filter.visibility) params.visibility = filter.visibility
+    if (filter.type) params.type = filter.type
+    if (filter.status) params.status = filter.status
+    if (filter.keyword) params.keyword = filter.keyword
+    const d: any = await api.get('/live-rooms', { params })
     list.value = d?.items || d || []
   } catch {}
+  // 加载用户组列表（给 restricted 用）
+  if (!groups.value.length) {
+    try { groups.value = await api.get('/user-groups') } catch { groups.value = [] }
+  }
 }
 onMounted(load)
 
@@ -175,7 +328,10 @@ function openCreate() {
   editingId.value = null
   Object.assign(form, {
     room_name: '', room_type: 'obs_tasting', push_source: 'obs_rtmp',
-    order_id: null, location: '', description: '', cover_image: '', recording_url: ''
+    order_id: null, location: '', description: '', cover_image: '', recording_url: '',
+    visibility: 'registered', type: 'scheduled',
+    visible_user_ids: [], visible_group_ids: [],
+    enable_recording: true,
   })
   open.value = true
 }
@@ -187,9 +343,40 @@ function openEdit(row: any) {
     room_name: row.room_name, room_type: row.room_type, push_source: row.push_source,
     order_id: row.order_id ?? null, location: row.location ?? '',
     description: row.description ?? '', cover_image: row.cover_image ?? '',
-    recording_url: row.recording_url ?? ''
+    recording_url: row.recording_url ?? '',
+    visibility: row.visibility ?? 'registered',
+    type: row.type ?? 'scheduled',
+    visible_user_ids: (row.visible_user_ids || []).map(String),
+    visible_group_ids: (row.visible_group_ids || []).map(String),
+    enable_recording: row.enable_recording !== false,
   })
   open.value = true
+}
+
+function openVisEdit(row: any) {
+  editingVis.value = row
+  Object.assign(visForm, {
+    visibility: row.visibility ?? 'registered',
+    visible_user_ids: (row.visible_user_ids || []).map(String),
+    visible_group_ids: (row.visible_group_ids || []).map(String),
+  })
+  openVis.value = true
+}
+
+async function saveVis() {
+  saving.value = true
+  try {
+    const payload: any = {
+      visibility: visForm.visibility,
+      visible_user_ids: visForm.visible_user_ids,
+      visible_group_ids: visForm.visible_group_ids,
+    }
+    await api.put(`/live-rooms/${editingVis.value.id}`, payload)
+    ElMessage.success('Visibility updated')
+    openVis.value = false
+    load()
+  } catch (err: any) { ElMessage.error(err?.message || 'Failed') }
+  finally { saving.value = false }
 }
 
 async function onCoverChange(e: Event) {

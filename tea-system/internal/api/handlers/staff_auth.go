@@ -114,7 +114,11 @@ func (h *StaffAuthHandler) Login(c *gin.Context) {
 	// 5. 判断是否需要 MFA（admin/supervisor 强制 + 任何角色开启了 mfa_enabled）
 	//    dev 模式（GIN_MODE=debug）下跳过 ForceMFA，方便测试 admin 账号
 	mfaRequired := staff.MfaEnabled
-	if ginMode := os.Getenv("GIN_MODE"); ginMode != "debug" {
+	ginMode := os.Getenv("GIN_MODE")
+	if ginMode == "" {
+		ginMode = os.Getenv("SERVER_MODE")
+	}
+	if ginMode != "debug" && ginMode != "" {
 		mfaRequired = mfaRequired || staff.ForceMFA()
 	}
 

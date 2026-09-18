@@ -53,6 +53,14 @@ type LiveRoom struct {
 	EndedAt               *time.Time `gorm:"column:ended_at" json:"ended_at,omitempty"`
 	PeakViewers           int        `gorm:"column:peak_viewers;default:0" json:"peak_viewers"`
 	RecordingURL          string     `gorm:"column:recording_url;size:500" json:"recording_url,omitempty"`
+	// ===== 2026-09 新增: 可见性 & 录制 & 类型 =====
+	Type             string    `gorm:"column:type;size:30;default:'scheduled'" json:"type"` // slow_live / scheduled / advisor / admin
+	Visibility       string    `gorm:"column:visibility;size:20;default:'registered'" json:"visibility"` // public / registered / restricted
+	VisibleUserIDs   JSONArray `gorm:"column:visible_user_ids;type:jsonb" json:"visible_user_ids,omitempty"`
+	VisibleGroupIDs  JSONArray `gorm:"column:visible_group_ids;type:jsonb" json:"visible_group_ids,omitempty"`
+	EnableRecording  bool      `gorm:"column:enable_recording;default:true" json:"enable_recording"`
+	RecordingID      *uint64   `gorm:"column:recording_id" json:"recording_id,omitempty"`
+	// ===== 新增结束 =====
 	TranslationSessionID  *uint64    `gorm:"column:translation_session_id" json:"translation_session_id,omitempty"`
 	CreatedByStaffID      *uint64    `gorm:"column:created_by_staff_id" json:"created_by_staff_id,omitempty"`
 	CreatedAt             time.Time  `gorm:"column:created_at;not null" json:"created_at"`

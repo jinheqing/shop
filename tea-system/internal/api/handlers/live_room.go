@@ -34,6 +34,12 @@ type liveRoomCreateReq struct {
 	OrderID        *uint64 `json:"order_id"`
 	HostStaffID    *uint64 `json:"host_staff_id"`
 	ScheduledStart *string `json:"scheduled_start"` // RFC3339
+	// ===== 2026-09 新增 =====
+	Type            string           `json:"type"`
+	Visibility      string           `json:"visibility"`
+	VisibleUserIDs  models.JSONArray `json:"visible_user_ids"`
+	VisibleGroupIDs models.JSONArray `json:"visible_group_ids"`
+	EnableRecording bool             `json:"enable_recording"`
 }
 
 type liveRoomUpdateReq struct {
@@ -42,6 +48,12 @@ type liveRoomUpdateReq struct {
 	CoverImage  *string `json:"cover_image"`
 	Description *string `json:"description"`
 	HostStaffID *uint64 `json:"host_staff_id"`
+	// ===== 2026-09 新增 =====
+	Type            *string           `json:"type"`
+	Visibility      *string           `json:"visibility"`
+	VisibleUserIDs  *models.JSONArray `json:"visible_user_ids"`
+	VisibleGroupIDs *models.JSONArray `json:"visible_group_ids"`
+	EnableRecording *bool             `json:"enable_recording"`
 }
 
 type customerRequestReq struct {
@@ -77,6 +89,12 @@ func (h *LiveRoomHandler) Create(c *gin.Context) {
 		OrderID:          req.OrderID,
 		HostStaffID:      req.HostStaffID,
 		CreatedByStaffID: &staffID,
+		// 2026-09 新增
+		Type:            req.Type,
+		Visibility:      req.Visibility,
+		VisibleUserIDs:  req.VisibleUserIDs,
+		VisibleGroupIDs: req.VisibleGroupIDs,
+		EnableRecording: req.EnableRecording,
 	}
 
 	room, err := h.svc.Create(c.Request.Context(), in)
@@ -93,11 +111,13 @@ func (h *LiveRoomHandler) List(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	size, _ := strconv.Atoi(c.DefaultQuery("size", "20"))
 	f := repository.LiveRoomListFilter{
-		RoomType: c.Query("room_type"),
-		Status:   c.Query("status"),
-		Keyword:  c.Query("keyword"),
-		Page:     page,
-		Size:     size,
+		RoomType:   c.Query("room_type"),
+		Status:     c.Query("status"),
+		Visibility: c.Query("visibility"),
+		Type:       c.Query("type"),
+		Keyword:    c.Query("keyword"),
+		Page:       page,
+		Size:       size,
 	}
 	if v := c.Query("order_id"); v != "" {
 		if id, err := strconv.ParseUint(v, 10, 64); err == nil {
@@ -161,6 +181,22 @@ func (h *LiveRoomHandler) Update(c *gin.Context) {
 	}
 	if req.HostStaffID != nil {
 		patch["host_staff_id"] = *req.HostStaffID
+	}
+	// 2026-09 新增字段
+	if req.Type != nil {
+		patch["type"] = *req.Type
+	}
+	if req.Visibility != nil {
+		patch["visibility"] = *req.Visibility
+	}
+	if req.VisibleUserIDs != nil {
+		patch["visible_user_ids"] = *req.VisibleUserIDs
+	}
+	if req.VisibleGroupIDs != nil {
+		patch["visible_group_ids"] = *req.VisibleGroupIDs
+	}
+	if req.EnableRecording != nil {
+		patch["enable_recording"] = *req.EnableRecording
 	}
 
 	room, err := h.svc.Update(c.Request.Context(), id, patch)
@@ -393,11 +429,12 @@ func (h *LiveRoomHandler) SystemCreate(c *gin.Context) {
 }
 
 // PublicLiveRooms — GET /public/live-rooms（公开查询，仅暴露安全字段）
+// 仅返回 visibility=public 的直播间；状态为 deleted 的永远不返回
 func (h *LiveRoomHandler) PublicLiveRooms(c *gin.Context) {
 	items, _, err := h.svc.List(c.Request.Context(), repository.LiveRoomListFilter{
-		Status: "live",
-		Page:   1,
-		Size:   50,
+		Visibility: "public",
+		Page:       1,
+		Size:       50,
 	})
 	if err != nil {
 		log.Error().Err(err).Msg("live_room: public list failed")
@@ -410,20 +447,27 @@ func (h *LiveRoomHandler) PublicLiveRooms(c *gin.Context) {
 		RoomID      string `json:"room_id"`
 		RoomName    string `json:"room_name"`
 		RoomType    string `json:"room_type"`
+		Type        string `json:"type"`
 		Location    string `json:"location,omitempty"`
 		Description string `json:"description,omitempty"`
 		Status      string `json:"status"`
+		Visibility  string `json:"visibility"`
 	}
 	public := make([]PublicRoom, 0, len(items))
 	for _, r := range items {
+		if r.Status == "deleted" {
+			continue
+		}
 		public = append(public, PublicRoom{
 			ID:          r.ID,
 			RoomID:      r.RoomID,
 			RoomName:    r.RoomName,
 			RoomType:    r.RoomType,
+			Type:        r.Type,
 			Location:    util.SanitizeGardenLocation(r.Location),
 			Description: r.Description,
 			Status:      r.Status,
+			Visibility:  r.Visibility,
 		})
 	}
 	c.JSON(http.StatusOK, gin.H{"items": public})

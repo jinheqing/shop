@@ -20,6 +20,12 @@ var AllModels = []interface{}{
 	&SiteContent{},
 	&DSARRequest{},
 	&CookieConsentLog{},
+
+	// ===== 2026-09 会员体系新增 =====
+	&UserGroup{},
+	&UserGroupMember{},
+	&ShortLink{},
+	&Recording{},
 }
 
 // AuditModels — 审计库 model（独立 PostgreSQL 实例）

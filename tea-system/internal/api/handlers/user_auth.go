@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 
 	"tea-system/internal/models"
 	"tea-system/internal/repository"
@@ -22,6 +23,7 @@ type UserAuthHandler struct {
 	passwordSvc      *service.PasswordService
 	jwtSvc           *service.JWTService
 	magicLinkSvc     *service.MagicLinkService
+	db               *gorm.DB
 }
 
 func NewUserAuthHandler(
@@ -29,12 +31,14 @@ func NewUserAuthHandler(
 	passwordSvc *service.PasswordService,
 	jwtSvc *service.JWTService,
 	magicLinkSvc *service.MagicLinkService,
+	db *gorm.DB,
 ) *UserAuthHandler {
 	return &UserAuthHandler{
 		userRepo:     userRepo,
 		passwordSvc:  passwordSvc,
 		jwtSvc:       jwtSvc,
 		magicLinkSvc: magicLinkSvc,
+		db:           db,
 	}
 }
 
@@ -126,11 +130,26 @@ func (h *UserAuthHandler) MagicLinkVerify(c *gin.Context) {
 	accessToken, _ := h.jwtSvc.GenerateUserToken(user.ID, user.Email)
 	refreshToken, _ := h.jwtSvc.GenerateRefreshToken("user", user.ID)
 
+	// 统计已有数据（用于匿名合并提示）
+	var mergedCount int64
+	if h.db != nil {
+		h.db.Model(&models.Conversation{}).
+			Joins("JOIN conversation_participants cp ON cp.conversation_id = conversations.id").
+			Where("cp.user_id = ?", user.ID).
+			Count(&mergedCount)
+		customCount := int64(0)
+		h.db.Model(&models.CustomProduct{}).
+			Where("created_by_staff_id IS NULL").
+			Count(&customCount)
+		mergedCount += customCount
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"access_token":  accessToken,
-		"refresh_token": refreshToken,
-		"token_type":    "Bearer",
-		"expires_in":    120 * 60,
+		"access_token":          accessToken,
+		"refresh_token":         refreshToken,
+		"token_type":            "Bearer",
+		"expires_in":            120 * 60,
+		"merged_anonymous_count": mergedCount,
 		"user": gin.H{
 			"id":                 user.ID,
 			"name":               user.Name,

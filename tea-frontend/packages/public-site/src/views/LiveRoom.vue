@@ -34,10 +34,17 @@ const attendeeCount = ref(12) // 克制显示，不像抖音"2.3w 人正在看"
 
 onMounted(async () => {
   try {
-    rooms.value = ((await api.get('/live-rooms') as any)?.items || [])
+    // 优先用公开 API（不需要 JWT），失败再尝试带 auth 的（staff 在后台也能看）
+    let data: any = null
+    try {
+      data = await api.get('/public/live-rooms')
+    } catch {
+      try { data = await api.get('/live-rooms') } catch {}
+    }
+    rooms.value = data?.items || data || []
   } catch { rooms.value = [] }
   try {
-    presets.value = ((await api.get('/slow-presets') as any)?.items || [])
+    presets.value = ((await api.get('/public/slow-presets') as any)?.items || [])
   } catch { presets.value = [] }
 
   const DEMO = {

@@ -37,8 +37,14 @@ type CreateInput struct {
 	Description  string
 	OrderID      *uint64
 	HostStaffID  *uint64
-	ScheduledStart *time.Time
+	ScheduledStart   *time.Time
 	CreatedByStaffID *uint64
+	// ===== 2026-09 新增 =====
+	Type            string
+	Visibility      string
+	VisibleUserIDs  models.JSONArray
+	VisibleGroupIDs models.JSONArray
+	EnableRecording bool
 }
 
 // Create — 创建直播间（按 room_type + push_source 自动生成字段）
@@ -67,11 +73,25 @@ func (s *LiveRoomService) Create(ctx context.Context, in CreateInput) (*models.L
 		OrderID:      in.OrderID,
 		HostStaffID:  in.HostStaffID,
 		Status:       models.LiveStatusConfiguring,
-		ScheduledStart: in.ScheduledStart,
+		ScheduledStart:   in.ScheduledStart,
 		CreatedByStaffID: in.CreatedByStaffID,
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
+	// 2026-09: 新字段 (visibility defaults to "registered", enable_recording defaults true)
+	if in.Type != "" {
+		room.Type = in.Type
+	} else {
+		room.Type = "scheduled"
+	}
+	if in.Visibility != "" {
+		room.Visibility = in.Visibility
+	} else {
+		room.Visibility = "registered"
+	}
+	room.VisibleUserIDs = in.VisibleUserIDs
+	room.VisibleGroupIDs = in.VisibleGroupIDs
+	room.EnableRecording = in.EnableRecording || true
 
 	mediamtxHost := s.mediamtxHost()
 
