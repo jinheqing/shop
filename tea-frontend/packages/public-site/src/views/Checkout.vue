@@ -92,7 +92,7 @@ const place = async () => {
           <button :disabled="loading" @click="place" class="w-full mt-6 py-4 bg-tea-900 text-white rounded-lg font-medium hover:bg-tea-800 transition disabled:opacity-50">
             {{ loading ? 'Redirecting to 2Checkout...' : 'Pay Securely →' }}
           </button>
-          <p class="text-xs text-center text-tea-500 mt-4">🔒 256-bit SSL · 2Checkout / PayPal</p>
+          <p class="text-xs text-center text-tea-500 mt-4">🔒 256-bit SSL · 2Checkout / PayPal · We never store your card details</p>
         </div>
       </div>
     </div>

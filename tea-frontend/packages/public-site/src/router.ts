@@ -33,6 +33,9 @@ export const routes = [
   { path: '/contact', name: 'contact', component: () => import('@/views/Contact.vue'), meta: { title: 'Contact' } },
   { path: '/faq', name: 'faq', component: () => import('@/views/FAQ.vue'), meta: { title: 'FAQ' } },
   { path: '/privacy', name: 'privacy', component: () => import('@/views/Privacy.vue'), meta: { title: 'Privacy · GDPR' } },
+  { path: '/cookie-policy', name: 'cookie-policy', component: () => import('@/views/CookiePolicy.vue'), meta: { title: 'Cookie Policy' } },
+  { path: '/terms', name: 'terms', component: () => import('@/views/Terms.vue'), meta: { title: 'Terms of Service' } },
+  { path: '/gdpr-dsar', name: 'gdpr-dsar', component: () => import('@/views/GdprDsar.vue'), meta: { title: 'GDPR · Data Requests' } },
 
   // Invoice
   { path: '/orders/:id/invoice', name: 'invoice', component: () => import('@/views/InvoiceView.vue'), props: true },

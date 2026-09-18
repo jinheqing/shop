@@ -102,6 +102,11 @@ onMounted(load)
           </div>
           <div v-if="!reports.length" class="text-center text-tea-500 py-12">No SGS reports available yet.</div>
         </div>
+
+        <!-- SGS disclaimer -->
+        <p class="text-xs text-tea-500 text-center mt-8 px-4 leading-relaxed">
+          SGS reports apply only to the specific production batch tested. Results are not medical advice and do not guarantee the safety of any individual serving. All products are food items, not medicinal products.
+        </p>
       </div>
     </section>
   </div>

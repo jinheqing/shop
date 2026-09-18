@@ -165,6 +165,10 @@ async function submit() {
             </template>
           </form>
 
+          <p class="text-xs text-tea-500 text-center mt-4 leading-relaxed">
+            <strong>Note:</strong> Bespoke production takes up to 45 days. Your advisor will confirm final pricing and lead time before roasting begins. Actual tea may differ slightly from the sample description shown here.
+          </p>
+
           <div class="mt-8 text-center text-sm text-tea-500">
             Already have a bespoke token? <RouterLink to="/bespoke/demo-1" class="text-tea-700 font-medium hover:underline">View existing product →</RouterLink>
           </div>

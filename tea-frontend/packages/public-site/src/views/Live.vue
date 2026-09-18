@@ -19,6 +19,13 @@ onMounted(async () => {
       </div>
     </section>
 
+    <!-- Live disclaimer -->
+    <div class="bg-amber-50 border-y border-amber-200 text-sm text-amber-900">
+      <div class="max-w-6xl mx-auto px-6 py-3 text-center">
+        <span class="font-medium">⚠️</span> Live feeds may be delayed by up to 30 seconds. Camera availability depends on local connectivity. Tea preparation times shown are estimates — actual production schedules vary by garden and harvest season.
+      </div>
+    </div>
+
     <section class="py-16 bg-tea-50">
       <div class="max-w-7xl mx-auto px-6">
         <h2 class="font-serif text-3xl text-tea-900 mb-8">🌱 24/7 Garden Cameras</h2>

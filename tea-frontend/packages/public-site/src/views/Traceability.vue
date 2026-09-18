@@ -99,5 +99,10 @@ onMounted(async () => {
         <RouterLink to="/" class="inline-block px-8 py-3 bg-white text-tea-900 rounded-full font-medium">Back to UK Tea House →</RouterLink>
       </div>
     </section>
+    <div class="max-w-3xl mx-auto px-6 pb-10">
+      <p class="text-xs text-tea-500 text-center leading-relaxed">
+        This traceability record reflects the production batch, not every individual cup. Live camera feeds are provided for context and may be delayed. SGS results apply only to the tested batch. Not medical advice.
+      </p>
+    </div>
   </div>
 </template>
