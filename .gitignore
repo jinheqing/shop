@@ -1,0 +1,54 @@
+# ════════════════════════════════════════════════════════════════
+# UK Tea House — 根目录 .gitignore
+# ════════════════════════════════════════════════════════════════
+
+# ─── 敏感配置 ───
+.env
+.env.local
+.env.production
+
+# ─── 前端 node_modules ───
+node_modules/
+.pnpm-store/
+pnpm-store/
+
+# ─── Go ───
+tea-system/server
+tea-system/*.exe
+tea-system/vendor/
+
+# ─── Python ───
+tea-translate/__pycache__/
+tea-translate/*.pyc
+tea-translate/.venv/
+tea-translate/models/   # Whisper/NLLB 模型缓存 ~2GB
+
+# ─── Docker ───
+docker-compose.override.yml
+
+# ─── 数据 / 存储 ───
+storage/
+dump.rdb
+*.sql.backup
+*.tar.gz
+
+# ─── IDE / 编辑器 ───
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ─── OS ───
+.DS_Store
+Thumbs.db
+
+# ─── 日志 ───
+*.log
+tea-system/storage/logs/
+
+# ─── Flutter ───
+tea-app-android/.dart_tool/
+tea-app-android/.flutter-plugins
+tea-app-android/.flutter-plugins-dependencies
+tea-app-android/build/
+tea-app-android/.idea/
