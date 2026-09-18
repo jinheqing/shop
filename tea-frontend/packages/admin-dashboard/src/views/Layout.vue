@@ -37,6 +37,9 @@ const menuGroups: MenuGroup[] = [
     { label: 'Delivery Inspection', path: '/delivery-inspection', icon: 'Van' },
     { label: 'Slow Presets (24/7)', path: '/slow-presets', icon: 'Clock' },
     { label: 'LiveKit SFU', path: '/livekit', icon: 'Monitor' },
+    { label: 'Recordings', path: '/recordings', icon: 'VideoPlay' },
+    { label: 'Short Links', path: '/short-links', icon: 'Link' },
+    { label: 'User Groups', path: '/user-groups', icon: 'User' },
   ]},
   { label: 'Infrastructure', items: [
     { label: 'Media Nodes', path: '/nodes', icon: 'MonitorHeart' },

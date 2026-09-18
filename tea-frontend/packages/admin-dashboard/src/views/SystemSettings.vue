@@ -114,11 +114,55 @@
       </el-form>
     </el-card>
 
-    <!-- Group 6: Runtime Status (read-only) -->
+    <!-- Group 6: LiveKit SFU -->
     <el-card>
-      <template #header><b>⑥ Runtime Status</b> <span class="text-xs text-gray-400">(read-only)</span></template>
+      <template #header><b>⑥ LiveKit SFU</b><span class="ml-2 text-xs text-gray-400">section = <code>livekit</code></span></template>
+      <el-alert title="⚠️ LIVEKIT_API_KEY / LIVEKIT_API_SECRET are production secrets. Be careful editing here — values are stored in plaintext in site_contents (JSONB)." type="warning" show-icon :closable="false" class="mb-3" />
+      <el-form :model="livekit" label-width="200px" class="max-w-3xl">
+        <el-form-item label="SFU WebSocket URL">
+          <el-input v-model="livekit.url" placeholder="http://livekit:7880" />
+        </el-form-item>
+        <el-form-item label="API Key">
+          <el-input v-model="livekit.api_key" placeholder="livekit-dev" />
+        </el-form-item>
+        <el-form-item label="API Secret">
+          <el-input v-model="livekit.api_secret" type="password" show-password placeholder="" />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :loading="saving.livekit" @click="save('livekit', livekit)">Save LiveKit</el-button>
+          <el-tag v-if="savedAt.livekit" type="success" class="ml-2">Saved {{ savedAt.livekit }}</el-tag>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <!-- Group 7: Admin Seed (⚠️ dev only) -->
+    <el-card>
+      <template #header><b>⑦ Admin Seed</b><span class="ml-2 text-xs text-gray-400">section = <code>seed_admin</code> · <span class="text-red-400">dev only — only applies when staff table is empty</span></span></template>
+      <el-alert title="⚠️ These credentials are only used on FIRST START when staff table is empty. Changing them here won't reset existing staff passwords." type="warning" show-icon :closable="false" class="mb-3" />
+      <el-form :model="seedAdmin" label-width="200px" class="max-w-3xl">
+        <el-form-item label="Seed Email">
+          <el-input v-model="seedAdmin.email" placeholder="admin@ukteahouse.co.uk" />
+        </el-form-item>
+        <el-form-item label="Seed Name">
+          <el-input v-model="seedAdmin.name" placeholder="Admin" />
+        </el-form-item>
+        <el-form-item label="Seed Password">
+          <el-input v-model="seedAdmin.password" type="password" show-password placeholder="Admin!Tea2026" />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :loading="saving.seed_admin" @click="save('seed_admin', seedAdmin)">Save Seed Admin</el-button>
+          <el-tag v-if="savedAt.seed_admin" type="success" class="ml-2">Saved {{ savedAt.livekit, seedAdmin }}</el-tag>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <!-- Group 8: Runtime Status (read-only) -->
+    <el-card>
+      <template #header><b>⑧ Runtime Status</b> <span class="text-xs text-gray-400">(read-only)</span></template>
       <div class="grid grid-cols-2 gap-4">
         <div>Config entries in DB: <b>{{ knownKeys.length }}</b></div>
+        <div>LiveKit URL: <b>{{ livekit.url || '(not set — using env)' }}</b></div>
+        <div>Seed Email: <b>{{ seedAdmin.email || '(not set — using env default)' }}</b></div>
         <div>Current loaded version: <b>{{ server.version || '(not set — using env default)' }}</b></div>
         <div>Service name: <b>{{ app.service_name }}</b></div>
         <div>Magic-link domain: <b>{{ app.domain || '(not set)' }}</b></div>
@@ -135,18 +179,20 @@ import { api } from '../api/client'
 
 // ——— 预置 schema：每个 key 对应一个默认 JSON body ———
 type Section = Record<string, any>
-const knownKeys = ref<string[]>(['app', 'mail', 'translate', 'nodes', 'server'])
+const knownKeys = ref<string[]>(['app', 'mail', 'translate', 'nodes', 'server', 'livekit', 'seed_admin'])
 
 const app      = reactive<Section>({ domain: '', service_name: '', contact_email: '' })
 const mail     = reactive<Section>({ smtp_host: '', from_addr: '', api_key: '' })
 const translate = reactive<Section>({ service_url: '' })
 const nodes    = reactive<Section>({ wg_ip_start: '', wg_ip_prefix: '' })
 const server   = reactive<Section>({ version: '' })
+const livekit  = reactive<Section>({ url: '', api_key: '', api_secret: '' })
+const seedAdmin = reactive<Section>({ email: '', name: '', password: '' })
 
 const saving = reactive<Record<string, boolean>>({})
 const savedAt = reactive<Record<string, string>>({})
 
-const sections: Record<string, Section> = { app, mail, translate, nodes, server }
+const sections: Record<string, Section> = { app, mail, translate, nodes, server, livekit, seedAdmin }
 
 async function loadAll() {
   for (const key of knownKeys.value) {
