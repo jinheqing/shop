@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"os"
 	"errors"
 	"net/http"
 	"strconv"
@@ -111,7 +112,11 @@ func (h *StaffAuthHandler) Login(c *gin.Context) {
 	_ = h.staffRepo.UpdateLastLogin(ctx, staff.ID)
 
 	// 5. 判断是否需要 MFA（admin/supervisor 强制 + 任何角色开启了 mfa_enabled）
-	mfaRequired := staff.ForceMFA() || staff.MfaEnabled
+	//    dev 模式（GIN_MODE=debug）下跳过 ForceMFA，方便测试 admin 账号
+	mfaRequired := staff.MfaEnabled
+	if ginMode := os.Getenv("GIN_MODE"); ginMode != "debug" {
+		mfaRequired = mfaRequired || staff.ForceMFA()
+	}
 
 	// 6. 如果需要 MFA 但还没配 secret，先生成一个（用户首次登录时设置）
 	if mfaRequired && staff.MfaSecret == "" {

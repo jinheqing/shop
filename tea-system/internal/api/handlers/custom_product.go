@@ -546,3 +546,82 @@ func (h *CustomProductHandler) Published(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"items": items, "total": total})
 }
+
+// CreatePublic — POST /public/custom-products（公开提交定制请求，无需登录）
+// 轻量版本：允许缺失某些 admin 才知道的必填字段（自动填默认值）
+func (h *CustomProductHandler) CreatePublic(c *gin.Context) {
+	var req struct {
+		Title              string  `json:"title"`
+		TeaType            string  `json:"tea_type"`
+		TeaShape           string  `json:"tea_shape"`
+		UnitPrice          float64 `json:"unit_price"`
+		Quantity           int     `json:"quantity"`
+		ShippingCost       float64 `json:"shipping_cost"`
+		InnerPackaging     string  `json:"inner_packaging"`
+		OuterPackaging     string  `json:"outer_packaging"`
+		TeaGardenLocation  string  `json:"tea_garden_location"`
+		MasterName         string  `json:"master_name"`
+		RawTeaSource       string  `json:"raw_tea_source"`
+		CustomRequirement  string  `json:"custom_requirement"`
+		CustomerName       string  `json:"customer_name"`
+		CustomerEmail      string  `json:"customer_email" binding:"omitempty,email"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": err.Error()})
+		return
+	}
+	if req.Title == "" {
+		req.Title = "Bespoke Pu'er Request"
+	}
+	if req.TeaType == "" {
+		req.TeaType = "sheng_puer"
+	}
+	if req.TeaShape == "" {
+		req.TeaShape = "cake_357g"
+	}
+	if req.TeaGardenLocation == "" {
+		req.TeaGardenLocation = "Master Selection"
+	}
+	if req.RawTeaSource == "" {
+		req.RawTeaSource = req.TeaGardenLocation
+	}
+
+	// 生成 product_token 便于后续报价/支付
+	token, _ := h.svc.GenerateProductToken()
+	now := time.Now()
+
+	p := &models.CustomProduct{
+		ProductToken:      &token,
+		Version:           1,
+		Status:            models.CustomProductStatusDraft,
+		IsBespoke:         true,
+		NonRefundable:     true,
+		Title:             req.Title,
+		RawTeaSource:      req.RawTeaSource,
+		CustomRequirement: req.CustomRequirement,
+		TeaType:           req.TeaType,
+		TeaShape:          req.TeaShape,
+		InnerPackaging:    req.InnerPackaging,
+		OuterPackaging:    req.OuterPackaging,
+		UnitPrice:         req.UnitPrice,
+		Quantity:          req.Quantity,
+		ShippingCost:      req.ShippingCost,
+		TeaGardenLocation: req.TeaGardenLocation,
+		MasterName:        req.MasterName,
+		LeadTime:          "45 days from confirmation",
+		HarvestDate:       now,
+		RoastingDate:      now,
+		StorageLocation:   "London (temporary)",
+	}
+	if err := h.repo.Create(c.Request.Context(), p); err != nil {
+		log.Error().Err(err).Msg("custom_product: public create failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "internal error"})
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{
+		"code":    0,
+		"message": "bespoke request submitted",
+		"token":   token,
+		"product": p,
+	})
+}

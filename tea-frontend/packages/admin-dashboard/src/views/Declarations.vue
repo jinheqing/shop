@@ -25,7 +25,7 @@ async function del(id: number) { await api.delete(`/declarations/${id}`); load()
       </el-table-column>
       <el-table-column prop="customs_status" label="Status" width="120">
         <template #default="{ row }">
-          <el-tag :type="{'pending':'warning','cleared':'success','held':'danger'}[row.customs_status] || 'info'" effect="dark">{{ row.customs_status }}</el-tag>
+          <el-tag :type="({'pending':'warning','cleared':'success','held':'danger'} as Record<string,string>)[row.customs_status] || 'info'" effect="dark">{{ row.customs_status }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column prop="created_at" label="Created" width="180" />

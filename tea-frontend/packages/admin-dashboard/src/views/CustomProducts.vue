@@ -80,7 +80,7 @@ function total() {
       <el-table-column prop="master_name" label="Master" width="120" />
       <el-table-column prop="status" label="Status" width="110">
         <template #default="{ row }">
-          <el-tag :type="{'draft':'info','published':'success','archived':''}[row.status]" effect="dark">{{ row.status }}</el-tag>
+          <el-tag :type="({'draft':'info','published':'success','archived':''} as Record<string,string>)[row.status]" effect="dark">{{ row.status }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column label="Version" width="80">

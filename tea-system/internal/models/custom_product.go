@@ -1,8 +1,15 @@
 package models
 
+
 import (
+	"crypto/rand"
+	"encoding/hex"
+	"fmt"
 	"time"
+
+	"gorm.io/gorm"
 )
+
 
 // CustomProductStatus
 const (
@@ -66,3 +73,15 @@ type CustomProduct struct {
 func (CustomProduct) TableName() string {
 	return "custom_products"
 }
+
+func (c *CustomProduct) BeforeCreate(tx *gorm.DB) error {
+	if c.SKU == "" {
+		var b [6]byte
+		rand.Read(b[:])
+		c.SKU = fmt.Sprintf("TEA-%s-%s",
+			time.Now().Format("20060102"),
+			hex.EncodeToString(b[:]))
+	}
+	return nil
+}
+

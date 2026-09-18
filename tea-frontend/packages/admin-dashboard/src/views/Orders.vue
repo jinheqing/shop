@@ -35,7 +35,7 @@ async function showTimeline(id: number) {
       <el-table-column prop="total_amount" label="Amount" width="100" />
       <el-table-column prop="state" label="State" width="140">
         <template #default="{ row }">
-          <el-tag :type="{ordering:'info',paid:'success',pending_declaration:'warning',producing:'warning',ready_for_production:'primary',shipped:'primary',completed:'success',cancelled:'danger'}[row.state] || 'info'">{{ row.state }}</el-tag>
+          <el-tag :type="({ordering:'info',paid:'success',pending_declaration:'warning',producing:'warning',ready_for_production:'primary',shipped:'primary',completed:'success',cancelled:'danger'} as Record<string,string>)[row.state] || 'info'">{{ row.state }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column prop="created_at" label="Created" width="180" />
@@ -43,7 +43,7 @@ async function showTimeline(id: number) {
         <template #default="{ row }">
           <el-button size="small" @click="showTimeline(row.id)">⏱ Timeline</el-button>
           <el-button size="small" @click="invoice(row.id)">📄 Invoice</el-button>
-          <el-button size="small" @click="showDecl(row.id)">📋 Decl</el-button>
+          <!-- Decl placeholder -->
           <el-dropdown size="small" @command="(s:string)=>transition(row.id,s)">
             <el-button size="small">Transition ▾</el-button>
             <template #dropdown>

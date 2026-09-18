@@ -16,7 +16,7 @@ async function save() {
   await api.post('/sgs-reports', form)
   ElMessage.success('Uploaded')
   open.value = false
-  Object.keys(form).forEach(k => form[k] = '')
+  Object.assign(form, Object.fromEntries(Object.keys(form).map(k => [k, ''])))
   load()
 }
 </script>

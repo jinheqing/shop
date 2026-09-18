@@ -91,6 +91,8 @@ func (r *Router) Setup() *gin.Engine {
 		v1.GET("/public/sgs-reports", r.h.SgsReport.PublicList)
                 v1.GET("/public/live-rooms", r.h.LiveRoom.PublicLiveRooms)
                 v1.GET("/custom-products/published", r.h.CustomProduct.Published)
+                // Public bespoke submission — rate-limited, no auth required
+                v1.POST("/public/custom-products", middleware.RateLimit(2, 10), r.h.CustomProduct.CreatePublic)
 
 		// ---------- 支付 Webhook ----------
 		v1.POST("/webhooks/2checkout", r.h.Payment.Handle2CheckoutWebhook)
@@ -110,13 +112,13 @@ func (r *Router) Setup() *gin.Engine {
 			auth.POST("/staff/:id/toggle", r.h.StaffAuth.StaffToggle)
 			auth.DELETE("/staff/:id", r.h.StaffAuth.StaffDelete)
 			// Users (customers) list
-			auth.GET("/users", r.h.StaffAuth.UserList)
+			auth.GET("/users", middleware.RequireRole("admin", "supervisor"), r.h.StaffAuth.UserList)
 			// System Config
-			auth.GET("/system/config", r.h.SystemConfig.List)
-			auth.GET("/system/config/:key", r.h.SystemConfig.Get)
-			auth.PUT("/system/config/:key", r.h.SystemConfig.Put)
+			auth.GET("/system/config", middleware.RequireRole("admin", "supervisor"), r.h.SystemConfig.List)
+			auth.GET("/system/config/:key", middleware.RequireRole("admin", "supervisor"), r.h.SystemConfig.Get)
+			auth.PUT("/system/config/:key", middleware.RequireRole("admin", "supervisor"), r.h.SystemConfig.Put)
 			// Payment Transactions
-			auth.GET("/payment/transactions", r.h.Payment.ListTransactions)
+			auth.GET("/payment/transactions", middleware.RequireRole("admin", "supervisor"), r.h.Payment.ListTransactions)
 
 			// Step 7: IM
 			auth.GET("/conversations", r.h.Conversation.List)

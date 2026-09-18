@@ -65,7 +65,7 @@ const recent = ref([
         <el-table-column prop="source_type" label="Source" width="150" />
         <el-table-column prop="status" label="Status" width="120">
           <template #default="{ row }">
-            <el-tag :type="{'completed':'success','translating':'warning','failed':'danger','pending':'info'}[row.status]" effect="dark">{{ row.status }}</el-tag>
+            <el-tag :type="({'completed':'success','translating':'warning','failed':'danger','pending':'info'} as Record<string,string>)[row.status]" effect="dark">{{ row.status }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="Latency" width="140">
