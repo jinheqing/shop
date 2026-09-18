@@ -15,14 +15,17 @@ from app.models.translator import get_translator
 router = APIRouter()
 
 
-# 每次 flush 的音频窗口（秒）
-PARTIAL_WINDOW_SEC = 2.0
-# final flush 间隔
-FLUSH_INTERVAL_SEC = 2.0
+# ============ 延时关键参数 ============
+# PARTIAL_WINDOW_SEC: partial 字幕的音频窗口（秒）
+#   2.0s → 1.2s: 每个 partial 字幕提前 ~800ms 出，代价是识别准确率略降（1.2s 短窗口）
+#   如果需要精准识别可改回 2.0s，但字幕会 ~800ms 延迟
+PARTIAL_WINDOW_SEC = 1.2
+# FLUSH_INTERVAL_SEC: 定时器 flush 间隔（音频不够窗口时兜底）
+FLUSH_INTERVAL_SEC = 1.5
 SAMPLE_RATE = 16000
 BYTES_PER_SAMPLE = 2  # int16
 
-PARTIAL_CHUNK_SIZE = SAMPLE_RATE * BYTES_PER_SAMPLE * PARTIAL_WINDOW_SEC
+PARTIAL_CHUNK_SIZE = int(SAMPLE_RATE * BYTES_PER_SAMPLE * PARTIAL_WINDOW_SEC)
 
 
 @router.websocket("/asr-stream")
@@ -96,7 +99,11 @@ async def asr_stream(websocket: WebSocket):
 
 
 async def _send_partial(ws: WebSocket, pcm: bytes, asr) -> None:
-    text = asr.transcribe_realtime(pcm, sample_rate=SAMPLE_RATE)
+    # asyncio.to_thread: 把 CPU 密集的 Whisper 推理放到线程池，不阻塞 event loop
+    # event loop 被阻塞 → 收不到新音频包 → 积压 → 字幕延迟
+    text = await asyncio.to_thread(asr.transcribe_realtime, pcm, SAMPLE_RATE)
+    if not text.strip():
+        return
     payload = {"type": "partial", "text": text}
     try:
         await ws.send_text(json.dumps(payload, ensure_ascii=False))
@@ -107,17 +114,19 @@ async def _send_partial(ws: WebSocket, pcm: bytes, asr) -> None:
 async def _send_final(
     ws: WebSocket, pcm: bytes, asr, translator, target_lang: str
 ) -> None:
-    text = asr.transcribe_realtime(pcm, sample_rate=SAMPLE_RATE)
+    # Whisper: to_thread 避免阻塞
+    text = await asyncio.to_thread(asr.transcribe_realtime, pcm, SAMPLE_RATE)
     translated = ""
     try:
         if text.strip():
-            # 简化：假设中文->英文，英文->中文
             if target_lang == "auto":
                 zh_chars = sum(1 for c in text if "\u4e00" <= c <= "\u9fff")
                 target_lang = "en" if zh_chars > len(text) * 0.2 else "zh"
-            # source 反推：跟目标相反
             src_lang = "zh" if target_lang == "en" else "en"
-            translated = translator.translate(text, source_lang=src_lang, target_lang=target_lang)
+            # NLLB-200: to_thread 避免阻塞
+            translated = await asyncio.to_thread(
+                translator.translate, text, src_lang, target_lang
+            )
     except Exception:
         translated = ""
 
