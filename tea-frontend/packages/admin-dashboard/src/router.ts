@@ -50,7 +50,7 @@ const routes = [
     { path: 'audit-logs', component: () => import('@/views/AuditLogs.vue'), meta: { title: 'Audit Logs' } },
   ] },
 ]
-const r = createRouter({ history: createWebHistory(), routes })
+const r = createRouter({ history: createWebHistory('/admin/'), routes })
 r.beforeEach((to, _, next) => {
   if (to.path === '/login') return next()
   if (!localStorage.getItem('staff_token')) return next('/login')

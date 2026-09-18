@@ -1,4 +1,4 @@
-import { createRouter, createWebHashHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
 
 export const routes = [
   // Core public pages
@@ -46,7 +46,7 @@ export const routes = [
   { path: '/host', name: 'host-live', component: () => import('@/views/HostLive.vue'), meta: { title: 'Host · Live' } },
 ]
 
-const router = createRouter({ history: createWebHashHistory(), routes, scrollBehavior: () => ({ top: 0 }) })
+const router = createRouter({ history: createWebHistory(), routes, scrollBehavior: () => ({ top: 0 }) })
 
 // ===== 登录守卫 =====
 // - requiresAuth 路由：未登录 → 跳 /login?redirect=当前路径
