@@ -92,11 +92,11 @@
       </el-table-column>
       <el-table-column label="Actions" width="340">
         <template #default="{ row }">
-          <el-button size="small" v-if="row.status !== 'live'" type="success" @click="start(row)">Start</el-button>
+          <el-button size="small" v-if="row.status !== 'live'" type="success" :loading="goLiveLoading" @click="goLive(row)">🎬 Go Live</el-button>
           <el-button size="small" v-else type="warning" @click="end(row)">End</el-button>
+          <el-button size="small" v-if="row.status !== 'live'" @click="openEdit(row)">Edit</el-button>
+          <el-button size="small" v-if="row.status !== 'live'" @click="openVisEdit(row)">👁 Vis</el-button>
           <el-button size="small" @click="copyKey(row)">Key</el-button>
-          <el-button size="small" @click="openEdit(row)">Edit</el-button>
-          <el-button size="small" @click="openVisEdit(row)">👁 Vis</el-button>
           <el-button size="small" type="danger" @click="del(row.id)">Del</el-button>
         </template>
       </el-table-column>
@@ -243,6 +243,87 @@
     <template #footer>
       <el-button @click="openVis = false">Cancel</el-button>
       <el-button type="primary" :loading="saving" @click="saveVis">Save Visibility</el-button>
+    </template>
+  </el-dialog>
+
+  <!-- ========== 开播配置弹窗 ========== -->
+  <el-dialog v-model="openGoLive" :title="`🎬 Go Live · ${goLiveRoom?.room_name || ''}`" width="680px">
+    <div v-if="goLiveConfig" class="space-y-4">
+      <!-- 直播状态 -->
+      <el-alert type="success" show-icon :closable="false">
+        Room status: <strong>LIVE</strong> · room_id: <code>{{ goLiveRoom?.room_id }}</code>
+      </el-alert>
+
+      <!-- 方案选择 -->
+      <el-tabs v-model="goLiveRoom?.push_source || 'app_webrtc'">
+        <!-- === 手机 App WebRTC 推流 (推荐, 支持连麦+翻译) === -->
+        <el-tab-pane label="📱 Mobile App WebRTC" name="app_webrtc">
+          <div class="text-xs text-slate-500 mb-3">
+            手机端打开 App / H5 主播页，填入 LiveKit URL + Host Token 即可开播。
+            支持互动连麦、实时字幕翻译。
+          </div>
+          <div class="space-y-3">
+            <!-- 📱 一键打开主播 H5 (手机扫码 / 桌面新窗口) -->
+            <div class="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded">
+              <div class="flex-1">
+                <div class="text-sm font-medium text-green-700">📱 Quick Start</div>
+                <div class="text-xs text-green-600 mt-1">手机扫码或新窗口打开主播 H5（已自动填入所有参数）</div>
+              </div>
+              <el-button type="success" size="small" @click="openHostH5">📱 Open Host H5</el-button>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-32 text-xs text-slate-500">LiveKit URL</span>
+              <el-input :model-value="goLiveConfig.livekit_url" readonly size="small" />
+              <el-button size="small" @click="copy(goLiveConfig.livekit_url, 'LiveKit URL')">Copy</el-button>
+            </div>
+            <div class="flex items-start gap-2">
+              <span class="w-32 text-xs text-slate-500 mt-1">Host Token</span>
+              <el-input :model-value="goLiveConfig.host_token" readonly size="small" type="textarea" :autosize="{ minRows: 3, maxRows: 5 }" />
+              <el-button size="small" @click="copy(goLiveConfig.host_token, 'Host Token')">Copy</el-button>
+            </div>
+            <div class="text-[11px] text-amber-600">
+              ⚠ Token 有效期 {{ goLiveConfig.expires || 3600 }}s（约 1h）。过期后需要重新点击 "🎬 Go Live" 获取新 token。
+            </div>
+          </div>
+        </el-tab-pane>
+
+        <!-- === OBS RTMP 推流 === -->
+        <el-tab-pane label="🖥 OBS RTMP" name="obs_rtmp">
+          <div class="text-xs text-slate-500 mb-3">
+            OBS Studio → 设置 → 直播 → 自定义：粘贴 URL + 密钥。推流到 MediaMTX，后端自动转 WebRTC。
+          </div>
+          <div class="space-y-3">
+            <div class="flex items-center gap-2">
+              <span class="w-32 text-xs text-slate-500">服务器</span>
+              <el-input :model-value="goLiveConfig.obs_rtmp_url" readonly size="small" />
+              <el-button size="small" @click="copy(goLiveConfig.obs_rtmp_url, 'RTMP URL')">Copy</el-button>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-32 text-xs text-slate-500">串流密钥</span>
+              <el-input :model-value="goLiveConfig.obs_rtmp_key" readonly size="small" show-password />
+              <el-button size="small" @click="copy(goLiveConfig.obs_rtmp_key, 'Stream Key')">Copy</el-button>
+            </div>
+          </div>
+        </el-tab-pane>
+
+        <!-- === Camera RTMP (慢直播) === -->
+        <el-tab-pane label="📹 Camera RTMP" name="camera_rtmp">
+          <div class="text-xs text-slate-500 mb-3">
+            IP Camera → RTMP 推流到 MediaMTX slow 入口。24/7 慢直播专用。
+          </div>
+          <div class="space-y-3">
+            <div class="flex items-center gap-2">
+              <span class="w-32 text-xs text-slate-500">RTMP URL</span>
+              <el-input :model-value="goLiveConfig.obs_rtmp_url" readonly size="small" />
+              <el-button size="small" @click="copy(goLiveConfig.obs_rtmp_url, 'Camera RTMP')">Copy</el-button>
+            </div>
+          </div>
+        </el-tab-pane>
+      </el-tabs>
+    </div>
+    <template #footer>
+      <el-button @click="openGoLive = false">Close</el-button>
+      <el-button type="danger" @click="end(goLiveRoom)" :loading="goLiveLoading">End Stream</el-button>
     </template>
   </el-dialog>
 </template>
@@ -416,11 +497,92 @@ async function save() {
 }
 
 async function del(id: number) { await api.delete(`/live-rooms/${id}`); load() }
-async function start(row: any) { await api.post(`/live-rooms/${row.id}/start`); ElMessage.success('Started'); load() }
-async function end(row: any) { await api.post(`/live-rooms/${row.id}/end`); ElMessage.success('Ended'); load() }
+
+// ========== 开播配置弹窗 ==========
+const openGoLive = ref(false)
+const goLiveRoom = ref<any>(null)
+const goLiveConfig = ref<any>(null)  // { host_token, obs_rtmp_url, obs_rtmp_key, web_url }
+const goLiveLoading = ref(false)
+
+async function goLive(row: any) {
+  goLiveRoom.value = row
+  goLiveConfig.value = null
+  goLiveLoading.value = true
+  try {
+    // 1) 先 Start（后端状态机 + 触发 LiveKit CreateRoom + 确保 host token）
+    const started = await api.post(`/live-rooms/${row.id}/start`)
+    // 2) 拿 OBS/Host token + RTMP/Web 配置
+    const tokenResp = await api.post('/livekit/token-for-obs', {
+      room_name: row.room_id,
+      identity: 'host-' + row.room_id,
+    })
+    goLiveConfig.value = {
+      host_token: tokenResp?.token || (started?.livekit_token_for_host) || '',
+      expires: tokenResp?.expires,
+      obs_rtmp_url: tokenResp?.obs_rtmp_url || row.obs_rtmp_url,
+      obs_rtmp_key: tokenResp?.obs_rtmp_key || row.obs_rtmp_key,
+      web_url: tokenResp?.web_url,
+      livekit_url: import.meta.env.VITE_LIVEKIT_URL || '',
+    }
+    openGoLive.value = true
+    await load()  // 刷新列表显示 live 状态
+    ElMessage.success('Room started. Stream config ready.')
+  } catch (err: any) {
+    // 如果已经是 live（重复 start），直接拿配置
+    if (err?.message?.includes('cannot start') || err?.code === 400) {
+      try {
+        const tokenResp = await api.post('/livekit/token-for-obs', {
+          room_name: row.room_id,
+          identity: 'host-' + row.room_id,
+        })
+        goLiveConfig.value = {
+          host_token: tokenResp?.token || '',
+          expires: tokenResp?.expires,
+          obs_rtmp_url: tokenResp?.obs_rtmp_url || row.obs_rtmp_url,
+          obs_rtmp_key: tokenResp?.obs_rtmp_key || row.obs_rtmp_key,
+          web_url: tokenResp?.web_url,
+          livekit_url: import.meta.env.VITE_LIVEKIT_URL || '',
+        }
+        openGoLive.value = true
+      } catch (e2: any) {
+        ElMessage.error(err?.message || e2?.message || 'Failed to start')
+      }
+    } else {
+      ElMessage.error(err?.message || 'Failed to start')
+    }
+  } finally { goLiveLoading.value = false }
+}
+
+async function end(row: any) {
+  await api.post(`/live-rooms/${row.id}/end`)
+  ElMessage.success('Ended')
+  openGoLive.value = false
+  await load()
+}
+
+function copy(val: string, label = 'Value') {
+  if (!val) { ElMessage.info(`${label} is empty`); return }
+  navigator.clipboard.writeText(val).then(() => ElMessage.success(`${label} copied`))
+}
+
 function copyKey(row: any) {
   const k = row.obs_rtmp_key || row.camera_rtmp_key || ''
-  if (k) { navigator.clipboard.writeText(k); ElMessage.success('Key copied') }
+  if (k) copy(k, 'RTMP Key')
   else ElMessage.info('No RTMP key yet — start stream first')
+}
+
+function openHostH5() {
+  if (!goLiveConfig.value || !goLiveRoom.value) return
+  const adminBase = window.location.origin
+  // admin-dashboard 和 public-site 可能不同 host；尝试相对路径 fallback
+  const base = adminBase.includes('admin') ? adminBase.replace('admin', '') : adminBase
+  const params = new URLSearchParams({
+    host_token:  goLiveConfig.value.host_token,
+    livekit_url: goLiveConfig.value.livekit_url,
+    room_id:     goLiveRoom.value.room_id,
+  })
+  const url = `${base}/#/host?${params.toString()}`
+  window.open(url, '_blank', 'noopener,noreferrer')
+  copy(url, 'Host H5 URL (copied to clipboard)')
 }
 </script>

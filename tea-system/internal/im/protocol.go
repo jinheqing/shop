@@ -6,7 +6,7 @@ import (
 
 // IMMessage — WebSocket 统一消息信封
 type IMMessage struct {
-	Type    string      `json:"type"`    // send_message / chat_message / barrage / ack / error / presence / join_room
+	Type    string      `json:"type"`    // send_message / chat_message / barrage / ack / error / presence / join_room / link_mic / subtitle
 	Payload interface{} `json:"payload"` // 具体消息体
 }
 
@@ -45,14 +45,35 @@ type ChatMessage struct {
 	CreatedAt         time.Time    `json:"created_at"`
 }
 
-// BarragePayload — 弹幕（直播间）
+// BarragePayload — 弹幕（直播间通用载体，subtype 区分业务）
+//
+// subtype 取值:
+//   chat         — 普通弹幕聊天（原 barrage）
+//   link_invite  — 观众请求连麦 / 主播邀请观众连麦
+//   link_accept  — 被邀请者接受（请求者自己发布音视频）
+//   link_reject  — 被邀请者拒绝
+//   link_end     — 任一方结束连麦（双方都停推）
+//   subtitle     — 主播/连麦者的字幕（ASR → 翻译 → 广播）
+//
 type BarragePayload struct {
 	RoomID    string `json:"room_id"`
+	Subtype   string `json:"subtype,omitempty"` // chat / link_invite / link_accept / link_reject / link_end / subtitle
 	Content   string `json:"content"`
 	Nickname  string `json:"nickname,omitempty"`
 	Badge     string `json:"badge,omitempty"`
 	UserID    uint64 `json:"user_id,omitempty"`
 	Timestamp int64  `json:"ts"`
+
+	// === link_mic 专属字段 ===
+	TargetUserID  uint64 `json:"target_user_id,omitempty"`  // 邀请/拒绝谁
+	LinkSessionID string `json:"link_session_id,omitempty"` // 本次连麦 session（双方一致）
+
+	// === subtitle 专属字段 ===
+	Speaker    string `json:"speaker,omitempty"`            // host / guest_{id}
+	Text       string `json:"text,omitempty"`               // ASR 原文
+	Translation string `json:"translation,omitempty"`       // 译文
+	Lang       string `json:"lang,omitempty"`               // zh / en / auto
+	TranscriptType string `json:"transcript_type,omitempty"` // partial / final
 }
 
 // AckPayload — 服务器 → 客户端：消息送达确认

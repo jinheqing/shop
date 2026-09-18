@@ -40,6 +40,10 @@ export const routes = [
 
   // Invoice
   { path: '/orders/:id/invoice', name: 'invoice', component: () => import('@/views/InvoiceView.vue'), props: true, meta: { requiresAuth: true } },
+
+  // 主播端 H5 (手机端开播, LiveKit App WebRTC 推流)
+  // 从 admin-dashboard "Go Live" 弹窗里点 "📱 Mobile" 跳转，带 host_token / livekit_url / room_id query
+  { path: '/host', name: 'host-live', component: () => import('@/views/HostLive.vue'), meta: { title: 'Host · Live' } },
 ]
 
 const router = createRouter({ history: createWebHashHistory(), routes, scrollBehavior: () => ({ top: 0 }) })

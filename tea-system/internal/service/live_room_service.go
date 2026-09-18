@@ -145,7 +145,37 @@ func (s *LiveRoomService) Delete(ctx context.Context, id uint64) error {
 }
 
 // Start — 开始直播
+// 状态机: configuring/scheduled → live
+// 副作用: 触发 LiveKitService.CreateRoom + 确保 host token 已生成
 func (s *LiveRoomService) Start(ctx context.Context, id uint64) (*models.LiveRoom, error) {
+	room, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if room.Status != models.LiveStatusConfiguring && room.Status != models.LiveStatusScheduled {
+		return nil, fmt.Errorf("room %d cannot start: current status=%s (expect configuring/scheduled)", id, room.Status)
+	}
+
+	// 1) 如果 push_source 是 app_webrtc / obs_rtmp，确保 host viewer token 都已生成
+	if room.PushSource == models.PushSourceAppWebRTC && s.lk != nil {
+		if room.LivekitTokenForHost == "" {
+			if tk, _, e := s.lk.GenerateToken(room.RoomID, "host-"+room.RoomID, true); e == nil {
+				room.LivekitTokenForHost = tk
+				_ = s.repo.Update(ctx, id, map[string]interface{}{"livekit_token_for_host": tk})
+			} else {
+				log.Warn().Err(e).Uint64("room_id", id).Msg("generate host token failed, continue without")
+			}
+		}
+	}
+
+	// 2) 触发 LiveKit 真正创建房间（若服务可用）
+	if s.lk != nil {
+		if _, e := s.lk.CreateRoom(room.RoomID); e != nil {
+			log.Warn().Err(e).Str("room", room.RoomID).Msg("livekit create room failed (non-blocking)")
+		}
+	}
+
+	// 3) 状态流转
 	if err := s.repo.Start(ctx, id); err != nil {
 		return nil, err
 	}

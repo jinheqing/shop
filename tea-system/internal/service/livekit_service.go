@@ -54,6 +54,9 @@ func (s *LiveKitService) GenerateToken(roomName, identity string, isHost bool) (
 	if identity == "" {
 		return "", 0, fmt.Errorf("identity is required")
 	}
+	if s.apiKey == "" || s.apiSecret == "" {
+		return "", 0, fmt.Errorf("livekit not configured: LIVEKIT_API_KEY and LIVEKIT_API_SECRET must be set")
+	}
 
 	at := auth.NewAccessToken(s.apiKey, s.apiSecret)
 

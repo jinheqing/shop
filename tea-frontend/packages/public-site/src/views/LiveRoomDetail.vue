@@ -31,7 +31,7 @@ const audioSource = ref<MediaStreamAudioSourceNode | null>(null)
 const captions = ref<Array<{
   id: number
   type: 'partial' | 'final'
-  speaker: 'host' | 'me'
+  speaker: 'host' | 'me' | 'guest'
   text: string
   translation?: string
   lang: string
@@ -47,6 +47,99 @@ const targetLang = computed(() => {
   if (sourceLang.value === 'en') return 'zh'
   return 'auto'
 })
+
+// ============ IM WebSocket（订阅主播字幕广播 + 连麦信令） ============
+const imWS = ref<WebSocket | null>(null)
+const imConnected = ref(false)
+
+// ============ 连麦状态 ============
+const linked = ref(false)           // 观众是否正在连麦
+const linkSessionId = ref<string>('')
+const linkRequested = ref(false)
+
+async function openIM() {
+  const token = localStorage.getItem('user_token') || localStorage.getItem('staff_token')
+  if (!token) return
+  const host = window.location.host
+  const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
+  imWS.value = new WebSocket(`${proto}://${host}/ws/im?token=${token}`)
+  imWS.value.onopen = () => {
+    imConnected.value = true
+    imWS.value?.send(JSON.stringify({ type: 'join_room', payload: { room_id: room.value?.room_id } }))
+  }
+  imWS.value.onclose = () => { imConnected.value = false }
+  imWS.value.onmessage = (ev) => {
+    try {
+      const env = JSON.parse(ev.data)
+      if (env.type === 'barrage') handleBarrage(env.payload)
+    } catch {}
+  }
+}
+
+function closeIM() { try { imWS.value?.close() } catch {}; imWS.value = null; imConnected.value = false }
+
+function sendBarrage(payload: any) {
+  if (!imWS.value || imWS.value.readyState !== WebSocket.OPEN) return
+  const env = { type: 'barrage', payload: { ...payload, room_id: room.value?.room_id, ts: Date.now() } }
+  imWS.value.send(JSON.stringify(env))
+}
+
+function handleBarrage(p: any) {
+  const st = p.subtype || 'chat'
+  if (st === 'subtitle') {
+    // 主播/连麦者发来的字幕广播 → 追加到字幕队列
+    const speaker = p.speaker === 'host' ? 'host' : 'guest'
+    pushCaption({
+      speaker, type: p.transcript_type === 'partial' ? 'partial' : 'final',
+      text: p.text, translation: p.translation, lang: p.lang || 'auto', ts: p.ts || Date.now(),
+    })
+  } else if (st === 'link_invite') {
+    // 主播邀请观众连麦 — 这里用"观众请求主播接受"的模型，主播拒绝/接受用 link_reject/link_accept 广播
+    // 观众作为"被邀请者"，主播是主动方 — 如果是反向场景（观众请求主播邀请），主播会发 invite
+  } else if (st === 'link_accept' && p.target_user_id && p.target_user_id === 0 /* 观众不知道自己 ID，简单处理 */) {
+    // 简化：收到 link_accept（无 target 或 target 为 0 时）→ 视为主播同意了观众的连麦请求
+    handleLinkAccepted(p.link_session_id)
+  } else if (st === 'link_reject') {
+    linkRequested.value = false
+  } else if (st === 'link_end') {
+    linked.value = false
+    linkSessionId.value = ''
+  }
+}
+
+// 观众请求连麦 → 主播会收到 link_invite（观众作为"请求方"，主播作为"被请求方"）
+// 这里复用同一 barrage subtype，主播收到 invite 后决定 accept/reject
+async function requestLinkMic() {
+  linkRequested.value = true
+  linkSessionId.value = 'l-' + Math.random().toString(36).slice(2, 10)
+  sendBarrage({ subtype: 'link_invite', content: 'request', link_session_id: linkSessionId.value, nickname: 'Viewer' })
+  // 同时自己也 publish audio 到 LiveKit（主播 accept 后就能听到）
+  try {
+    if (lkClient.value) await lkClient.value.localParticipant.setMicrophoneEnabled(true)
+  } catch {}
+}
+
+async function handleLinkAccepted(sessionId: string) {
+  linkRequested.value = false
+  linked.value = true
+  linkSessionId.value = sessionId
+  try {
+    if (lkClient.value) {
+      await lkClient.value.localParticipant.setMicrophoneEnabled(true)
+      await lkClient.value.localParticipant.setCameraEnabled(true)
+    }
+  } catch {}
+}
+
+async function endLinkMic() {
+  sendBarrage({ subtype: 'link_end', content: 'end', link_session_id: linkSessionId.value })
+  linked.value = false
+  linkRequested.value = false
+  linkSessionId.value = ''
+  try {
+    if (lkClient.value) await lkClient.value.localParticipant.setMicrophoneEnabled(false)
+  } catch {}
+}
 
 const isLoggedIn = () => !!localStorage.getItem('user_token')
 
@@ -80,6 +173,7 @@ onMounted(async () => {
 onUnmounted(() => {
   leaveLiveKit()
   closeASR()
+  closeIM()
 })
 
 function goLogin() {
@@ -115,6 +209,8 @@ async function joinLiveKit() {
 
     await r.connect(import.meta.env.VITE_LIVEKIT_URL || 'wss://tea.livekit.cloud', token)
     lkConnected.value = true
+    // LiveKit join 成功 → 打开 IM WS 订阅 barrage（主播字幕广播 + 连麦信令）
+    if (isLoggedIn()) openIM()
   } catch (e: any) {
     alert('LiveKit connect failed: ' + (e?.message || String(e)))
   } finally { lkJoinLoading.value = false }
@@ -338,6 +434,19 @@ function clearCaptions() { captions.value = [] }
         <template v-else>
           <button @click="leaveLiveKit" class="lux-btn lux-btn-ghost">
             <span class="uppercase-caps">Leave</span>
+          </button>
+
+          <!-- 连麦按钮 -->
+          <template v-if="!linked">
+            <button v-if="!linkRequested" @click="requestLinkMic" class="lux-btn lux-btn-ghost">
+              <span class="uppercase-caps">Request · Link Mic</span>
+            </button>
+            <button v-else disabled class="lux-btn">
+              <span class="uppercase-caps">Awaiting · Host</span>
+            </button>
+          </template>
+          <button v-else @click="endLinkMic" class="lux-btn lux-btn-active">
+            <span class="uppercase-caps">🔗 In · Call · End</span>
           </button>
         </template>
 
