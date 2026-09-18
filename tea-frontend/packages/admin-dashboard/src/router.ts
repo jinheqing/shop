@@ -44,6 +44,7 @@ const routes = [
 
     // System
     { path: 'staff', component: () => import('@/views/Staff.vue'), meta: { title: 'Staff' } },
+    { path: 'system-settings', component: () => import('@/views/SystemSettings.vue'), meta: { title: 'System Settings' } },
     { path: 'site-content', component: () => import('@/views/SiteContent.vue'), meta: { title: 'CMS' } },
     { path: 'dsar', component: () => import('@/views/DSAR.vue'), meta: { title: 'GDPR/DSAR' } },
     { path: 'audit-logs', component: () => import('@/views/AuditLogs.vue'), meta: { title: 'Audit Logs' } },

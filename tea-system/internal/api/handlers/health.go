@@ -7,10 +7,12 @@ import (
 )
 
 // HealthHandler — 健康检查
-type HealthHandler struct{}
+type HealthHandler struct {
+	Version string // 从 cfg.Server.Version 注入（DB 覆盖会在上游生效）
+}
 
-func NewHealthHandler() *HealthHandler {
-	return &HealthHandler{}
+func NewHealthHandler(version string) *HealthHandler {
+	return &HealthHandler{Version: version}
 }
 
 // HealthResponse — /health 响应结构
@@ -25,7 +27,7 @@ func (h *HealthHandler) Health(c *gin.Context) {
 	c.JSON(http.StatusOK, HealthResponse{
 		Status:  "ok",
 		Service: "tea-system",
-		Version: "0.2.0",
+		Version: h.Version,
 	})
 }
 

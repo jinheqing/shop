@@ -6,7 +6,7 @@ import { useAuth } from '@/stores/auth'
 
 const router = useRouter()
 const auth = useAuth()
-const form = ref({ email: 'admin@ukteahouse.co.uk', password: 'Admin!Tea2026' })
+const form = ref(import.meta.env.DEV ? { email: 'admin@ukteahouse.co.uk', password: 'Admin!Tea2026' } : { email: '', password: '' })
 const loading = ref(false)
 
 async function submit() {
@@ -30,7 +30,7 @@ async function submit() {
         <el-form-item label="Password"><el-input v-model="form.password" type="password" show-password size="large" /></el-form-item>
         <el-button type="primary" size="large" :loading="loading" class="w-full bg-slate-900 hover:bg-slate-800" @click="submit">Sign In</el-button>
       </el-form>
-      <p class="text-center text-xs text-slate-400 mt-6">Default admin: admin@ukteahouse.co.uk / Admin!Tea2026</p>
+      <p class="text-center text-xs text-slate-400 mt-6">Default admin (dev only) — change immediately on first login</p>
     </div>
   </div>
 </template>

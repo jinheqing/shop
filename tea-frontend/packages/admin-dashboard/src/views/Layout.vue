@@ -43,6 +43,7 @@ const menuGroups: MenuGroup[] = [
     { label: 'Translate Engine', path: '/translate-status', icon: 'Monitor' },
   ]},
   { label: 'System', items: [
+    { label: 'System Settings', path: '/system-settings', icon: 'Setting' },
     { label: 'Staff', path: '/staff', icon: 'UserFilled' },
     { label: 'CMS (Public Site)', path: '/site-content', icon: 'Reading' },
     { label: 'GDPR / DSAR', path: '/dsar', icon: 'Lock' },

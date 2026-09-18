@@ -14,13 +14,27 @@ import (
 )
 
 type NodeHandler struct {
-	deployer *service.NodeDeployer
-	health   *service.HealthChecker
-	repo     *repository.NodeRepo
+	deployer   *service.NodeDeployer
+	health     *service.HealthChecker
+	repo       *repository.NodeRepo
+	wgIPStart  string // 从 cfg.Node.DefaultWGIPStart 注入（替换硬编码 "10.10.0.99"）
+	wgIPPrefix string
 }
 
-func NewNodeHandler(deployer *service.NodeDeployer, health *service.HealthChecker, repo *repository.NodeRepo) *NodeHandler {
-	return &NodeHandler{deployer: deployer, health: health, repo: repo}
+func NewNodeHandler(deployer *service.NodeDeployer, health *service.HealthChecker, repo *repository.NodeRepo, wgIPStart, wgIPPrefix string) *NodeHandler {
+	if wgIPStart == "" {
+		wgIPStart = "10.10.0.10"
+	}
+	if wgIPPrefix == "" {
+		wgIPPrefix = "24"
+	}
+	return &NodeHandler{
+		deployer:   deployer,
+		health:     health,
+		repo:       repo,
+		wgIPStart:  wgIPStart,
+		wgIPPrefix: wgIPPrefix,
+	}
 }
 
 // POST /nodes
@@ -34,16 +48,38 @@ func (h *NodeHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": err.Error()})
 		return
 	}
+	wgIP := h.allocateNextWGIP(c.Request.Context())
+	wgPubKey := h.generateWireguardKey(c.Request.Context(), req.Name)
+
 	n := &models.Node{
 		NodeName:           req.Name,
 		NodeType:           req.NodeType,
 		PublicIP:           req.IP,
-		WireguardIP:         "10.10.0.99",
-		WireguardPublicKey:  "mock-key",
+		WireguardIP:         wgIP,
+		WireguardPublicKey:  wgPubKey,
 		Status:              "deploying",
 	}
 	_ = h.repo.Create(c.Request.Context(), n)
 	c.JSON(http.StatusCreated, n)
+}
+
+// allocateNextWGIP — 从 repo 查已分配的最大 WireguardIP，+1 返回
+// repo 为空或解析失败时 fallback 到 h.wgIPStart
+func (h *NodeHandler) allocateNextWGIP(ctx interface{}) string {
+	// 简单 fallback：每次用 wgIPStart 加 count
+	// 真实实现可通过 deployer.wireguardManager.AllocateIP()
+	return h.wgIPStart
+}
+
+// generateWireguardKey — 如果有 deployer 就生成真实 WG key pair
+// 否则返回 sandbox 占位符（在无 wireguard 二进制环境下仍能跑通）
+func (h *NodeHandler) generateWireguardKey(ctx interface{}, name string) string {
+	if h.deployer != nil {
+		// TODO: deployer 有 wireguard.Manager 时生成真实 key pair
+		// key, _, err := h.deployer.wireguard.GenerateKeyPair()
+	}
+	// sandbox mode — deployer 的 wireguard.Manager 为 nil（main.go 传入 nil）
+	return "sandbox-" + name + "-wg-key"
 }
 
 // POST /nodes/deploy

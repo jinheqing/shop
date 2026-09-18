@@ -18,9 +18,9 @@ type TranslateService struct {
 	client  *http.Client
 }
 
-func NewTranslateService() *TranslateService {
-	baseURL := os.Getenv("TRANSLATE_SERVICE_URL")
+func NewTranslateService(baseURL string) *TranslateService {
 	if baseURL == "" {
+		baseURL = os.Getenv("TRANSLATE_SERVICE_URL")
 		baseURL = "http://localhost:8090"
 	}
 	return &TranslateService{

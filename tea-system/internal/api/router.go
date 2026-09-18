@@ -74,7 +74,7 @@ func (r *Router) Setup() *gin.Engine {
 	r.engine.GET("/health", r.h.Health.Health)
 	r.engine.GET("/ready", r.h.Health.Ready)
 	r.engine.GET("/", func(c *gin.Context) {
-		c.JSON(200, gin.H{"service": "tea-system", "version": "0.4.0", "docs": "placeholder"})
+		c.JSON(200, gin.H{"service": "tea-system", "version": r.h.Health.Version, "docs": "https://github.com/tea-system/docs"})
 	})
 
 	// WebSocket（handler 内自己解析 JWT）

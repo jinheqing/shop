@@ -18,7 +18,7 @@ async function selectConv(id: number) {
   // Try WebSocket
   try {
     const token = localStorage.getItem('staff_token')
-    ws.value = new WebSocket(`ws://localhost:8080/api/v1/ws/im?token=${token}&conv_id=${id}`)
+    ws.value = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/api/v1/ws/im?token=${token}&conv_id=${id}`)
     ws.value.onmessage = (ev) => {
       try { const m = JSON.parse(ev.data); messages.value.push(m) } catch {}
     }
