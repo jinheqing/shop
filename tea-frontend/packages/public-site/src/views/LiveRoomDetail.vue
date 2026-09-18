@@ -143,6 +143,84 @@ async function endLinkMic() {
 
 const isLoggedIn = () => !!localStorage.getItem('user_token')
 
+// ============ 根据 push_source 选择 WebRTC 后端 ============
+// app_webrtc: 主播推到 LiveKit → 观众用 LiveKit SDK 连 LiveKit SFU (需 JWT)
+// obs_rtmp / camera_rtmp: 推到 MediaMTX → 观众用 LiveKit SDK 直连 MediaMTX WebRTC SFU (无需 token)
+const pushSource = computed(() => room.value?.push_source || 'app_webrtc')
+const needsLiveKitSFU = computed(() => pushSource.value === 'app_webrtc')
+const needsMediaMTX = computed(() => pushSource.value === 'obs_rtmp' || pushSource.value === 'camera_rtmp')
+
+function resolvedWSS(): string {
+  if (needsMediaMTX.value) {
+    const u = room.value?.webrtc_url || room.value?.web_url || ''
+    if (u) {
+      const wsProto = u.startsWith('https') ? 'wss' : 'ws'
+      const host = u.replace(/^https?:\/\//, '')
+      return `${wsProto}://${host}/`
+    }
+    // fallback: 从 obs_rtmp_url 推 host
+    const rtmp = room.value?.obs_rtmp_url || ''
+    if (rtmp.startsWith('rtmp://')) {
+      const hostPort = rtmp.replace('rtmp://', '').split('/')[0]
+      const hostOnly = hostPort.split(':')[0]
+      return `ws://${hostOnly}:8889/`
+    }
+  }
+  return import.meta.env.VITE_LIVEKIT_URL || ''
+}
+
+// ============ LiveKit / MediaMTX WebRTC join ============
+async function joinLiveKit() {
+  if (!hasLiveKitSDK.value || !room.value) { alert('LiveKit SDK unavailable'); return }
+  const wss = resolvedWSS()
+  if (!wss) { alert('WebRTC endpoint not configured'); return }
+  lkJoinLoading.value = true
+  try {
+    let identity: string
+    let token: string | undefined
+
+    if (needsLiveKitSFU.value) {
+      // LiveKit 模式：Go 后端签 JWT token（SFU 强鉴权）
+      identity = localStorage.getItem('user_token')
+        ? 'viewer-' + room.value.room_id
+        : 'guest-' + room.value.room_id
+      const resp: any = await api.post('/livekit/token', { room_name: room.value.room_id, identity })
+      token = resp?.token
+      if (!token) throw new Error('no livekit token')
+    } else {
+      // MediaMTX 模式：public SFU 不需要 token
+      identity = localStorage.getItem('user_token') ? 'viewer' : 'guest'
+      token = undefined
+    }
+
+    const { Room, RoomEvent, VideoPresets } = await import('livekit-client')
+    const r = new Room({ autoSubscribe: true, dynacast: true, videoCaptureDefaults: { resolution: VideoPresets.h720 } })
+    lkClient.value = r
+
+    r.on(RoomEvent.TrackSubscribed, (track: any, _pub: any, participant: any) => {
+      if (track.kind === 'video' && remoteVideoEl.value) {
+        const el = track.attach()
+        remoteVideoEl.value.appendChild(el)
+      } else if (track.kind === 'audio') {
+        track.attach()
+      }
+    })
+    r.on(RoomEvent.TrackUnsubscribed, (track: any) => {
+      try { track.detach() } catch {}
+    })
+
+    // LiveKit SDK 同时支持 LiveKit SFU 和 MediaMTX WebRTC SFU 协议
+    if (token) await r.connect(wss, token)
+    else       await r.connect(wss)
+    lkConnected.value = true
+
+    // join 成功 → 打开 IM WS 订阅 barrage（主播字幕广播 + 连麦信令）
+    if (isLoggedIn()) openIM()
+  } catch (e: any) {
+    alert('WebRTC connect failed: ' + (e?.message || String(e)))
+  } finally { lkJoinLoading.value = false }
+}
+
 onMounted(async () => {
   if (!roomId.value) { error.value = 'Missing room ID'; loading.value = false; return }
   try {
@@ -179,41 +257,6 @@ onUnmounted(() => {
 function goLogin() {
   const redirect = encodeURIComponent(route.fullPath)
   router.push({ path: '/magic-link', query: { redirect } })
-}
-
-// ============ LiveKit join (subscribe-only viewer) ============
-async function joinLiveKit() {
-  if (!hasLiveKitSDK.value || !room.value) { alert('LiveKit SDK unavailable'); return }
-  lkJoinLoading.value = true
-  try {
-    const identity = localStorage.getItem('user_token')
-      ? 'viewer-' + room.value.room_id
-      : 'guest-' + room.value.room_id
-    const resp: any = await api.post('/livekit/token', { room_name: room.value.room_id, identity })
-    const token = resp?.token
-    if (!token) throw new Error('no token')
-    const { Room, RoomEvent, VideoPresets } = await import('livekit-client')
-    const r = new Room({ autoSubscribe: true, dynacast: true, videoCaptureDefaults: { resolution: VideoPresets.h720 } })
-    lkClient.value = r
-
-    // 订阅远端视频轨（host 发布的）
-    r.on(RoomEvent.TrackSubscribed, (track: any, _pub: any, participant: any) => {
-      if (track.kind === 'video' && remoteVideoEl.value) {
-        const el = track.attach()
-        remoteVideoEl.value.appendChild(el)
-      }
-    })
-    r.on(RoomEvent.TrackUnsubscribed, (track: any) => {
-      try { track.detach() } catch {}
-    })
-
-    await r.connect(import.meta.env.VITE_LIVEKIT_URL || 'wss://tea.livekit.cloud', token)
-    lkConnected.value = true
-    // LiveKit join 成功 → 打开 IM WS 订阅 barrage（主播字幕广播 + 连麦信令）
-    if (isLoggedIn()) openIM()
-  } catch (e: any) {
-    alert('LiveKit connect failed: ' + (e?.message || String(e)))
-  } finally { lkJoinLoading.value = false }
 }
 
 async function leaveLiveKit() {
