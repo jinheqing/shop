@@ -42,6 +42,7 @@ type Handlers struct {
 		SiteContent    *handlers.SiteContentHandler
 		CookieConsent  *handlers.CookieConsentHandler
 	SystemConfig    *handlers.SystemConfigHandler
+	Upload          *handlers.UploadHandler
 }
 
 type Router struct {
@@ -238,6 +239,10 @@ func (r *Router) Setup() *gin.Engine {
 		// 公开路由：QR trace + cookie consent + site contents
 		v1.GET("/public/qrcodes/:token", r.h.QRCode.GetTrace)
 		v1.POST("/cookie-consent", r.h.CookieConsent.Submit)
+
+                // 文件上传 + 静态文件服务
+                r.engine.Static("/uploads", "./storage/uploads")
+                v1.POST("/upload", r.h.Upload.Upload)
 
 
 	r.engine.NoRoute(func(c *gin.Context) {
