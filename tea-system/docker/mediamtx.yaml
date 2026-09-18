@@ -1,0 +1,99 @@
+# ============================================================================
+# MediaMTX 配置 — RTMP → WebRTC 自动转码
+# Slow Preset 慢直播专用路径 + OBS 动态直播间路径
+# ============================================================================
+
+# 监听所有地址
+listen: ["0.0.0.0"]
+
+# API（HTTP 管理面板 + WebRTC HTTP 端口）
+api: true
+apiAddress: ":8888"          # HTTP API / 管理面板
+metrics: true
+metricsAddress: ":8889"     # Prometheus 指标端口
+
+# ============================================================================
+# 传输层配置
+# ============================================================================
+
+# RTMP（OBS Studio 推流用，端口 1935）
+protocols:
+  - rtmp
+  - webrtc
+  - hls
+  - https
+
+rtmp:
+  enabled: true
+  address: ":1935"
+
+# WebRTC 直接接收
+webrtc:
+  enabled: true
+  address: ":8889"
+  allowOrigin: "*"
+
+# HLS（HTTP-FLV 备选）
+hls:
+  enabled: true
+  address: ":8888"
+
+# ============================================================================
+# 路径配置 — 关键！RTMP 转 WebRTC + 慢直播中继
+# ============================================================================
+
+# 通用直播路径（OBS 推流 → RTMP → 自动转 WebRTC/HLS）
+# OBS 推流地址: rtmp://host:1935/live/{roomId}
+# WebRTC 播放:  webrtc://host:8889/live/{roomId}
+# HLS 播放:     http://host:8888/live/{roomId}/index.m3u8
+paths:
+  # ---------- 慢直播专用路径（camera_rtmp_url 推流） ----------
+  phoenix-dawu:                 # 凤凰山大乌岽 24/7 慢直播
+    source: rtmp://china-camera-01.ourdomain.com/live/phoenix-dawu-live
+    # source: rtmp://10.0.0.100:1935/stream/camera1  # 摄像头直推
+    webrtc:
+      p2p: true
+      tcp: false
+
+  bingcha-ancient:              # 冰岛古茶树慢直播
+    source: rtmp://china-camera-02.ourdomain.com/live/bingcha-live
+    webrtc:
+      p2p: true
+
+  # ---------- 动态直播间路径（OBS 推流用，任意 roomId） ----------
+  live/:
+    # 通配路径: 接受任意 rtmp://host:1935/live/* 推流
+    source: rtc
+    sourceOnDemand: true        # 没人看时不接收推流（省资源）
+    webrtc:
+      p2p: true
+    rtmp:
+      enabled: true
+
+  # ---------- 摄像头直推路径（慢直播 camera_rtmp_url 字段对应） ----------
+  camera/:
+    source: rtc
+    sourceOnDemand: false       # 慢直播常开
+    webrtc:
+      p2p: true
+    rtmp:
+      enabled: true
+
+  # ---------- 默认拒绝（安全） ----------
+  all:
+    deny: ["all"]
+
+# ============================================================================
+# 录制（可选：存本地然后上传到私有存储）
+# ============================================================================
+# ffmpeg:
+#   path: ffmpeg
+# record:
+#   enabled: false
+#   path: /data/recordings
+#   format: mp4
+
+# ============================================================================
+# 日志
+# ============================================================================
+logLevel: info

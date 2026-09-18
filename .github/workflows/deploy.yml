@@ -1,0 +1,69 @@
+# =========================================================================
+# GitHub Actions CI/CD — Build & Push Docker images to GHCR
+#
+# 触发: push main / tag v*
+# 产物: ghcr.io/jinheqing/shop-{gin,frontend,translate}:sha
+#
+# 服务器上只需要:
+#   1) docker login ghcr.io -u jinheqing -p $GITHUB_PAT
+#   2) docker compose pull && docker compose up -d
+# =========================================================================
+name: Build & Deploy
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  OWNER: jinheqing
+  IMAGES: |
+    gin
+    frontend
+    translate
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & Push gin (Go)
+        uses: docker/build-push-action@v5
+        with:
+          context: tea-system
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/shop-gin:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/shop-gin:latest
+
+      - name: Build & Push translate (Python)
+        uses: docker/build-push-action@v5
+        with:
+          context: tea-translate
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/shop-translate:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/shop-translate:latest
+
+      - name: Build & Push frontend (Vue)
+        uses: docker/build-push-action@v5
+        with:
+          context: tea-frontend
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/shop-frontend:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/shop-frontend:latest

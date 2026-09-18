@@ -1,0 +1,185 @@
+package im
+
+import (
+	"encoding/json"
+	"sync"
+
+	"github.com/rs/zerolog/log"
+)
+
+// Hub — WebSocket 连接中心
+type Hub struct {
+	mu         sync.RWMutex
+	// key 格式: "<userType>:<userID>" — 避免 user/staff 两个表 auto-increment ID 同号时互相覆盖
+	clients    map[string]*Client
+	broadcast  chan []byte
+	register   chan *Client
+	unregister chan *Client
+
+	// conversation → 订阅该会话的 clientKey 集合（用于定向广播）
+	convSubs   map[uint64]map[string]bool
+	convSubsMu sync.RWMutex
+
+	// room_id → 订阅该直播间弹幕的 clientKey 集合
+	barrageSubs   map[string]map[string]bool
+	barrageSubsMu sync.RWMutex
+}
+
+// NewHub — 构造 Hub
+func NewHub() *Hub {
+	return &Hub{
+		clients:     make(map[string]*Client),
+		broadcast:   make(chan []byte, 256),
+		register:    make(chan *Client),
+		unregister:  make(chan *Client),
+		convSubs:    make(map[uint64]map[string]bool),
+		barrageSubs: make(map[string]map[string]bool),
+	}
+}
+
+// clientKey — 复合 key，避免 user/staff 同 ID 冲突
+func clientKey(userType string, userID uint64) string {
+	return userType + ":" + itoa(userID)
+}
+
+// SubscribeConversation — client 订阅某会话（定向广播）
+func (h *Hub) SubscribeConversation(convID, userID uint64, userType string) {
+	h.convSubsMu.Lock()
+	defer h.convSubsMu.Unlock()
+	if h.convSubs[convID] == nil {
+		h.convSubs[convID] = make(map[string]bool)
+	}
+	h.convSubs[convID][clientKey(userType, userID)] = true
+}
+
+// SubscribeBarrage — client 订阅某直播间弹幕
+func (h *Hub) SubscribeBarrage(roomID string, userID uint64, userType string) {
+	h.barrageSubsMu.Lock()
+	defer h.barrageSubsMu.Unlock()
+	if h.barrageSubs[roomID] == nil {
+		h.barrageSubs[roomID] = make(map[string]bool)
+	}
+	h.barrageSubs[roomID][clientKey(userType, userID)] = true
+}
+
+// Register — 外部注册 client（非阻塞，走 channel）
+func (h *Hub) Register(c *Client) {
+	select {
+	case h.register <- c:
+	default:
+		log.Warn().Msg("hub register channel full")
+	}
+}
+
+// Start — 后台 goroutine：处理注册/注销 + 广播
+func (h *Hub) Start() {
+	for {
+		select {
+		case client := <-h.register:
+			h.mu.Lock()
+			k := clientKey(client.userType, client.userID)
+			h.clients[k] = client
+			h.mu.Unlock()
+			log.Info().Str("type", client.userType).Uint64("user_id", client.userID).Msg("ws client registered")
+
+		case client := <-h.unregister:
+			h.mu.Lock()
+			k := clientKey(client.userType, client.userID)
+			if existing, ok := h.clients[k]; ok && existing == client {
+				delete(h.clients, k)
+				close(client.send)
+				log.Info().Str("type", client.userType).Uint64("user_id", client.userID).Msg("ws client unregistered")
+			}
+			h.mu.Unlock()
+
+		case msg := <-h.broadcast:
+			h.mu.RLock()
+			for _, c := range h.clients {
+				select {
+				case c.send <- msg:
+				default:
+					log.Warn().Str("type", c.userType).Uint64("user_id", c.userID).Msg("ws client send buffer full, dropping")
+				}
+			}
+			h.mu.RUnlock()
+		}
+	}
+}
+
+// BroadcastChatMessage — 序列化 ChatMessage 并定向广播给会话参与者
+func (h *Hub) BroadcastChatMessage(payload ChatMessage) error {
+	env := IMMessage{Type: "chat_message", Payload: payload}
+	raw, err := json.Marshal(env)
+	if err != nil {
+		return err
+	}
+
+	// 定向：只发给该 conversation 的订阅者
+	h.convSubsMu.RLock()
+	keys := h.convSubs[payload.ConversationID]
+	h.convSubsMu.RUnlock()
+
+	if len(keys) > 0 {
+		h.mu.RLock()
+		for k := range keys {
+			if c, ok := h.clients[k]; ok {
+				select {
+				case c.send <- raw:
+				default:
+				}
+			}
+		}
+		h.mu.RUnlock()
+	} else {
+		// 无订阅者 → fallback 全量
+		h.broadcast <- raw
+	}
+	return nil
+}
+
+// BroadcastBarrage — 定向弹幕广播给直播间订阅者
+func (h *Hub) BroadcastBarrage(payload BarragePayload) error {
+	env := IMMessage{Type: "barrage", Payload: payload}
+	raw, err := json.Marshal(env)
+	if err != nil {
+		return err
+	}
+
+	h.barrageSubsMu.RLock()
+	keys := h.barrageSubs[payload.RoomID]
+	h.barrageSubsMu.RUnlock()
+
+	h.mu.RLock()
+	for k := range keys {
+		if c, ok := h.clients[k]; ok {
+			select {
+			case c.send <- raw:
+			default:
+			}
+		}
+	}
+	h.mu.RUnlock()
+	return nil
+}
+
+// ClientCount — 当前在线客户端数
+func (h *Hub) ClientCount() int {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return len(h.clients)
+}
+
+// itoa — 小工具，避免额外 strconv 依赖冲突
+func itoa(n uint64) string {
+	if n == 0 {
+		return "0"
+	}
+	var buf [20]byte
+	i := len(buf)
+	for n > 0 {
+		i--
+		buf[i] = byte('0' + n%10)
+		n /= 10
+	}
+	return string(buf[i:])
+}

@@ -1,0 +1,74 @@
+<template>
+  <div class="pt-20 py-20 bg-tea-50">
+    <div class="max-w-3xl mx-auto px-6">
+      <div class="mb-10">
+        <div class="text-xs tracking-[0.25em] uppercase text-tea-500 mb-3">Legal · Cookie Policy</div>
+        <h1 class="font-display font-semibold text-4xl md:text-5xl text-tea-900 mb-4">Cookie <span class="italic">Policy</span></h1>
+        <p class="text-sm text-tea-600">Last updated: 18 September 2026 · Applies to ukteahouse.co.uk and all subdomains</p>
+      </div>
+
+      <div class="space-y-8 text-tea-800 leading-relaxed">
+        <section>
+          <h2 class="font-display text-xl text-tea-900 mb-2">What are cookies?</h2>
+          <p class="text-sm">Cookies are small text files that a website stores on your device (computer, phone, or tablet) when you visit it. They enable the website to recognise your device, remember your preferences, and deliver content that may be relevant to you. Similar technologies such as local storage, session storage, and web beacons may also be used.</p>
+        </section>
+
+        <section>
+          <h2 class="font-display text-xl text-tea-900 mb-2">How we use cookies</h2>
+          <p class="text-sm mb-4">We categorise our use of cookies into four groups. You can manage your preferences at any time by clicking the "Cookie Settings" link in the footer.</p>
+
+          <div class="space-y-4">
+            <div class="rounded-xl border border-tea-200 bg-white p-5">
+              <div class="flex items-center justify-between mb-2">
+                <h3 class="font-medium text-tea-900">Essential (always on)</h3>
+                <span class="text-xs px-2 py-0.5 rounded-full bg-tea-100 text-tea-700">Required</span>
+              </div>
+              <p class="text-sm text-tea-700 mb-3">These cookies are necessary for the website to function and cannot be switched off. They are usually only set in response to actions you make that amount to a request for services.</p>
+              <table class="w-full text-xs text-tea-700">
+                <tr><td class="py-1.5 font-medium">session_*</td><td>Authentication — keeps you logged in during your visit</td></tr>
+                <tr><td class="py-1.5 font-medium">csrf_token</td><td>CSRF protection for form submissions</td></tr>
+                <tr><td class="py-1.5 font-medium">cart_token</td><td>Anonymous shopping cart persistence</td></tr>
+                <tr><td class="py-1.5 font-medium">cookie_consent_seen</td><td>Records that you've seen the consent banner</td></tr>
+              </table>
+            </div>
+
+            <div class="rounded-xl border border-tea-200 bg-white p-5">
+              <div class="flex items-center justify-between mb-2">
+                <h3 class="font-medium text-tea-900">Analytics (optional)</h3>
+                <span class="text-xs px-2 py-0.5 rounded-full bg-tea-100 text-tea-700">Opt-in</span>
+              </div>
+              <p class="text-sm text-tea-700 mb-3">These cookies help us understand how visitors interact with the website. We use privacy-first analytics (Plausible) that does not use personal identifiers.</p>
+              <table class="w-full text-xs text-tea-700">
+                <tr><td class="py-1.5 font-medium">plausible_*</td><td>Privacy-first traffic analytics (first-party)</td></tr>
+                <tr><td class="py-1.5 font-medium">_ga_sample</td><td>Optional anonymous sampling (if we enable Google Analytics)</td></tr>
+              </table>
+            </div>
+
+            <div class="rounded-xl border border-tea-200 bg-white p-5">
+              <div class="flex items-center justify-between mb-2">
+                <h3 class="font-medium text-tea-900">Marketing (optional)</h3>
+                <span class="text-xs px-2 py-0.5 rounded-full bg-tea-100 text-tea-700">Opt-in</span>
+              </div>
+              <p class="text-sm text-tea-700 mb-3">We do not currently use marketing cookies on this website. If we do so in the future, this category will be updated and you will be asked to consent.</p>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h2 class="font-display text-xl text-tea-900 mb-2">Managing your preferences</h2>
+          <p class="text-sm">You can change your cookie preferences at any time by clicking the link in our footer, or by adjusting your browser settings to block or delete cookies. Deleting cookies may affect some website functionality.</p>
+        </section>
+
+        <section>
+          <h2 class="font-display text-xl text-tea-900 mb-2">Third-party cookies</h2>
+          <p class="text-sm">We do not place third-party cookies ourselves. However, some embedded content (e.g. YouTube videos, LiveKit live streams) may set their own cookies controlled by those third parties. We do not have access to read or control those cookies.</p>
+        </section>
+
+        <section>
+          <h2 class="font-display text-xl text-tea-900 mb-2">Contact</h2>
+          <p class="text-sm">If you have questions about this Cookie Policy, email us at privacy@ukteahouse.co.uk or write to our Data Protection Officer at 12 Savile Row, Mayfair, London W1J 5PA.</p>
+        </section>
+      </div>
+    </div>
+  </div>
+</template>

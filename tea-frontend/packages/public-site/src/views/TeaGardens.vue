@@ -1,0 +1,81 @@
+<script setup lang="ts">
+import { RouterLink } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { api } from '../api/client'
+
+const gardens = ref<any[]>([])
+const loading = ref(true)
+
+async function load() {
+  try {
+    const d: any = await api.get('/public/slow-presets')
+    const got = d?.items || d || []
+    if (got.length) { gardens.value = got; return }
+  } catch (e) {
+    gardens.value = [
+      { name: '云南省 · 临沧市 · 云雾茶区', location: '临沧 · 云南', description: '古树普洱核心产区，高海拔终年云雾缭绕', camera_rtmp_url: 'rtmp://localhost:1935/slow/manzhang' },
+      { name: '云南省 · 西双版纳州 · 布朗山茶区', location: '西双版纳 · 云南', description: '王者之地，乔木古树，浓烈霸道', camera_rtmp_url: 'rtmp://localhost:1935/slow/banzhang' },
+      { name: '云南省 · 普洱市 · 澜沧茶区', location: '普洱 · 云南', description: '千年万亩古茶园，布朗族与傣族世代守护', camera_rtmp_url: 'rtmp://localhost:1935/slow/jingmai' },
+      { name: '云南省 · 西双版纳州 · 勐海茶区', location: '西双版纳 · 云南', description: '古树茶园，茶气醇厚，回甘持久' },
+      { name: '云南省 · 临沧市 · 雪山茶区', location: '临沧 · 云南', description: '大雪山，雪水灌溉，甜柔清雅' },
+      { name: '云南省 · 普洱市 · 澜沧茶区', location: '普洱 · 云南', description: '布朗族古寨，传统手工制茶' },
+    ]
+  } finally { loading.value = false }
+}
+onMounted(load)
+</script>
+
+<template>
+  <div class="pt-20">
+    <!-- Hero -->
+    <section class="bg-tea-900 text-tea-50 py-20 md:py-28 relative overflow-hidden">
+      <div class="absolute inset-0 opacity-25" style="background-image: radial-gradient(circle at 25% 40%, rgba(212,160,79,0.25), transparent 50%);"></div>
+      <div class="max-w-5xl mx-auto px-6 text-center relative">
+        <h1 class="font-display font-semibold text-4xl md:text-6xl lg:text-7xl leading-tight mb-6 tracking-tight">
+          Our Tea <span class="italic">Gardens</span>
+        </h1>
+        <p class="text-lg md:text-xl text-tea-200 max-w-2xl mx-auto leading-relaxed">
+          Direct from village-level tea gardens across Yunnan &amp; Guangdong. Each garden has a 24/7 live camera so you can watch where your tea grew.
+        </p>
+      </div>
+    </section>
+
+    <!-- Grid -->
+    <section class="py-16 md:py-20 bg-white">
+      <div class="max-w-6xl mx-auto px-6">
+        <div v-if="loading" class="text-center py-20 text-tea-500">Loading tea gardens…</div>
+
+        <div v-else class="grid md:grid-cols-2 gap-6 md:gap-8">
+          <div v-for="(g, i) in gardens" :key="g.id || g.name"
+               class="group rounded-2xl overflow-hidden border border-tea-100 bg-white card-hover">
+            <!-- Visual placeholder -->
+            <div class="aspect-[16/9]"
+                 :class="[
+                   'flex items-center justify-center text-5xl relative',
+                   i % 3 === 0 ? 'bg-gradient-to-br from-tea-900 to-tea-600' :
+                   i % 3 === 1 ? 'bg-gradient-to-br from-tea-800 to-tea-500' :
+                                 'bg-gradient-to-br from-tea-700 to-tea-400'
+                 ]">
+              🏞️
+              <div v-if="g.camera_rtmp_url"
+                   class="absolute top-3 left-3 flex items-center gap-2 px-2.5 py-1 bg-red-600 text-white text-xs rounded-full font-medium shadow-sm">
+                <span class="w-1.5 h-1.5 rounded-full bg-white live-dot"></span> LIVE
+              </div>
+            </div>
+            <!-- Content -->
+            <div class="p-6">
+              <h3 class="font-display text-xl text-tea-900 mb-2 leading-snug">{{ g.name || 'Unnamed Garden' }}</h3>
+              <p class="text-sm text-tea-500 mb-3 font-medium">{{ g.location || g.region || '—' }}</p>
+              <p class="text-sm text-tea-700 leading-relaxed mb-4">{{ g.description || 'Visit our live streams below to see this tea garden in action.' }}</p>
+              <div class="flex items-center gap-2">
+                <RouterLink to="/live" class="inline-flex items-center gap-1 text-sm font-medium text-tea-800 hover:text-tea-950 transition">
+                  Watch Live →
+                </RouterLink>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</template>

@@ -1,0 +1,43 @@
+# ============================================================================
+# Prometheus — 抓取所有服务指标
+# ============================================================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # ---------- Go Gin 后端 ----------
+  - job_name: 'gin-backend'
+    static_configs:
+      - targets: ['gin-backend:8080']
+    metrics_path: '/metrics'
+
+  # ---------- LiveKit Server ----------
+  - job_name: 'livekit'
+    static_configs:
+      - targets: ['livekit:9091']
+
+  # ---------- MediaMTX ----------
+  - job_name: 'mediamtx'
+    static_configs:
+      - targets: ['mediamtx:8889']
+
+  # ---------- PostgreSQL (pg_exporter) ----------
+  # - job_name: 'postgres'
+  #   static_configs:
+  #     - targets: ['pg-exporter:9187']
+
+  # ---------- Redis (redis_exporter) ----------
+  # - job_name: 'redis'
+  #   static_configs:
+  #     - targets: ['redis-exporter:9121']
+
+  # ---------- Node 节点健康 ----------
+  # - job_name: 'edge-nodes'
+  #   dns_sd_configs:
+  #     - names: ['edge-nodes']
+
+# 推送告警到 Loki/Grafana
+# remote_write:
+#   - url: 'http://loki:3100/api/v1/write'
