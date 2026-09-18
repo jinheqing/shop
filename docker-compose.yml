@@ -165,34 +165,63 @@ services:
     image: ${REGISTRY:-ghcr.io}/${OWNER:-jinheqing}/shop-gin:${IMAGE_TAG:-latest}
     container_name: tea-gin
     environment:
-      # ---- 业务 DB ----
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_USER: ${DB_USER:-tea_system}
-      DB_PASSWORD: ${DB_PASSWORD:-changeme_dev}
-      DB_NAME: ${DB_NAME:-tea_system}
-      # ---- 审计 DB ----
-      AUDIT_DB_HOST: postgres_audit
-      AUDIT_DB_PORT: 5432
-      AUDIT_DB_USER: ${AUDIT_DB_USER:-tea_audit}
-      AUDIT_DB_PASSWORD: ${AUDIT_DB_PASSWORD:-changeme_audit_dev}
-      AUDIT_DB_NAME: ${AUDIT_DB_NAME:-tea_audit}
-      # ---- Redis / MQ ----
+      # ========== 数据库（viper 直接读完整 DSN，不要拆成 DB_HOST/PORT/USER）==========
+      DB_BUSINESS_DSN: "postgres://${DB_USER:-tea_system}:${DB_PASSWORD:-changeme_dev}@postgres:5432/${DB_NAME:-tea_system}?sslmode=disable"
+      DB_AUDIT_DSN:    "postgres://${AUDIT_DB_USER:-tea_audit}:${AUDIT_DB_PASSWORD:-changeme_audit_dev}@postgres_audit:5432/${AUDIT_DB_NAME:-tea_audit}?sslmode=disable"
+
+      # ========== 服务运行 ==========
+      SERVER_MODE: release
+      SERVER_PORT: "8080"
+      SERVER_VERSION: ${SERVER_VERSION:-1.0.0}
+
+      # ========== Redis / RabbitMQ ==========
       REDIS_ADDR: redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_DB: "0"
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672/
-      # ---- JWT ----
+
+      # ========== JWT ==========
       JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-me-please-64chars-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx}
-      # ---- LiveKit ----
+      JWT_STAFF_EXPIRE_MIN: "60"
+      JWT_USER_EXPIRE_MIN: "120"
+      JWT_REFRESH_EXPIRE_DAY: "30"
+
+      # ========== LiveKit (WebRTC SFU) ==========
       LIVEKIT_URL: http://livekit:7880
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-dev-key}
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-dev-secret}
-      # ---- MediaMTX ----
+
+      # ========== MediaMTX (RTMP → WebRTC) ==========
       MEDIAMTX_WEBRTC_URL: http://mediamtx:8889
       MEDIAMTX_RTMP_PORT: "1935"
-      # ---- Translate ----
+
+      # ========== 翻译服务 ==========
       TRANSLATE_SERVICE_URL: http://translate:8090
-      # ---- Server ----
-      SERVER_ADDR: ":8080"
+
+      # ========== 应用（域名/邮件/管理员种子）==========
+      APP_DOMAIN: ${APP_DOMAIN:-http://localhost}
+      APP_SERVICE_NAME: ${APP_SERVICE_NAME:-UK Tea House}
+      APP_CONTACT_EMAIL: ${APP_CONTACT_EMAIL:-tea@ukteahouse.co.uk}
+      ADMIN_SEED_EMAIL: ${ADMIN_SEED_EMAIL:-admin@ukteahouse.co.uk}
+      ADMIN_SEED_NAME: ${ADMIN_SEED_NAME:-Admin}
+      ADMIN_SEED_PASSWORD: ${ADMIN_SEED_PASSWORD:-Admin!Tea2026}
+
+      # ========== 邮件（魔法链接登录、通知）==========
+      SMTP_HOST: ${SMTP_HOST:-}
+      MAIL_FROM: ${MAIL_FROM:-tea@ukteahouse.co.uk}
+      MAILGUN_API_KEY: ${MAILGUN_API_KEY:-}
+
+      # ========== 支付 ==========
+      PAYMENT_GATEWAY: ${PAYMENT_GATEWAY:-2checkout}
+      PAYMENT_BASE_URL: ${PAYMENT_BASE_URL:-}
+      PAYMENT_API_KEY: ${PAYMENT_API_KEY:-}
+      PAYMENT_API_SECRET: ${PAYMENT_API_SECRET:-}
+
+      # ========== WireGuard 节点 ==========
+      NODE_WG_IP_START: "10.10.0.10"
+      NODE_WG_IP_PREFIX: "24"
+
+      # ========== Gin 模式 ==========
       GIN_MODE: release
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
