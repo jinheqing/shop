@@ -9,7 +9,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /out/server ./cmd/server
 
 # 运行阶段
 FROM alpine:3.19
-RUN apk add --no-cache ca-certificates tzdata wireguard-tools
+RUN apk add --no-cache ca-certificates tzdata wireguard-tools wget
 COPY --from=builder /out/server /usr/local/bin/server
 EXPOSE 8080
 ENTRYPOINT ["server"]
