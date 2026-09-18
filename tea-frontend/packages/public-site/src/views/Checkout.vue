@@ -25,10 +25,14 @@ const total = () => (product.value?.unit_price || 0) * qty.value + (product.valu
 const place = async () => {
   loading.value = true
   try {
-    const login = await fetch('/api/v1/staff/login', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ email:'advisor@test.com', password:'Advisor@12345' }) }).then(x=>x.json())
+    // 使用用户自己的 user_token 下单（不伪造 staff 身份）
+    const userToken = localStorage.getItem('user_token')
+    if (!userToken) {
+      router.push('/magic-link?redirect=' + encodeURIComponent('/checkout/' + route.params.token))
+      return
+    }
     const order = await fetch('/api/v1/orders', {
-      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+login.access_token},
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+userToken},
       body: JSON.stringify({
         custom_product_id: product.value!.id, unit_price: product.value!.unit_price,
         quantity: qty.value, shipping_cost: product.value!.shipping_cost,
@@ -36,8 +40,12 @@ const place = async () => {
         delivery_address: { ...form.value.delivery, name: form.value.name },
       })
     }).then(x=>x.json())
+    if (order.code && order.code !== 0 && order.code !== 201) {
+      alert('Order failed: ' + (order.message || JSON.stringify(order)))
+      return
+    }
     const pay = await fetch(`/api/v1/orders/${order.id}/payment/init`, {
-      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+login.access_token},
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+userToken},
       body: JSON.stringify({ gateway: '2checkout' })
     }).then(x=>x.json())
     if (pay.checkout_url) window.location.href = pay.checkout_url

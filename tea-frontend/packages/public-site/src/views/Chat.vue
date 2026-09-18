@@ -51,8 +51,10 @@ const EMOJIS = [
 
 // ============ WebSocket ============
 function wsURL(token: string) {
-  const host = window.location.hostname
-  return `ws://${host}:8080/api/v1/ws/im?token=${token}`
+  const host = window.location.host
+  const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
+  // 后端 /ws/im 注册在根路由，不在 /api/v1 分组里
+  return `${proto}://${host}/ws/im?token=${token}`
 }
 
 function connectWS() {
@@ -275,7 +277,8 @@ onMounted(async () => {
   await loadConvs()
   if (!convs.value.length) {
     // auto-create conversation with default advisor
-    try { convs.value = (await api.post('/conversations', { other_user_id: 1 }) as any) || [] } catch {}
+    // 自动创建与默认 advisor（staff_id=1）的会话
+    try { convs.value = (await api.post('/conversations', { other_staff_id: 1 }) as any) || [] } catch {}
     await loadConvs()
   }
   if (convs.value.length) await selectConv(convs.value[0])

@@ -33,7 +33,10 @@ async function submit() {
   submitting.value = true
   try {
     const token = localStorage.getItem('user_token')
-    const payload: any = {
+    const now = new Date()
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const today = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`
+    const basePayload: any = {
       title: `Bespoke ${data.value.tea_type === 'raw_puer' ? 'Raw' : 'Ripe'} Pu'er`,
       tea_type: data.value.tea_type,
       tea_shape: data.value.shape,
@@ -48,16 +51,23 @@ async function submit() {
       custom_requirement: data.value.message,
     }
     if (token) {
+      // 已登录 → 调 auth 接口，补齐 admin-Create 所需必填字段
+      const payload = {
+        ...basePayload,
+        qr_code_position: 'bottom',
+        lead_time: '45 days from confirmation',
+        harvest_date: today,
+        roasting_date: today,
+        storage_location: 'London (temporary)',
+      }
       await api.post('/custom-products', payload)
     } else {
-      // 未登录：存到 localStorage，提示稍后登录后确认提交
-      const queue = JSON.parse(localStorage.getItem('bespoke_queue') || '[]')
-      queue.push({ ...payload, queued_at: new Date().toISOString() })
-      localStorage.setItem('bespoke_queue', JSON.stringify(queue))
+      // 未登录 → 调公开接口（带 RateLimit，字段有默认值兜底）
+      await api.post('/public/custom-products', basePayload)
     }
     success.value = true
   } catch (e: any) {
-    errorMsg.value = e?.response?.data?.error || e.message || 'Submission failed'
+    errorMsg.value = e?.response?.data?.message || e?.response?.data?.error || e.message || 'Submission failed'
   } finally {
     submitting.value = false
   }

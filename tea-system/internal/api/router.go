@@ -261,10 +261,6 @@ func (r *Router) Setup() *gin.Engine {
 			auth.POST("/dsar/requests/:id/export", r.h.DSAR.Export)
 			auth.POST("/dsar/requests/:id/delete", r.h.DSAR.Delete)
 			auth.GET("/audit-logs", r.h.StaffAuth.AuditLogs) // 别名 → 与 /staff/audit-logs 同实现
-
-			// PayPal + 2Checkout callback 别名（设计文档路径）
-			v1.POST("/payment/callback/2checkout", r.h.Payment.Handle2CheckoutWebhook)
-			v1.POST("/payment/callback/paypal", r.h.Payment.HandlePayPalWebhook)
 		}
 	}
 

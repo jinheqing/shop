@@ -13,8 +13,16 @@ async function request() {
   verifiedEmail.value = email.value
 }
 async function verify() {
-  const r = await fetch('/api/v1/user/magic-link/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: verifiedEmail.value, token: token.value }) }).then(x => x.json())
+  // 支持粘贴完整 URL 或裸 token
+  let raw = token.value.trim()
+  if (raw.includes('token=')) {
+    try {
+      raw = raw.split('token=')[1].split(/[&?#]/)[0]
+    } catch {}
+  }
+  const r = await fetch('/api/v1/user/magic-link/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: verifiedEmail.value, token: raw }) }).then(x => x.json())
   if (r.access_token) { localStorage.setItem('user_token', r.access_token); ElMessage.success('Welcome!'); window.location.href = '/account' }
+  else { ElMessage.error(r.message || 'Verification failed') }
 }
 </script>
 <template>
@@ -28,8 +36,8 @@ async function verify() {
       </div>
       <div v-if="step==='sent'">
         <div class="text-center text-5xl mb-4">📧</div>
-        <p class="text-center text-tea-700 mb-6">We sent a magic link to <strong>{{ verifiedEmail }}</strong>. Click the link in your email to sign in — or paste the token below.</p>
-        <input v-model="token" placeholder="Paste 6-digit token from email" class="w-full px-4 py-3 rounded-xl border border-tea-200 mb-4" />
+        <p class="text-center text-tea-700 mb-6">We sent a magic link to <strong>{{ verifiedEmail }}</strong>. Click the link in your email to sign in — or paste the full link or token below.</p>
+        <input v-model="token" placeholder="Paste magic link or token from email" class="w-full px-4 py-3 rounded-xl border border-tea-200 mb-4" />
         <button @click="verify" class="w-full py-3 bg-tea-800 text-white rounded-xl font-medium hover:bg-tea-900 transition">Verify & Sign In →</button>
       </div>
     </div>
