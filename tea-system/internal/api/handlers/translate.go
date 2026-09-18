@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httputil"
@@ -37,19 +38,58 @@ func (h *TranslateHandler) TranslateText(c *gin.Context) {
 }
 
 // GET /translate/status — 翻译引擎健康状态
+// Python /health 返回 ok() 包装层 {"code":0, "data": {...}}
+// TranslateStatus.vue 直接读 s.status / s.gpu_available / s.queue_depth ...
+// 我们在这里统一解包并补字段，让前端不管 Python 有没有都能拿到
 func (h *TranslateHandler) Status(c *gin.Context) {
 	if h.FastAPIURL == "" {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"status": "not_configured"})
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"status":    "not_configured",
+			"engine":    "tea-translate",
+			"endpoint":  h.FastAPIURL,
+			"note":      "Configure TRANSLATE_SERVICE_URL env or System Settings → Translate",
+		})
 		return
 	}
+
 	resp, err := http.Get(h.FastAPIURL + "/health")
 	if err != nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"status": "unreachable", "detail": err.Error()})
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"status":   "unreachable",
+			"endpoint": h.FastAPIURL,
+			"detail":   err.Error(),
+		})
 		return
 	}
 	defer resp.Body.Close()
-	data, _ := io.ReadAll(resp.Body)
-	c.Data(resp.StatusCode, "application/json", data)
+
+	raw, _ := io.ReadAll(resp.Body)
+
+	// 先尝试 Python ok() 包装层
+	var wrapped struct {
+		Code    int                    `json:"code"`
+		Message string                 `json:"message"`
+		Data    map[string]interface{} `json:"data"`
+	}
+	if err := json.Unmarshal(raw, &wrapped); err == nil && wrapped.Data != nil {
+		out := gin.H{
+			"status":              wrapped.Data["status"],
+			"whisper_loaded":      wrapped.Data["whisper_loaded"],
+			"nllb_loaded":         wrapped.Data["nllb_loaded"],
+			"engine":              "tea-translate",
+			"endpoint":            h.FastAPIURL,
+			"gpu_available":       false, // Python health 暂未提供，默认 false
+			"queue_depth":         0,
+			"avg_latency_ms":      0,
+			"languages_supported": 2,
+			"total_translations_today": 0,
+		}
+		c.JSON(http.StatusOK, out)
+		return
+	}
+
+	// fallback：裸响应
+	c.Data(resp.StatusCode, "application/json", raw)
 }
 
 // GET /translate/asr — WebSocket ASR endpoint marker

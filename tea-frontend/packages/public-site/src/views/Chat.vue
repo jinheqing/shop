@@ -49,6 +49,14 @@ const EMOJIS = [
   '🎁','🎉','🥳','🎊','💐','🏆','📦','📮','💰','💷','💴','💵','🪙','📜','📄','📎'
 ]
 
+// ============ 我是谁（从 localStorage token 类型推断） ============
+// JWT payload 里有 subject_type: "user" | "staff"，用 token key 名直接推断即可
+const meUserType: 'user' | 'staff' | '' = (() => {
+  if (localStorage.getItem('user_token')) return 'user'
+  if (localStorage.getItem('staff_token')) return 'staff'
+  return ''
+})()
+
 // ============ WebSocket ============
 function wsURL(token: string) {
   const host = window.location.host
@@ -300,7 +308,15 @@ export const MessageBubble = defineComponent({
   },
   emits: ['toggle-translation'],
   setup(props, { emit }) {
-    const isMine = computed(() => props.msg.sender_type === 'me' || props.msg.sender_type === 'staff')
+    // isMine 判断: 后端 sender_type 是 "user" / "staff" / "system"
+    // 用 module-level meUserType 对比（从 localStorage token 类型推断）
+    const isMine = computed(() => {
+      const t = (props.msg.sender_type || '').toLowerCase()
+      if (meUserType && t === meUserType) return true
+      // 本地 pending 消息 sender_type 硬编码为 "me"
+      if (t === 'me') return true
+      return false
+    })
     const isCard = computed(() => ['quote_card', 'order_card'].includes(props.msg.message_type))
     const atts = computed(() => props.msg.attachments || [])
 
@@ -389,7 +405,9 @@ export const MessageBubble = defineComponent({
         // Translation badge
         const hasTrans = m.translation_status === 'translated' && (m.translation_en || m.translation_zh)
         if (hasTrans) {
-          const transText = isMine.value ? m.translation_zh : m.translation_en
+          // 后端 asyncTranslate 只往"相反语言"字段写：原文中文→translation_en，原文英文→translation_zh
+          // 不管是谁发的，显示有内容的那个（让用户看到与原文不同的译文）
+          const transText = m.translation_en || m.translation_zh
           if (transText) {
             children.push(h('div', {
               class: 'mt-1 text-xs opacity-70 cursor-pointer underline',
