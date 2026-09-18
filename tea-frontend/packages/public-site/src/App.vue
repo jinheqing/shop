@@ -3,6 +3,7 @@ import { RouterView } from 'vue-router'
 import SiteHeader from '@/components/SiteHeader.vue'
 import SiteFooter from '@/components/SiteFooter.vue'
 import CookieConsent from '@/components/CookieConsent.vue'
+import ConciergeWidget from '@/components/ConciergeWidget.vue'
 </script>
 
 <template>
@@ -17,6 +18,8 @@ import CookieConsent from '@/components/CookieConsent.vue'
     </main>
     <SiteFooter />
     <CookieConsent />
+    <!-- 全站浮动顾问入口 — 任何页面右下角均可直接呼叫 -->
+    <ConciergeWidget />
   </div>
 </template>
 

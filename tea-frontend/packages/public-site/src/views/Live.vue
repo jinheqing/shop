@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { RouterLink } from 'vue-router'
 import { getSlowPresets, listLiveRooms, type LiveRoom } from '@/api/live'
 
 const presets = ref<any[]>([])
@@ -10,91 +11,156 @@ onMounted(async () => {
 })
 </script>
 
+<!--
+  直播列表页 — Luxury Edition
+  设计参考：Château Lafite Rothschild 酒庄导览册 / Dior 后台 / Rolls-Royce Private Office
+  原则：
+    - off-black + ivory + champagne 三色
+    - 零 emoji，零粗圆角，零红色脉冲，零暴露内部 RTMP URL
+    - serif 大标题 + 10px SERIF CAPS 小标签 + 香槟金 hairline
+    - 慢过渡（600ms），悬停金线从 20% → 60%
+-->
 <template>
-  <div class="pt-20 min-h-screen">
-    <section class="bg-tea-900 text-tea-50 py-20">
-      <div class="max-w-6xl mx-auto px-6">
-        <h1 class="font-serif text-5xl md:text-6xl mb-4">Live From the Tea Gardens.</h1>
-        <p class="text-lg text-tea-300 max-w-2xl">24/7 slow-live cameras show the tea growing. Taste sessions streamed by appointment. Watch your own bespoke tea as it's being roasted.</p>
+  <div class="pt-20 min-h-screen bg-ivory-100">
+
+    <!-- ===== HERO — off-black 主舞台 ===== -->
+    <section class="bg-ink-900 text-ivory-100 py-24 md:py-32 relative overflow-hidden">
+      <div class="absolute inset-0 pointer-events-none opacity-[0.05]"
+           style="background-image: radial-gradient(circle at 20% 50%, #C5A572 0%, transparent 50%), radial-gradient(circle at 80% 30%, #C5A572 0%, transparent 40%);"></div>
+      <div class="max-w-5xl mx-auto px-6 relative">
+        <div class="flex items-center gap-3 mb-8">
+          <span class="h-px w-10 bg-gold/60"></span>
+          <span class="text-[10px] uppercase tracking-lux text-gold font-sans">Slow · Live · 24 Hours</span>
+        </div>
+        <h1 class="font-serif text-5xl md:text-7xl leading-[1.05] mb-8">
+          The Garden,<br/> <em class="not-italic text-gold">Uninterrupted.</em>
+        </h1>
+        <p class="text-sand max-w-xl text-lg leading-relaxed">
+          Three slow cameras positioned in the cloud mountains of Yunnan.
+          They show the tea growing — nothing more, nothing less.
+          No commentary. No editing. Just the mountain, in real time.
+        </p>
       </div>
     </section>
 
-    <!-- Live disclaimer -->
-    <div class="bg-amber-50 border-y border-amber-200 text-sm text-amber-900">
-      <div class="max-w-6xl mx-auto px-6 py-3 text-center">
-        <span class="font-medium">⚠️</span> Live feeds may be delayed by up to 30 seconds. Camera availability depends on local connectivity. Tea preparation times shown are estimates — actual production schedules vary by garden and harvest season.
-      </div>
-    </div>
-
-    <section class="py-16 bg-tea-50">
+    <!-- ===== 24/7 SLOW CAMERAS ===== -->
+    <section class="py-24 bg-ivory-100">
       <div class="max-w-7xl mx-auto px-6">
-        <h2 class="font-serif text-3xl text-tea-900 mb-8">🌱 24/7 Garden Cameras</h2>
-        <div class="grid md:grid-cols-3 gap-6">
-          <div v-for="p in (presets.length ? presets : [
-            { name: '云南省 · 临沧市 · 云雾茶区', location: '临沧', camera_rtmp_url: 'rtmp://localhost:1935/slow/manzhang', status: 'live' },
-            { name: '云南省 · 西双版纳州 · 布朗山茶区', location: '西双版纳', camera_rtmp_url: 'rtmp://localhost:1935/slow/banzhang', status: 'live' },
-            { name: '云南省 · 普洱市 · 澜沧茶区', location: '普洱', camera_rtmp_url: 'rtmp://localhost:1935/slow/jingmai', status: 'live' },
-          ])" :key="p.name" class="rounded-2xl overflow-hidden card-hover bg-white border border-tea-100">
-            <div class="relative aspect-video bg-tea-900 flex items-center justify-center text-tea-200">
-              <div class="text-center">
-                <div class="text-6xl mb-2">🏞️</div>
-                <div class="text-xs font-mono text-tea-400">{{ p.camera_rtmp_url }}</div>
-              </div>
-              <div class="absolute top-3 left-3 flex items-center gap-2 px-3 py-1 bg-red-600 text-white text-xs font-medium rounded-full">
-                <span class="w-1.5 h-1.5 rounded-full bg-white live-dot"></span> LIVE · 24/7
+        <div class="flex items-end justify-between mb-14 flex-wrap gap-4">
+          <div>
+            <div class="flex items-center gap-3 mb-4">
+              <span class="h-px w-10 bg-gold/50"></span>
+              <span class="text-[10px] uppercase tracking-lux text-gold font-sans">Three Cameras · Always On</span>
+            </div>
+            <h2 class="font-serif text-4xl text-ink-900">Garden Cameras</h2>
+          </div>
+          <p class="text-[11px] uppercase tracking-lux text-sand font-sans">
+            {{ presets.length || 3 }} stations · 24/7
+          </p>
+        </div>
+
+        <!-- 三联卡：gap-px 香槟金线分隔 → 像美术馆三幅挂画 -->
+        <div class="grid md:grid-cols-3 gap-px bg-gold/15">
+          <RouterLink v-for="p in (presets.length ? presets : [
+            { name: '云雾茶区 · 临沧', location: 'Yunnan · Lincang', status: 'live' },
+            { name: '布朗山茶区 · 西双版纳', location: 'Yunnan · Xishuangbanna', status: 'live' },
+            { name: '澜沧茶区 · 普洱', location: 'Yunnan · Pu\'er', status: 'live' },
+          ])" :key="p.name"
+              to="/live-room"
+              class="group bg-ink-900 hover:bg-ink-800 transition-duration-lux block">
+            <!-- 视频帧 -->
+            <div class="aspect-[16/10] relative">
+              <div class="absolute inset-5 border border-gold/15 group-hover:border-gold/50 transition-duration-lux pointer-events-none"></div>
+              <!-- LIVE 指示：香槟金小点 + SERIF CAPS 字 -->
+              <div class="absolute top-6 left-6 flex items-center gap-2">
+                <span class="w-1 h-1 bg-gold rounded-full"></span>
+                <span class="text-[10px] uppercase tracking-lux text-gold/90 font-sans">Live · 24/7</span>
               </div>
             </div>
-            <div class="p-5">
-              <h3 class="font-serif text-lg text-tea-900">{{ p.name }}</h3>
-              <p class="text-sm text-tea-500">{{ p.location }}</p>
+            <!-- 象牙白标签 -->
+            <div class="px-6 py-7 bg-ivory-100">
+              <h3 class="font-serif text-ink-900 text-lg">{{ p.name }}</h3>
+              <p class="text-[11px] uppercase tracking-lux text-sand mt-2 font-sans">{{ p.location }}</p>
+            </div>
+          </RouterLink>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== PRIVATE TASTING — 预约品鉴 ===== -->
+    <!-- 不是 "Upcoming Tasting Sessions · Book Now" 紧迫感 → 是 "By Appointment · Request" 的克制 -->
+    <section class="py-24 bg-white border-y border-gold/10">
+      <div class="max-w-7xl mx-auto px-6">
+        <div class="text-center mb-16">
+          <div class="flex items-center gap-3 justify-center mb-6">
+            <span class="h-px w-10 bg-gold/50"></span>
+            <span class="text-[10px] uppercase tracking-lux text-gold font-sans">Private · Confidential</span>
+            <span class="h-px w-10 bg-gold/50"></span>
+          </div>
+          <h2 class="font-serif text-4xl md:text-5xl text-ink-900 mb-5">A Private Tasting</h2>
+          <p class="text-sand max-w-2xl mx-auto leading-relaxed">
+            Request a one-to-one session with our tea advisor.
+            Three gardens, three brews, three hours — on your schedule.
+          </p>
+        </div>
+
+        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-0 bg-gold/10">
+          <div class="bg-white p-8 transition-duration-lux hover:bg-ivory-100 group">
+            <div class="text-[10px] uppercase tracking-lux text-gold font-sans mb-4">Saturday · Sep 20</div>
+            <h4 class="font-serif text-xl text-ink-900 mb-2">Morning Gongfu</h4>
+            <p class="text-[11px] uppercase tracking-lux text-sand mb-8 font-sans">10:00 BST · 45 min</p>
+            <RouterLink to="/chat" class="text-[10px] uppercase tracking-lux text-gold font-sans group-hover:text-ink-900 transition">Request →</RouterLink>
+          </div>
+          <div class="bg-white p-8 transition-duration-lux hover:bg-ivory-100 group">
+            <div class="text-[10px] uppercase tracking-lux text-gold font-sans mb-4">Sunday · Sep 21</div>
+            <h4 class="font-serif text-xl text-ink-900 mb-2">Rare Tasting</h4>
+            <p class="text-[11px] uppercase tracking-lux text-sand mb-8 font-sans">15:00 BST · 60 min</p>
+            <RouterLink to="/chat" class="text-[10px] uppercase tracking-lux text-gold font-sans group-hover:text-ink-900 transition">Request →</RouterLink>
+          </div>
+          <div class="bg-white p-8 transition-duration-lux hover:bg-ivory-100 group">
+            <div class="text-[10px] uppercase tracking-lux text-gold font-sans mb-4">Saturday · Sep 27</div>
+            <h4 class="font-serif text-xl text-ink-900 mb-2">Masterclass</h4>
+            <p class="text-[11px] uppercase tracking-lux text-sand mb-8 font-sans">14:00 BST · 90 min</p>
+            <RouterLink to="/chat" class="text-[10px] uppercase tracking-lux text-gold font-sans group-hover:text-ink-900 transition">Request →</RouterLink>
+          </div>
+          <div class="bg-ink-900 p-8 group">
+            <div class="text-[10px] uppercase tracking-lux text-gold font-sans mb-4">By Request</div>
+            <h4 class="font-serif text-xl text-ivory-100 mb-2">Your Bespoke Stream</h4>
+            <p class="text-[11px] uppercase tracking-lux text-sand mb-8 font-sans">From £50 · 30 min</p>
+            <RouterLink to="/chat" class="text-[10px] uppercase tracking-lux text-gold font-sans group-hover:text-ivory-100 transition">Request →</RouterLink>
+          </div>
+        </div>
+
+        <!-- 已激活的房间（如果有） -->
+        <div v-if="rooms.length" class="mt-24">
+          <h3 class="font-serif text-2xl text-ink-900 mb-8 text-center">Your Active Rooms</h3>
+          <div class="grid md:grid-cols-3 gap-0 bg-gold/10 max-w-3xl mx-auto">
+            <div v-for="r in rooms" :key="r.id"
+                 class="bg-white p-6 flex items-center justify-between group">
+              <div>
+                <div class="font-serif text-ink-900">{{ r.room_name }}</div>
+                <div class="text-[10px] uppercase tracking-lux text-sand mt-1 font-sans">{{ r.room_type }}</div>
+              </div>
+              <span :class="[
+                'text-[10px] uppercase tracking-lux font-sans flex items-center gap-2',
+                r.status === 'live' ? 'text-gold' : 'text-sand'
+              ]">
+                <span :class="['w-1 h-1 rounded-full', r.status === 'live' ? 'bg-gold' : 'bg-sand']"></span>
+                {{ r.status }}
+              </span>
             </div>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="py-16 bg-white">
-      <div class="max-w-7xl mx-auto px-6">
-        <h2 class="font-serif text-3xl text-tea-900 mb-4">🎥 Upcoming Tasting Sessions</h2>
-        <p class="text-tea-600 mb-8">Book a 1:1 tasting with our tea advisors. They'll brew Pu'er from three gardens and walk you through the tasting notes.</p>
-        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div class="p-6 rounded-xl bg-tea-50 border border-tea-100">
-            <div class="text-xs text-tea-500 mb-2">SAT · Sep 20</div>
-            <h4 class="font-serif text-lg mb-2">Morning Gongfu</h4>
-            <p class="text-xs text-tea-600 mb-4">10:00 GMT · 45 min</p>
-            <button class="w-full py-2 text-sm bg-tea-700 text-white rounded-lg hover:bg-tea-800">Book Now</button>
-          </div>
-          <div class="p-6 rounded-xl bg-tea-50 border border-tea-100">
-            <div class="text-xs text-tea-500 mb-2">SUN · Sep 21</div>
-            <h4 class="font-serif text-lg mb-2">Rare Tasting</h4>
-            <p class="text-xs text-tea-600 mb-4">15:00 GMT · 60 min</p>
-            <button class="w-full py-2 text-sm bg-tea-700 text-white rounded-lg hover:bg-tea-800">Book Now</button>
-          </div>
-          <div class="p-6 rounded-xl bg-tea-50 border border-tea-100">
-            <div class="text-xs text-tea-500 mb-2">SAT · Sep 27</div>
-            <h4 class="font-serif text-lg mb-2">Masterclass</h4>
-            <p class="text-xs text-tea-600 mb-4">14:00 GMT · 90 min</p>
-            <button class="w-full py-2 text-sm bg-tea-700 text-white rounded-lg hover:bg-tea-800">Book Now</button>
-          </div>
-          <div class="p-6 rounded-xl bg-tea-50 border border-tea-100">
-            <div class="text-xs text-tea-500 mb-2">PRIVATE</div>
-            <h4 class="font-serif text-lg mb-2">Your Bespoke Stream</h4>
-            <p class="text-xs text-tea-600 mb-4">From £50 · 30 min</p>
-            <button class="w-full py-2 text-sm bg-tea-700 text-white rounded-lg hover:bg-tea-800">Request</button>
-          </div>
-        </div>
-
-        <h3 class="font-serif text-xl text-tea-900 mt-16 mb-4">Your Active Rooms</h3>
-        <div v-if="rooms.length" class="grid md:grid-cols-3 gap-4">
-          <div v-for="r in rooms" :key="r.id" class="p-4 bg-white rounded-xl border border-tea-100 flex items-center justify-between">
-            <div>
-              <div class="font-medium text-tea-900">{{ r.room_name }}</div>
-              <div class="text-xs text-tea-500">{{ r.room_type }}</div>
-            </div>
-            <span :class="['text-xs px-2 py-1 rounded-full', r.status==='live'?'bg-green-100 text-green-700':'bg-tea-100 text-tea-500']">{{ r.status }}</span>
-          </div>
-        </div>
-        <div v-else class="text-sm text-tea-500">No active rooms. Book a session above.</div>
+    <!-- ===== 底部极细的注释 — 取代原来的 amber 警告条 ===== -->
+    <section class="bg-ivory-100 py-14">
+      <div class="max-w-4xl mx-auto px-6 text-center">
+        <p class="text-[11px] uppercase tracking-lux text-sand leading-loose font-sans">
+          Feeds may be delayed by up to 30 seconds. Camera availability depends on local connectivity.
+          The advisory reserves the right to reschedule sessions. Private tastings are confirmed within 24 hours.
+        </p>
       </div>
     </section>
   </div>

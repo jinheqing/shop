@@ -1,12 +1,38 @@
 <script setup lang="ts">
 import { onMounted, ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
-import { api } from '@/api/client'
+import { api, upload } from '@/api/client'
 
 const list = ref<any[]>([])
 const open = ref(false)
 const editingId = ref<number | null>(null)
 const tab = ref<'list' | 'create'>('list')
+const uploading = ref(false)
+const coverFileRef = ref<any>(null)
+
+function triggerFile(r: any) { r?.click() }
+function resolveUrl(url: string): string {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+  const base = (import.meta.env.VITE_API_BASE || '').replace(/\/api\/v1$/, '')
+  return base + url
+}
+async function onImageFileChange(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  uploading.value = true
+  try {
+    const url = await upload(file, 'image')
+    ;(form as any).product_image_url = url
+    ElMessage.success('Product image uploaded')
+  } catch (err: any) {
+    ElMessage.error(`Upload failed: ${err?.message || err}`)
+  } finally {
+    uploading.value = false
+    input.value = ''
+  }
+}
 
 // 完整 26 字段表单 — 和 Go struct / DB DDL 100% 对齐
 const form = reactive({
@@ -16,7 +42,7 @@ const form = reactive({
   tea_type: 'raw_puer', tea_shape: 'cake', tea_shape_weight: 357,
   smoked_with_flower: false, flower_type: 'jasmine',
   // 包装 (2)
-  inner_packaging: '竹编内层 + 棉纸', outer_packaging: '哑光纸质礼盒 + 丝绒内衬',
+  inner_packaging: '竹编内层 + 棉纸', outer_packaging: '哑光纸质礼盒 + 丝绒内衬', product_image_url: '',
   // 产品卡 (3)
   product_card_text: '', product_card_format: 'vertical', qr_code_position: 'outer_back',
   // 价格 (4)
@@ -49,7 +75,7 @@ async function submit() {
   open.value = false; editingId.value = null; load()
 }
 function openNew() {
-  Object.assign(form, { title: '', raw_tea_source: '', custom_requirement: '', tea_type: 'raw_puer', tea_shape: 'cake', tea_shape_weight: 357, smoked_with_flower: false, flower_type: 'jasmine', inner_packaging: '', outer_packaging: '', product_card_text: '', product_card_format: 'vertical', qr_code_position: 'outer_back', unit_price: 0, quantity: 1, shipping_cost: 0, lead_time: '', harvest_date: '', roasting_date: '', tea_garden_location: '', master_name: '', storage_location: '', sgs_report_id: null, include_custom_live: false, live_scheduled_date: '' })
+  Object.assign(form, { title: '', raw_tea_source: '', custom_requirement: '', tea_type: 'raw_puer', tea_shape: 'cake', tea_shape_weight: 357, smoked_with_flower: false, flower_type: 'jasmine', inner_packaging: '', outer_packaging: '', product_image_url: '', product_card_text: '', product_card_format: 'vertical', qr_code_position: 'outer_back', unit_price: 0, quantity: 1, shipping_cost: 0, lead_time: '', harvest_date: '', roasting_date: '', tea_garden_location: '', master_name: '', storage_location: '', sgs_report_id: null, include_custom_live: false, live_scheduled_date: '' })
   editingId.value = null; open.value = true
 }
 function openEdit(row: any) { editingId.value = row.id; Object.assign(form, row); open.value = true }
@@ -73,6 +99,13 @@ function total() {
 
     <el-table :data="list" stripe>
       <el-table-column prop="id" label="#" width="60" />
+      <el-table-column label="Cover" width="100">
+        <template #default="{ row }">
+          <el-image v-if="row.product_image_url" :src="resolveUrl(row.product_image_url)" fit="cover"
+                   style="width:72px;height:44px;border-radius:2px;border:1px solid #e5e7eb" />
+          <div v-else class="w-[72px] h-[44px] bg-slate-100 flex items-center justify-center text-slate-300 text-[10px]">&mdash;</div>
+        </template>
+      </el-table-column>
       <el-table-column prop="title" label="Title" min-width="260" />
       <el-table-column prop="tea_type" label="Type" width="130" />
       <el-table-column prop="tea_shape" label="Shape" width="100" />
@@ -149,6 +182,27 @@ function total() {
       <el-divider content-position="left">📦 Packaging (2)</el-divider>
       <el-form-item label="Inner Packaging" required><el-input v-model="form.inner_packaging" /></el-form-item>
       <el-form-item label="Outer Packaging" required><el-input v-model="form.outer_packaging" /></el-form-item>
+
+      <!-- Product Image Upload -->
+      <el-form-item label="Product Image">
+        <div class="flex items-start gap-4">
+          <div v-if="(form as any).product_image_url" class="relative">
+            <el-image :src="resolveUrl((form as any).product_image_url)" fit="cover"
+                     style="width:160px;height:100px;border-radius:2px;border:1px solid #e5e7eb" />
+            <button type="button" @click="(form as any).product_image_url = ''"
+                    class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600">&times;</button>
+          </div>
+          <div class="flex flex-col gap-2">
+            <el-button type="primary" plain size="small" :disabled="uploading" @click="triggerFile(coverFileRef)">
+              <span v-if="uploading">Uploading&hellip;</span>
+              <span v-else>{{ (form as any).product_image_url ? 'Replace Image' : 'Upload Product Image' }}</span>
+            </el-button>
+            <div class="text-[11px] text-slate-400">JPG/PNG/WEBP &middot; max 10MB &middot; 推荐 16:10 &middot; 800&times;500</div>
+          </div>
+          <input ref="coverFileRef" type="file" accept="image/jpeg,image/png,image/webp" class="hidden"
+                 @change="onImageFileChange" />
+        </div>
+      </el-form-item>
 
       <!-- Group 4: 产品卡 -->
       <el-divider content-position="left">💳 Product Card (3)</el-divider>

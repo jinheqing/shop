@@ -35,6 +35,7 @@ type CustomProduct struct {
 	FlowerType          string    `gorm:"column:flower_type;size:30" json:"flower_type,omitempty"` // jasmine / osmanthus / orchid / custom
 	InnerPackaging      string    `gorm:"column:inner_packaging;not null;size:100" json:"inner_packaging"`
 	OuterPackaging      string    `gorm:"column:outer_packaging;not null;size:100" json:"outer_packaging"`
+	ProductImageURL     *string   `gorm:"column:product_image_url;size:500" json:"product_image_url,omitempty"`
 	ProductCardText     string    `gorm:"column:product_card_text;type:text" json:"product_card_text,omitempty"`
 	ProductCardFormat   string    `gorm:"column:product_card_format;size:20;default:'vertical'" json:"product_card_format"` // vertical / horizontal
 	QrCodePosition      string    `gorm:"column:qr_code_position;not null;size:20" json:"qr_code_position"` // outer_front / outer_back / inner_front / hidden

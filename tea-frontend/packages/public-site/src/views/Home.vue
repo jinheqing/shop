@@ -67,57 +67,116 @@ onMounted(async () => {
     </div>
   </section>
 
-  <!-- LIVE STRIP -->
-  <section class="py-20 bg-tea-50 border-y border-tea-100">
-    <div class="max-w-7xl mx-auto px-6">
-      <div class="flex items-center justify-between mb-10 flex-wrap gap-4">
-        <div>
-          <h2 class="font-display text-3xl md:text-4xl text-tea-900 mb-2">Live From the Tea Gardens</h2>
-          <p class="text-tea-600 text-sm md:text-base">Watch your tea being picked, rolled and sun-dried in real time.</p>
+  <!-- LIVE STRIP — 第二区块主视觉 -->
+  <!-- 设计参考：Dior 2026 秀场、Château Lafite Rothschild、Rolls-Royce 配置器 -->
+  <!-- 原则：off-black 舞台 + ivory 面板 + 香槟金细点；零 emoji；零红色脉冲；零暴露内部 URL -->
+  <section class="bg-ink-900 py-24 md:py-28 relative overflow-hidden">
+    <!-- 极淡的香槟金噪点 overlay — 像老丝绒背景 -->
+    <div class="absolute inset-0 pointer-events-none opacity-[0.07]"
+         style="background-image: radial-gradient(circle at 30% 40%, #C5A572 0%, transparent 60%), radial-gradient(circle at 70% 70%, #C5A572 0%, transparent 50%);"></div>
+
+    <div class="max-w-7xl mx-auto px-6 relative">
+      <!-- 区块头：serif 大标题 + 香槟金 hairline 分隔 -->
+      <div class="mb-16 md:mb-20 max-w-4xl">
+        <div class="flex items-center gap-3 mb-6">
+          <span class="h-px w-10 bg-gold/60"></span>
+          <span class="text-[10px] uppercase tracking-lux text-gold font-sans">Slow · Live · Yunnan</span>
         </div>
-        <RouterLink to="/live" class="hidden md:inline-block text-tea-700 hover:text-tea-900 font-medium">View All →</RouterLink>
+        <h2 class="font-serif text-4xl md:text-5xl text-ivory-100 leading-[1.1] mb-5">
+          A Moment,<br/> <em class="not-italic text-gold">Always</em> in the Garden.
+        </h2>
+        <p class="text-sand max-w-xl leading-relaxed">
+          Three slow cameras. Four seasons. One cloud mountain in Yunnan.
+          Watch the tea grow, 24 hours a day — quietly, without commentary.
+        </p>
       </div>
-      <div class="grid md:grid-cols-3 gap-6">
-        <div v-for="p in (presets.length ? presets : [
-          { name: '云南省 · 临沧市 · 云雾茶区', location: '临沧', camera_rtmp_url: 'rtmp://localhost:1935/slow/manzhang' },
-          { name: '云南省 · 西双版纳州 · 布朗山茶区', location: '西双版纳', camera_rtmp_url: 'rtmp://localhost:1935/slow/banzhang' },
-          { name: '云南省 · 普洱市 · 澜沧茶区', location: '普洱', camera_rtmp_url: 'rtmp://localhost:1935/slow/jingmai' },
-        ])" :key="p.name" class="relative rounded-2xl overflow-hidden card-hover group">
-          <div class="aspect-video bg-tea-900 flex items-center justify-center text-tea-200">
-            <div class="text-center">
-              <div class="text-5xl mb-2">🏞️</div>
-              <div class="text-xs text-tea-400 font-mono">{{ p.camera_rtmp_url || 'rtmp://...' }}</div>
+
+      <!-- 三张卡：off-black 内联元素，零 emoji，零粗圆角 -->
+      <div class="grid md:grid-cols-3 gap-px bg-gold/15">
+        <RouterLink v-for="p in (presets.length ? presets : [
+          { name: '云雾茶区 · 临沧', location: 'Yunnan · Lincang', status: 'live' },
+          { name: '布朗山茶区 · 西双版纳', location: 'Yunnan · Xishuangbanna', status: 'live' },
+          { name: '澜沧茶区 · 普洱', location: 'Yunnan · Pu\'er', status: 'live' },
+        ])" :key="p.name"
+            to="/live-room"
+            class="group relative bg-ink-900 hover:bg-ink-800 transition-duration-lux overflow-hidden block focus:outline-none">
+
+          <!-- 舞台视频帧：off-black + 1px 金边线框 placeholder -->
+          <div class="aspect-[16/10] relative">
+            <div class="absolute inset-0 bg-gradient-to-br from-ink-800 to-ink-900"></div>
+            <!-- 极淡的金线框装饰 — 像老照片取景器 -->
+            <div class="absolute inset-4 border border-gold/20 pointer-events-none"></div>
+
+            <!-- LIVE 指示：一个静态香槟金小点 + SERIF CAPS 极小字 — 绝不用红色脉冲 -->
+            <div class="absolute top-5 left-5 flex items-center gap-2">
+              <span class="w-1 h-1 bg-gold rounded-full"></span>
+              <span class="text-[10px] uppercase tracking-lux text-gold/90 font-sans">Live</span>
+            </div>
+
+            <!-- 悬停：金线从 20% → 60%，600ms slow transition -->
+            <div class="absolute inset-4 border border-gold/0 group-hover:border-gold/60 transition-duration-lux pointer-events-none"></div>
+          </div>
+
+          <!-- 象牙白丝绒感底部条 -->
+          <div class="px-6 py-7 bg-ivory-100">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h3 class="font-serif text-ink-900 text-lg md:text-xl leading-tight">{{ p.name }}</h3>
+                <p class="text-[11px] uppercase tracking-lux text-sand mt-2 font-sans">{{ p.location }}</p>
+              </div>
+              <span class="text-[10px] uppercase tracking-lux text-gold font-sans shrink-0 mt-2">View →</span>
             </div>
           </div>
-          <div class="absolute top-3 left-3 flex items-center gap-2 px-2.5 py-1 bg-red-600 text-white text-xs rounded-full font-medium shadow-sm">
-            <span class="w-1.5 h-1.5 rounded-full bg-white live-dot"></span> LIVE
-          </div>
-          <div class="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-black/80 to-transparent text-white">
-            <h3 class="font-display text-base md:text-lg">{{ p.name }}</h3>
-            <p class="text-xs text-white/70">{{ p.location }}</p>
-          </div>
-        </div>
+        </RouterLink>
       </div>
+
+      <!-- 底部一行极细的 serif 小字 — 像画廊导览的 closing line -->
+      <p class="text-center text-[11px] uppercase tracking-lux text-sand mt-14 font-sans">
+        Cameras operate on local time · The advisory reserves the right to adjust schedules
+      </p>
     </div>
   </section>
 
   <!-- FEATURED -->
-  <section class="py-24 bg-white">
+  <section class="py-24 bg-ivory-100">
     <div class="max-w-7xl mx-auto px-6">
-      <h2 class="font-display text-3xl md:text-4xl text-tea-900 mb-12">Our Bespoke Collection</h2>
-      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+      <!-- 区块头：serif 大标题 + 香槟金 hairline -->
+      <div class="flex items-end justify-between mb-14 flex-wrap gap-4">
+        <div>
+          <div class="flex items-center gap-3 mb-4">
+            <span class="h-px w-10 bg-gold/50"></span>
+            <span class="text-[10px] uppercase tracking-lux text-gold font-sans">Curated · This Season</span>
+          </div>
+          <h2 class="font-serif text-4xl text-ink-900">Our Bespoke Collection</h2>
+        </div>
+        <RouterLink to="/bespoke" class="text-[11px] uppercase tracking-lux text-sand hover:text-ink-900 transition font-sans">All Bespoke →</RouterLink>
+      </div>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-0 bg-gold/10">
         <RouterLink v-for="cp in (featured.length ? featured : [
           { id: 1, product_token: 'demo-1', title: '邦东古树饼', tea_garden_location: '云南省 · 临沧市', master_name: '李师傅', unit_price: 68.5, tea_type: 'raw_puer' },
           { id: 2, product_token: 'demo-2', title: '班章熟砖', tea_garden_location: '云南省 · 西双版纳州', master_name: '张师傅', unit_price: 120, tea_type: 'ripe_puer' },
           { id: 3, product_token: 'demo-3', title: '景迈金瓜', tea_garden_location: '云南省 · 普洱市', master_name: '王师傅', unit_price: 88, tea_type: 'raw_puer' },
-        ])" :key="cp.id" :to="`/bespoke/${cp.product_token || 'demo-' + cp.id}`" class="group block card-hover rounded-2xl overflow-hidden border border-tea-100 bg-white">
-          <div class="aspect-[4/3] bg-gradient-to-br from-tea-800 to-tea-500 flex items-center justify-center text-5xl group-hover:scale-105 transition-transform duration-500">🍵</div>
-          <div class="p-6">
-            <h3 class="font-display text-lg text-tea-900 mb-1">{{ cp.title }}</h3>
-            <p class="text-xs text-tea-500 mb-3">{{ cp.tea_garden_location }} · Master {{ cp.master_name }}</p>
-            <div class="flex items-center justify-between">
-              <span class="text-tea-800 font-medium">£{{ cp.unit_price }}</span>
-              <span class="text-xs text-tea-600 group-hover:text-tea-900">View →</span>
+        ])" :key="cp.id" :to="`/bespoke/${cp.product_token || 'demo-' + cp.id}`"
+          class="group bg-ivory-100 hover:bg-ivory-50 transition-duration-lux border border-transparent hover:border-gold/30 block">
+          <!-- 卡头：off-black placeholder 帧 + 金线框装饰 → 绝不用 emoji -->
+          <div class="aspect-[4/3] relative bg-ink-900 overflow-hidden">
+            <div class="absolute inset-5 border border-gold/15 group-hover:border-gold/50 transition-duration-lux pointer-events-none"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="text-center">
+                <div class="font-serif text-gold/50 text-2xl tracking-wider">N° {{ cp.id || '—' }}</div>
+                <div class="text-[10px] uppercase tracking-lux text-sand mt-2 font-sans">{{ cp.tea_type === 'raw_puer' ? 'Raw Pu\'er' : 'Ripe Pu\'er' }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="p-7">
+            <h3 class="font-serif text-xl text-ink-900 mb-2">{{ cp.title }}</h3>
+            <p class="text-[11px] uppercase tracking-lux text-sand mb-6 font-sans">
+              {{ cp.tea_garden_location }} · Master {{ cp.master_name }}
+            </p>
+            <div class="flex items-center justify-between pt-5 border-t border-gold/15">
+              <span class="font-serif text-ink-900 text-xl">£{{ cp.unit_price }}</span>
+              <span class="text-[10px] uppercase tracking-lux text-gold font-sans">View →</span>
             </div>
           </div>
         </RouterLink>
