@@ -31,6 +31,7 @@ const messages = ref<ChatMsg[]>([])
 const input = ref('')
 const ws = ref<WebSocket | null>(null)
 const wsConnected = ref(false)
+const isLoggedIn = computed(() => !!localStorage.getItem('user_token'))
 const sidebarOpen = ref(true)
 const emojiPickerOpen = ref(false)
 const showUploadMenu = ref(false)
@@ -282,6 +283,7 @@ async function sendOrderCard() {
 
 // ============ Lifecycle ============
 onMounted(async () => {
+  if (!isLoggedIn.value) return
   await loadConvs()
   if (!convs.value.length) {
     // auto-create conversation with default advisor
@@ -467,7 +469,26 @@ function escapeHtml(s: string) {
           <!-- Chat Area -->
           <section class="flex-1 flex flex-col min-w-0">
             <div class="flex-1 overflow-auto p-4 md:p-6 bg-slate-50" ref="scrollRef">
-              <div v-if="!active" class="text-center text-tea-500 mt-20">
+              <div v-if="!isLoggedIn" class="text-center mt-16">
+                <div class="text-5xl mb-4">🫖</div>
+                <h2 class="font-serif text-2xl text-tea-900 mb-2">Speak with your Tea Advisor</h2>
+                <p class="text-tea-600 text-sm mb-6 max-w-md mx-auto">
+                  Sign in to chat with a Pu'er tea expert. Bespoke blending, garden stories,
+                  and instant answers — in English or Chinese.
+                </p>
+                <div class="flex items-center justify-center gap-3">
+                  <router-link to="/magic-link?redirect=/chat"
+                               class="px-6 py-2.5 bg-tea-700 text-white rounded-xl font-medium hover:bg-tea-800 transition">
+                    Sign in to Chat →
+                  </router-link>
+                  <router-link to="/about"
+                               class="px-5 py-2.5 text-tea-700 hover:bg-tea-50 rounded-xl transition text-sm">
+                    Learn more
+                  </router-link>
+                </div>
+              </div>
+
+              <div v-else-if="!active" class="text-center text-tea-500 mt-20">
                 <div class="text-5xl mb-3">💬</div>
                 Select a conversation to start chatting →
               </div>

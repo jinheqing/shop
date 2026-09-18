@@ -27,7 +27,7 @@ export const routes = [
   { path: '/account', name: 'account', component: () => import('@/views/Account.vue'), meta: { title: 'My Account', requiresAuth: true } },
 
   // IM chat
-  { path: '/chat', name: 'chat', component: () => import('@/views/Chat.vue'), meta: { title: 'Chat with Advisor', requiresAuth: true } },
+  { path: '/chat', name: 'chat', component: () => import('@/views/Chat.vue'), meta: { title: 'Chat with Advisor' } },
 
   // Company / legal
   { path: '/about', name: 'about', component: () => import('@/views/About.vue'), meta: { title: 'About Us' } },
