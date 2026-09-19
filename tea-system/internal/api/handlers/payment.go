@@ -41,9 +41,9 @@ func NewPaymentHandler(
 
 // PaymentInitRequest — POST /orders/:id/payment/init
 type PaymentInitRequest struct {
-	Gateway  string `json:"gateway" binding:"required,oneof=2checkout paypal"`
+	Gateway   string `json:"gateway" binding:"required,oneof=2checkout paypal"`
 	ReturnURL string `json:"return_url"`
-	Currency string `json:"currency"` // 默认 GBP
+	Currency  string `json:"currency"` // 默认 GBP
 }
 
 // ==================== handlers ====================
@@ -226,19 +226,21 @@ func (h *PaymentHandler) processCallback(c *gin.Context, cb *service.CallbackRes
 			if err := h.repo.UpdateState(ctx, order.ID, models.OrderStatePaid); err != nil {
 				log.Error().Err(err).Uint64("order_id", order.ID).Msg("payment: order state update failed")
 			}
+			// ===== 推荐人自动触发（幂等）=====
+			UpdateReferralOnOrderPaid(h.db, order.UserID, order.ID, order.TotalAmount)
 		} else {
 			log.Warn().Str("from", order.State).Msg("payment: cannot transition to paid (invalid from state)")
 		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"code":                    0,
-		"gateway":                 gateway,
-		"gateway_transaction_id":  cb.GatewayTransactionID,
-		"order_no":                order.OrderNo,
-		"amount":                  cb.Amount,
-		"currency":                cb.Currency,
-		"status":                  status,
+		"code":                   0,
+		"gateway":                gateway,
+		"gateway_transaction_id": cb.GatewayTransactionID,
+		"order_no":               order.OrderNo,
+		"amount":                 cb.Amount,
+		"currency":               cb.Currency,
+		"status":                 status,
 	})
 }
 

@@ -33,21 +33,22 @@ type Handlers struct {
 	// Step 12+13+15
 	SlowPreset *handlers.SlowPresetHandler
 	LiveRoom   *handlers.LiveRoomHandler
-			Node       *handlers.NodeHandler
+	Node       *handlers.NodeHandler
 
-		// Step 16+: 补齐设计文档缺失 handler
-		Translate      *handlers.TranslateHandler
-		QRCode         *handlers.QRCodeHandler
-		DSAR           *handlers.DSARHandler
-		SiteContent    *handlers.SiteContentHandler
-		CookieConsent  *handlers.CookieConsentHandler
-	SystemConfig    *handlers.SystemConfigHandler
-	Upload          *handlers.UploadHandler
+	// Step 16+: 补齐设计文档缺失 handler
+	Translate     *handlers.TranslateHandler
+	QRCode        *handlers.QRCodeHandler
+	DSAR          *handlers.DSARHandler
+	SiteContent   *handlers.SiteContentHandler
+	CookieConsent *handlers.CookieConsentHandler
+	SystemConfig  *handlers.SystemConfigHandler
+	Upload        *handlers.UploadHandler
 
-        // ===== 2026-09 会员体系新增 =====
-        UserGroup    *handlers.UserGroupHandler
-        ShortLink    *handlers.ShortLinkHandler
-        Recording    *handlers.RecordingHandler
+	// ===== 2026-09 会员体系新增 =====
+	UserGroup *handlers.UserGroupHandler
+	ShortLink *handlers.ShortLinkHandler
+	Recording *handlers.RecordingHandler
+	Referral  *handlers.ReferralHandler
 }
 
 type Router struct {
@@ -86,7 +87,7 @@ func (r *Router) Setup() *gin.Engine {
 	v1 := r.engine.Group("/api/v1")
 	{
 		// ---------- 认证（限流：防暴力破解/邮件轰炸） ----------
-		v1.POST("/staff/login", middleware.RateLimit(2, 10), r.h.StaffAuth.Login)           // 2 req/s, burst 10
+		v1.POST("/staff/login", middleware.RateLimit(2, 10), r.h.StaffAuth.Login) // 2 req/s, burst 10
 		v1.POST("/staff/mfa/verify", middleware.RateLimit(5, 20), r.h.StaffAuth.MFAVerify)
 		v1.POST("/staff/refresh", r.h.StaffAuth.Refresh)
 		v1.POST("/user/magic-link/request", middleware.RateLimit(1, 5), r.h.UserAuth.MagicLinkRequest) // 1 req/s, burst 5
@@ -98,10 +99,10 @@ func (r *Router) Setup() *gin.Engine {
 		v1.GET("/public/slow-presets", r.h.SlowPreset.PublicList)
 		v1.POST("/live-rooms/customer-request", r.h.LiveRoom.CustomerRequest)
 		v1.GET("/public/sgs-reports", r.h.SgsReport.PublicList)
-                v1.GET("/public/live-rooms", r.h.LiveRoom.PublicLiveRooms)
-                v1.GET("/custom-products/published", r.h.CustomProduct.Published)
-                // Public bespoke submission — rate-limited, no auth required
-                v1.POST("/public/custom-products", middleware.RateLimit(2, 10), r.h.CustomProduct.CreatePublic)
+		v1.GET("/public/live-rooms", r.h.LiveRoom.PublicLiveRooms)
+		v1.GET("/custom-products/published", r.h.CustomProduct.Published)
+		// Public bespoke submission — rate-limited, no auth required
+		v1.POST("/public/custom-products", middleware.RateLimit(2, 10), r.h.CustomProduct.CreatePublic)
 
 		// ---------- 支付 Webhook ----------
 		v1.POST("/webhooks/2checkout", r.h.Payment.Handle2CheckoutWebhook)
@@ -126,6 +127,9 @@ func (r *Router) Setup() *gin.Engine {
 			auth.GET("/system/config", middleware.RequireRole("admin", "supervisor"), r.h.SystemConfig.List)
 			auth.GET("/system/config/:key", middleware.RequireRole("admin", "supervisor"), r.h.SystemConfig.Get)
 			auth.PUT("/system/config/:key", middleware.RequireRole("admin", "supervisor"), r.h.SystemConfig.Put)
+
+			// ===== 用户端：我的推荐人 =====
+			auth.GET("/user/referrals", r.h.Referral.MyReferrals)
 			// Payment Transactions
 			auth.GET("/payment/transactions", middleware.RequireRole("admin", "supervisor"), r.h.Payment.ListTransactions)
 
@@ -223,33 +227,38 @@ func (r *Router) Setup() *gin.Engine {
 
 			// QR Code
 			auth.POST("/qrcodes/generate", r.h.QRCode.Generate)
-                        // ===== 2026-09: 用户组 UserGroups =====
-                        auth.POST("/user-groups", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.Create)
-                        auth.GET("/user-groups", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.List)
-                        auth.GET("/user-groups/:id", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.Get)
-                        auth.PUT("/user-groups/:id", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.Update)
-                        auth.DELETE("/user-groups/:id", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.Delete)
-                        auth.POST("/user-groups/:id/members", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.AddMember)
-                        auth.POST("/user-groups/:id/members/bulk", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.BulkAdd)
-                        auth.DELETE("/user-groups/:id/members/:userId", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.RemoveMember)
-                        auth.GET("/user-groups/:id/members", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.ListMembers)
-                        auth.POST("/user-groups/auto-sync", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.AutoSync)
-                        auth.GET("/users/me/groups", r.h.UserGroup.ListMyGroups)
+			// ===== 2026-09: 用户组 UserGroups =====
+			auth.POST("/user-groups", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.Create)
+			auth.GET("/user-groups", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.List)
+			auth.GET("/user-groups/:id", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.Get)
+			auth.PUT("/user-groups/:id", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.Update)
+			auth.DELETE("/user-groups/:id", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.Delete)
+			auth.POST("/user-groups/:id/members", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.AddMember)
+			auth.POST("/user-groups/:id/members/bulk", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.BulkAdd)
+			auth.DELETE("/user-groups/:id/members/:userId", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.RemoveMember)
+			auth.GET("/user-groups/:id/members", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.ListMembers)
+			auth.POST("/user-groups/auto-sync", middleware.RequireRole("admin", "supervisor"), r.h.UserGroup.AutoSync)
+			auth.GET("/users/me/groups", r.h.UserGroup.ListMyGroups)
 
-                        // ===== 2026-09: 短链 ShortLinks =====
-                        auth.POST("/short-links", r.h.ShortLink.Create)
-                        auth.GET("/short-links", middleware.RequireRole("admin", "supervisor"), r.h.ShortLink.List)
-                        auth.GET("/short-links/:code", middleware.RequireRole("admin", "supervisor"), r.h.ShortLink.Get)
-                        auth.DELETE("/short-links/:id", middleware.RequireRole("admin", "supervisor"), r.h.ShortLink.Delete)
-                        auth.GET("/short-links/top-stats", middleware.RequireRole("admin", "supervisor"), r.h.ShortLink.TopStats)
+			// ===== 推荐人管理 Referrals =====
+			auth.GET("/referrals", middleware.RequireRole("admin", "supervisor"), r.h.Referral.List)
+			auth.POST("/referrals", middleware.RequireRole("admin", "supervisor"), r.h.Referral.Create)
+			auth.POST("/referrals/:id/trigger-reward", middleware.RequireRole("admin", "supervisor"), r.h.Referral.UpdateReward)
+			auth.DELETE("/referrals/:id", middleware.RequireRole("admin", "supervisor"), r.h.Referral.Delete)
 
-                        // ===== 2026-09: 回放 Recordings =====
-                        auth.GET("/recordings", middleware.RequireRole("admin", "supervisor"), r.h.Recording.List)
-                        auth.GET("/recordings/:id", middleware.LiveAccessMiddleware(r.db))
-                        auth.PUT("/recordings/:id/visibility", middleware.RequireRole("admin", "supervisor"), r.h.Recording.UpdateVisibility)
-                        auth.DELETE("/recordings/:id", middleware.RequireRole("admin", "supervisor"), r.h.Recording.Delete)
-                        auth.GET("/my/recordings", r.h.Recording.ListMine)
+			// ===== 2026-09: 短链 ShortLinks =====
+			auth.POST("/short-links", r.h.ShortLink.Create)
+			auth.GET("/short-links", middleware.RequireRole("admin", "supervisor"), r.h.ShortLink.List)
+			auth.GET("/short-links/:code", middleware.RequireRole("admin", "supervisor"), r.h.ShortLink.Get)
+			auth.DELETE("/short-links/:id", middleware.RequireRole("admin", "supervisor"), r.h.ShortLink.Delete)
+			auth.GET("/short-links/top-stats", middleware.RequireRole("admin", "supervisor"), r.h.ShortLink.TopStats)
 
+			// ===== 2026-09: 回放 Recordings =====
+			auth.GET("/recordings", middleware.RequireRole("admin", "supervisor"), r.h.Recording.List)
+			auth.GET("/recordings/:id", middleware.LiveAccessMiddleware(r.db))
+			auth.PUT("/recordings/:id/visibility", middleware.RequireRole("admin", "supervisor"), r.h.Recording.UpdateVisibility)
+			auth.DELETE("/recordings/:id", middleware.RequireRole("admin", "supervisor"), r.h.Recording.Delete)
+			auth.GET("/my/recordings", r.h.Recording.ListMine)
 
 			// 翻译引擎代理
 			auth.POST("/translate/text", r.h.Translate.TranslateText)
@@ -267,20 +276,18 @@ func (r *Router) Setup() *gin.Engine {
 		}
 	}
 
-		// 公开路由：QR trace + cookie consent + site contents
-		v1.GET("/public/qrcodes/:token", r.h.QRCode.GetTrace)
-		v1.POST("/cookie-consent", r.h.CookieConsent.Submit)
-		v1.GET("/public/site-contents/:key", r.h.SiteContent.GetPublic)
+	// 公开路由：QR trace + cookie consent + site contents
+	v1.GET("/public/qrcodes/:token", r.h.QRCode.GetTrace)
+	v1.POST("/cookie-consent", r.h.CookieConsent.Submit)
+	v1.GET("/public/site-contents/:key", r.h.SiteContent.GetPublic)
 
-                // 文件上传 + 静态文件服务
-                r.engine.Static("/uploads", "./storage/uploads")
-                v1.POST("/upload", r.h.Upload.Upload)
-
-
+	// 文件上传 + 静态文件服务
+	r.engine.Static("/uploads", "./storage/uploads")
+	v1.POST("/upload", r.h.Upload.Upload)
 
 	// ===== 2026-09: 公开短链重定向（不在 /api/v1 分组里）=====
 	r.engine.GET("/s/:code", r.h.ShortLink.Redirect)
-		r.engine.NoRoute(func(c *gin.Context) {
+	r.engine.NoRoute(func(c *gin.Context) {
 		c.JSON(404, gin.H{"code": 404, "message": "route not found", "path": c.Request.URL.Path})
 	})
 	return r.engine

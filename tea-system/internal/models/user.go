@@ -43,30 +43,37 @@ func (j *JSONArray) Scan(value interface{}) error {
 
 // User — 客户表
 type User struct {
-	ID                    uint64    `gorm:"primaryKey;column:id" json:"id"`
-	Name                  string    `gorm:"column:name;not null;size:100" json:"name"`
-	Email                 string    `gorm:"column:email;uniqueIndex;not null;size:200" json:"email"`
-	Phone                 string    `gorm:"column:phone;size:30" json:"phone"`
-	PasswordHash          string    `gorm:"column:password_hash;size:255" json:"-"`
-	BillingAddress        JSONMap   `gorm:"column:billing_address;type:jsonb" json:"billing_address,omitempty"`
-	DeliveryAddress       JSONMap   `gorm:"column:delivery_address;type:jsonb" json:"delivery_address,omitempty"`
-	PreferredLanguage     string    `gorm:"column:preferred_language;size:10;default:'en'" json:"preferred_language"`
-	PreferredTimezone     string    `gorm:"column:preferred_timezone;size:50;default:'Europe/London'" json:"preferred_timezone"`
-	PreferredAdvisorID    *uint64   `gorm:"column:preferred_advisor_id" json:"preferred_advisor_id,omitempty"`
-	ConsentMarketing      bool      `gorm:"column:consent_marketing;default:false" json:"consent_marketing"`
-	ConsentAnalytics      bool      `gorm:"column:consent_analytics;default:false" json:"consent_analytics"`
+	ID                    uint64     `gorm:"primaryKey;column:id" json:"id"`
+	Name                  string     `gorm:"column:name;not null;size:100" json:"name"`
+	Email                 string     `gorm:"column:email;uniqueIndex;not null;size:200" json:"email"`
+	Phone                 string     `gorm:"column:phone;size:30" json:"phone"`
+	PasswordHash          string     `gorm:"column:password_hash;size:255" json:"-"`
+	BillingAddress        JSONMap    `gorm:"column:billing_address;type:jsonb" json:"billing_address,omitempty"`
+	DeliveryAddress       JSONMap    `gorm:"column:delivery_address;type:jsonb" json:"delivery_address,omitempty"`
+	PreferredLanguage     string     `gorm:"column:preferred_language;size:10;default:'en'" json:"preferred_language"`
+	PreferredTimezone     string     `gorm:"column:preferred_timezone;size:50;default:'Europe/London'" json:"preferred_timezone"`
+	PreferredAdvisorID    *uint64    `gorm:"column:preferred_advisor_id" json:"preferred_advisor_id,omitempty"`
+	ConsentMarketing      bool       `gorm:"column:consent_marketing;default:false" json:"consent_marketing"`
+	ConsentAnalytics      bool       `gorm:"column:consent_analytics;default:false" json:"consent_analytics"`
 	DataDeleteRequestedAt *time.Time `gorm:"column:data_delete_requested_at" json:"data_delete_requested_at,omitempty"`
 	DataDeleteCompletedAt *time.Time `gorm:"column:data_delete_completed_at" json:"data_delete_completed_at,omitempty"`
-	DsarRequestCount      int       `gorm:"column:dsar_request_count;default:0" json:"dsar_request_count"`
+	DsarRequestCount      int        `gorm:"column:dsar_request_count;default:0" json:"dsar_request_count"`
 	LastLoginAt           *time.Time `gorm:"column:last_login_at" json:"last_login_at,omitempty"`
-	LastLoginIP           string    `gorm:"column:last_login_ip;size:50" json:"last_login_ip,omitempty"`
-	LastLoginCity         string    `gorm:"column:last_login_city;size:100" json:"last_login_city,omitempty"`
-	LastLoginCountry      string    `gorm:"column:last_login_country;size:100" json:"last_login_country,omitempty"`
-	LastLoginCountryCode  string    `gorm:"column:last_login_country_code;size:10" json:"last_login_country_code,omitempty"`
-	LastLoginRegion       string    `gorm:"column:last_login_region;size:100" json:"last_login_region,omitempty"`
-	CreatedAt             time.Time `gorm:"column:created_at;not null" json:"created_at"`
-	UpdatedAt             time.Time `gorm:"column:updated_at;not null" json:"updated_at"`
-	DeletedAt             *time.Time `gorm:"column:deleted_at" json:"-"`
+	LastLoginIP           string     `gorm:"column:last_login_ip;size:50" json:"last_login_ip,omitempty"`
+	LastLoginCity         string     `gorm:"column:last_login_city;size:100" json:"last_login_city,omitempty"`
+	LastLoginCountry      string     `gorm:"column:last_login_country;size:100" json:"last_login_country,omitempty"`
+	LastLoginCountryCode  string     `gorm:"column:last_login_country_code;size:10" json:"last_login_country_code,omitempty"`
+	LastLoginRegion       string     `gorm:"column:last_login_region;size:100" json:"last_login_region,omitempty"`
+
+	// ===== 推荐人相关 =====
+	ReferralSource    string  `gorm:"column:referral_source;size:50" json:"referral_source,omitempty"`                     // youtube / friend / search / other
+	ReferrerName      string  `gorm:"column:referrer_name;size:100" json:"referrer_name,omitempty"`                        // 朋友推荐时输入的名字（可能匹配不上系统里的用户）
+	ReferrerUserID    *uint64 `gorm:"column:referrer_user_id" json:"referrer_user_id,omitempty"`                           // 如果推荐人也在系统里，关联其 ID
+	ReferralShortCode string  `gorm:"column:referral_short_code;size:20;uniqueIndex" json:"referral_short_code,omitempty"` // 专属推荐短链 code
+
+	CreatedAt time.Time  `gorm:"column:created_at;not null" json:"created_at"`
+	UpdatedAt time.Time  `gorm:"column:updated_at;not null" json:"updated_at"`
+	DeletedAt *time.Time `gorm:"column:deleted_at" json:"-"`
 
 	// Associations
 	PreferredAdvisor *Staff `gorm:"-:migration;foreignKey:PreferredAdvisorID" json:"preferred_advisor,omitempty"`

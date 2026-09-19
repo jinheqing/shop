@@ -36,7 +36,8 @@
     "staff": "Staff",
     "cms": "CMS (Public Site)",
     "gdpr_dsar": "GDPR / DSAR",
-    "audit_logs": "Audit Logs"
+    "audit_logs": "Audit Logs",
+    "referrals": "Referrals"
   },
   "layout": {
     "logout": "Logout",

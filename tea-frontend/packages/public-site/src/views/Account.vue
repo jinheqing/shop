@@ -4,13 +4,14 @@ import { useRouter } from 'vue-router'
 import { api } from '@/api/client'
 
 const router = useRouter()
-const tab = ref<'orders' | 'chat' | 'broadcasts' | 'garden'>('orders')
+const tab = ref<'orders' | 'chat' | 'broadcasts' | 'garden' | 'referrals'>('orders')
 
 const orders = ref<any[]>([])
 const quotes = ref<any[]>([])
 const conversations = ref<any[]>([])
 const recordings = ref<any[]>([])
 const userGroups = ref<any[]>([])
+const myReferrals = ref<any>({ items: [], stats: {}, referral_code: '', referral_url: '' })
 
 // Garden privileges derived from userGroups
 const gardenPrivileges = computed(() => {
@@ -45,6 +46,9 @@ async function load() {
 
   // User groups
   try { userGroups.value = (await api.get('/users/me/groups') as any) || [] } catch {}
+
+  // My referrals (老客户看自己推荐了谁)
+  try { myReferrals.value = (await api.get('/user/referrals') as any) || { items: [], stats: {}, referral_code: '', referral_url: '' } } catch {}
 }
 onMounted(load)
 
@@ -82,7 +86,8 @@ function resolveUrl(url: string) {
         { key: 'orders', label: 'Orders & Bespoke' },
         { key: 'chat', label: 'Conversations' },
         { key: 'broadcasts', label: 'Private Broadcasts' },
-        { key: 'garden', label: 'Garden & Invitations' },
+        { key: 'garden', label: 'Garden & Invitations' },,
+        { key: 'referrals', label: 'Share · The · Tea' },
       ]" :key="t.key"
         :class="['ac-tab', tab === t.key ? 'ac-tab--active' : '']"
         @click="tab = t.key">
@@ -202,6 +207,53 @@ function resolveUrl(url: string) {
               <span class="ac-list-label">{{ rc.replace(/_/g, ' ') }}</span>
               <span class="ac-list-source uppercase-caps">{{ g.name }}</span>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====== Tab 5: Share The Tea (Referrals) ====== -->
+      <section v-if="tab === 'referrals'">
+        <div class="ac-section">
+          <h2 class="ac-section-title uppercase-caps">Share · The · Tea</h2>
+          <p class="ac-sub">Share your love for our mountain tea with friends. No discount codes, no promotions — simply a personal introduction.</p>
+
+          <!-- 专属短链 -->
+          <div v-if="myReferrals.referral_code" class="ac-referral-card">
+            <div class="ac-referral-code">
+              <span class="ac-mono">{{ myReferrals.referral_url }}</span>
+              <button @click="navigator.clipboard?.writeText(myReferrals.referral_url)" class="ac-btn ac-btn-primary">Copy · Link</button>
+            </div>
+            <p class="ac-referral-hint">Share this link privately with friends via WhatsApp or email. When they sign up, your name will be attached.</p>
+          </div>
+
+          <!-- 统计 -->
+          <div v-if="myReferrals.stats && myReferrals.stats.total_referred > 0" class="ac-referral-stats">
+            <div>
+              <div class="ac-stat-num">{{ myReferrals.stats.total_referred }}</div>
+              <div class="ac-stat-label uppercase-caps">Friends Invited</div>
+            </div>
+            <div>
+              <div class="ac-stat-num">{{ myReferrals.stats.valid_orders }}</div>
+              <div class="ac-stat-label uppercase-caps">With Orders</div>
+            </div>
+            <div>
+              <div class="ac-stat-num">{{ myReferrals.stats.rewarded }}</div>
+              <div class="ac-stat-label uppercase-caps">Rewards Sent</div>
+            </div>
+          </div>
+
+          <!-- 推荐列表 -->
+          <div v-if="myReferrals.items && myReferrals.items.length > 0" class="ac-list">
+            <div v-for="r in myReferrals.items" :key="r.id" class="ac-list-item">
+              <span class="ac-list-dot ac-list-dot--gold"></span>
+              <span class="ac-list-label">{{ r.referred_name }}</span>
+              <span v-if="r.friend_order_amount > 0" class="ac-list-source uppercase-caps">£{{ r.friend_order_amount.toFixed(2) }}</span>
+              <span v-if="r.reward_triggered_at" class="ac-list-source uppercase-caps ac-rewarded">✓ Thank you sent</span>
+            </div>
+          </div>
+
+          <div v-if="!myReferrals.items || myReferrals.items.length === 0" class="ac-empty">
+            <p>No referrals yet. Share your favourite tea with a friend — your name travels farther than any advertisement.</p>
           </div>
         </div>
       </section>
@@ -394,6 +446,22 @@ function resolveUrl(url: string) {
 }
 .ac-btn-primary { background: #0B0A09; color: #C5A572; }
 .ac-btn-primary:hover { background: #2A2520; }
+
+/* Referrals */
+.ac-sub { font-family: 'Cormorant Garamond', serif; font-size: 14px; color: #6b6459; line-height: 1.6; margin: 0 0 28px; }
+.ac-referral-card {
+  padding: 28px; border: 1px solid #C5A572; border-radius: 2px;
+  background: #FBF9F4; margin-bottom: 32px;
+}
+.ac-referral-code {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+}
+.ac-referral-code .ac-mono { font-size: 13px; }
+.ac-referral-hint { font-family: 'Cormorant Garamond', serif; font-size: 13px; color: #8a8578; margin: 12px 0 0; }
+.ac-referral-stats { display: flex; gap: 48px; margin: 0 0 32px; }
+.ac-stat-num { font-family: 'Cormorant Garamond', serif; font-size: 36px; color: #0B0A09; }
+.ac-stat-label { font-size: 10px; color: #8a8578; }
+.ac-rewarded { color: #C5A572; }
 
 /* Footer */
 .ac-foot {

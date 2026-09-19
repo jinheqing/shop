@@ -155,9 +155,10 @@ func main() {
 		SystemConfig:  handlers.NewSystemConfigHandler(db.Business),
 		Upload:        handlers.NewUploadHandler("./storage/uploads", "/uploads"),
 
-		UserGroup:  handlers.NewUserGroupHandler(db.Business),
-		ShortLink:  handlers.NewShortLinkHandler(db.Business),
-		Recording:  handlers.NewRecordingHandler(db.Business),
+		UserGroup: handlers.NewUserGroupHandler(db.Business),
+		ShortLink: handlers.NewShortLinkHandler(db.Business),
+		Recording: handlers.NewRecordingHandler(db.Business),
+		Referral:  handlers.NewReferralHandler(db.Business),
 	}
 
 	// ── 9. 构造 Router + 启动 HTTP ──

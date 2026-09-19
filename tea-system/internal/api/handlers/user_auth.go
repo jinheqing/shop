@@ -19,12 +19,12 @@ import (
 // ============================================================
 
 type UserAuthHandler struct {
-	userRepo         *repository.UserRepo
-	passwordSvc      *service.PasswordService
-	jwtSvc           *service.JWTService
-	magicLinkSvc     *service.MagicLinkService
-	geoipSvc         *service.GeoIPService
-	db               *gorm.DB
+	userRepo     *repository.UserRepo
+	passwordSvc  *service.PasswordService
+	jwtSvc       *service.JWTService
+	magicLinkSvc *service.MagicLinkService
+	geoipSvc     *service.GeoIPService
+	db           *gorm.DB
 }
 
 func NewUserAuthHandler(
@@ -48,6 +48,10 @@ func NewUserAuthHandler(
 // MagicLinkRequestRequest — POST /user/magic-link/request
 type MagicLinkRequestRequest struct {
 	Email string `json:"email" binding:"required,email"`
+	// ===== 推荐人（全部可选）=====
+	ReferralSource string `json:"referral_source"` // friend / youtube / search / other
+	ReferrerName   string `json:"referrer_name"`   // 朋友推荐时输入的名字（名字分享模式）
+	ReferralCode   string `json:"referral_code"`   // 短链 code（从 WhatsApp 私下发的链接里带过来）
 }
 
 // MagicLinkRequest — 生成魔法链接并发邮件（生产走 Mailgun，dev 只存 Redis）
@@ -69,10 +73,19 @@ func (h *UserAuthHandler) MagicLinkRequest(c *gin.Context) {
 				Name:  strings.Split(req.Email, "@")[0],
 				Email: strings.ToLower(req.Email),
 			}
+			// ===== 推荐人字段（只有新用户才存）=====
+			if req.ReferralSource != "" {
+				user.ReferralSource = req.ReferralSource
+			}
+			if req.ReferrerName != "" {
+				user.ReferrerName = strings.TrimSpace(req.ReferrerName)
+			}
 			if err := h.userRepo.Create(ctx, user); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "failed to create user"})
 				return
 			}
+			// ===== 创建后自动匹配推荐人并建立 Referral 记录 =====
+			h.matchAndCreateReferral(ctx, user, req.ReferrerName, req.ReferralCode)
 		} else {
 			c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "internal error"})
 			return
@@ -157,10 +170,10 @@ func (h *UserAuthHandler) MagicLinkVerify(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"access_token":          accessToken,
-		"refresh_token":         refreshToken,
-		"token_type":            "Bearer",
-		"expires_in":            120 * 60,
+		"access_token":           accessToken,
+		"refresh_token":          refreshToken,
+		"token_type":             "Bearer",
+		"expires_in":             120 * 60,
 		"merged_anonymous_count": mergedCount,
 		"user": gin.H{
 			"id":                 user.ID,
@@ -224,6 +237,70 @@ func (h *UserAuthHandler) UserLogin(c *gin.Context) {
 		"expires_in":    120 * 60,
 	})
 }
+
+// matchAndCreateReferral — 新用户注册后，根据推荐人名字或短链 code 尝试匹配已存在的推荐人，
+// 匹配上了自动建 Referral 记录；匹配不上留给顾问在后台手动关联。
+func (h *UserAuthHandler) matchAndCreateReferral(ctx context.Context, newUser *models.User, referrerName string, referralCode string) {
+	var referrer *models.User
+	var source = "name_share"
+
+	// 方式一：短链 code — 精确匹配
+	if referralCode != "" {
+		var u models.User
+		if err := h.db.WithContext(ctx).Where("referral_short_code = ?", referralCode).First(&u).Error; err == nil {
+			referrer = &u
+			source = "short_code"
+		}
+	}
+
+	// 方式二：名字分享 — 模糊匹配（按 name 模糊匹配取最新的一个）
+	if referrer == nil && referrerName != "" {
+		var u models.User
+		pattern := "%" + strings.TrimSpace(referrerName) + "%"
+		if err := h.db.WithContext(ctx).Where("name ILIKE ?", pattern).Order("created_at DESC").First(&u).Error; err == nil {
+			referrer = &u
+			source = "name_share"
+		}
+	}
+
+	// 没匹配上 — 留给顾问后台处理（ReferrerName 已经存到 users 表里了）
+	if referrer == nil {
+		return
+	}
+
+	// 防止自己推荐自己
+	if referrer.ID == newUser.ID {
+		return
+	}
+
+	// 已经有推荐关系了（幂等）
+	var count int64
+	h.db.WithContext(ctx).Model(&models.Referral{}).Where("referred_user_id = ?", newUser.ID).Count(&count)
+	if count > 0 {
+		return
+	}
+
+	// 更新用户表
+	now := time.Now()
+	h.db.WithContext(ctx).Model(&models.User{}).Where("id = ?", newUser.ID).Updates(map[string]interface{}{
+		"referrer_user_id": referrer.ID,
+		"referrer_name":    referrer.Name,
+		"referral_source":  "friend",
+	})
+
+	// 创建 Referral 记录
+	referral := &models.Referral{
+		ReferrerUserID: ptr(referrer.ID),
+		ReferrerName:   referrer.Name,
+		ReferredUserID: newUser.ID,
+		ReferredName:   newUser.Name,
+		Source:         source,
+	}
+	_ = now // keep linter happy
+	h.db.WithContext(ctx).Create(referral)
+}
+
+func ptr[T any](v T) *T { return &v }
 
 // 编译期检查
 var _ context.Context = nil

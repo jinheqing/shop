@@ -49,6 +49,7 @@ const menuGroups: MenuGroup[] = [
     { key: 'menu.recordings', path: '/recordings', icon: 'VideoPlay' },
     { key: 'menu.short_links', path: '/short-links', icon: 'Link' },
     { key: 'menu.user_groups', path: '/user-groups', icon: 'User' },
+    { key: 'menu.referrals', path: '/referrals', icon: 'Share' },
   ]},
   { key: 'menu.infrastructure', items: [
     { key: 'menu.media_nodes', path: '/nodes', icon: 'MonitorHeart' },
@@ -87,6 +88,7 @@ const pathTitleMap: Record<string, string> = {
   '/recordings': 'menu.recordings',
   '/short-links': 'menu.short_links',
   '/user-groups': 'menu.user_groups',
+  '/referrals': 'menu.referrals',
   '/nodes': 'menu.media_nodes',
   '/translate-status': 'menu.translate_engine',
   '/staff': 'menu.staff',

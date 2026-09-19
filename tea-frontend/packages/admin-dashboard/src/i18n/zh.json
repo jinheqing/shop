@@ -36,7 +36,8 @@
     "staff": "员工",
     "cms": "内容管理（公开站）",
     "gdpr_dsar": "GDPR / 数据主体请求",
-    "audit_logs": "审计日志"
+    "audit_logs": "审计日志",
+    "referrals": "推荐人管理"
   },
   "layout": {
     "logout": "退出登录",
