@@ -44,15 +44,16 @@ func NewOrderHandler(
 // ==================== DTO ====================
 
 // OrderCreateRequest — POST /orders
+// 修复 (2026-09-19): 最小化 required，admin 手动创建订单时允许只填 custom_product_id + quantity
 type OrderCreateRequest struct {
-	CustomProductID         uint64          `json:"custom_product_id" binding:"required"`
-	UnitPrice               float64         `json:"unit_price" binding:"required,gt=0"`
-	Quantity                int             `json:"quantity" binding:"required,gt=0"`
-	ShippingCost            float64         `json:"shipping_cost" binding:"required,gte=0"`
-	BillingAddress          json.RawMessage `json:"billing_address" binding:"required"`
-	DeliveryAddress         json.RawMessage `json:"delivery_address" binding:"required"`
-	HsCode                  string          `json:"hs_code"`
-	CountryOfOrigin         string          `json:"country_of_origin"`
+	CustomProductID uint64          `json:"custom_product_id" binding:"required"`
+	UnitPrice       *float64        `json:"unit_price,omitempty"`
+	Quantity        *int            `json:"quantity,omitempty"`
+	ShippingCost    *float64        `json:"shipping_cost,omitempty"`
+	BillingAddress  json.RawMessage `json:"billing_address,omitempty"`
+	DeliveryAddress json.RawMessage `json:"delivery_address,omitempty"`
+	HsCode          string          `json:"hs_code,omitempty"`
+	CountryOfOrigin string          `json:"country_of_origin,omitempty"`
 }
 
 // OrderStateRequest — POST /orders/:id/state
@@ -85,7 +86,6 @@ func (h *OrderHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// 快照：把 CustomProduct 的 JSON map 序列化再反序列化到 models.JSONMap
 	snapshot, err := toJSONMap(cp)
 	if err != nil {
 		log.Error().Err(err).Msg("order: snapshot failed")
@@ -93,6 +93,7 @@ func (h *OrderHandler) Create(c *gin.Context) {
 		return
 	}
 
+	// 地址 — 可选，空时用默认 JSON
 	billingSnap, err := rawToJSONMap(req.BillingAddress)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "invalid billing_address json"})
@@ -107,7 +108,6 @@ func (h *OrderHandler) Create(c *gin.Context) {
 	userID := middleware.GetSubjectID(c)
 	isUser := middleware.GetSubjectType(c) == "user"
 	if !isUser {
-		// staff 代用户下单（通过 query param user_id）
 		if qid, ok := c.GetQuery("user_id"); ok {
 			if parsed, perr := strconv.ParseUint(qid, 10, 64); perr == nil {
 				userID = parsed
@@ -120,7 +120,6 @@ func (h *OrderHandler) Create(c *gin.Context) {
 		uid := userID
 		userIDPtr = &uid
 	} else if qid, ok := c.GetQuery("user_id"); ok {
-		// staff 明确代指定 user 下单
 		uid, _ := strconv.ParseUint(qid, 10, 64)
 		if uid != 0 {
 			userIDPtr = &uid
@@ -132,27 +131,37 @@ func (h *OrderHandler) Create(c *gin.Context) {
 		staffID = middleware.GetSubjectID(c)
 	}
 
-	hsCode := req.HsCode
-	if hsCode == "" {
-		hsCode = "0902.10"
+	// 从 CustomProduct 快照填默认值（admin 手动创建订单时前端可能不填）
+	unitPrice := cp.UnitPrice
+	if req.UnitPrice != nil && *req.UnitPrice > 0 {
+		unitPrice = *req.UnitPrice
 	}
-	country := req.CountryOfOrigin
-	if country == "" {
-		country = "China"
+	quantity := cp.Quantity
+	if req.Quantity != nil && *req.Quantity > 0 {
+		quantity = *req.Quantity
+	}
+	shippingCost := cp.ShippingCost
+	if req.ShippingCost != nil {
+		shippingCost = *req.ShippingCost
 	}
 
-	total := req.UnitPrice*float64(req.Quantity) + req.ShippingCost
+	hsCode := req.HsCode
+	if hsCode == "" { hsCode = "0902.10" }
+	country := req.CountryOfOrigin
+	if country == "" { country = "China" }
+
+	total := unitPrice*float64(quantity) + shippingCost
 
 	o := &models.Order{
-		OrderNo:                 "", // repo 自动生成
+		OrderNo:                 "",
 		UserID:                  userIDPtr,
 		StaffID:                 staffID,
 		CustomProductID:         req.CustomProductID,
 		CustomProductSnapshot:   snapshot,
 		State:                   models.OrderStateOrdering,
-		UnitPrice:               req.UnitPrice,
-		Quantity:                req.Quantity,
-		ShippingCost:            req.ShippingCost,
+		UnitPrice:               unitPrice,
+		Quantity:                quantity,
+		ShippingCost:            shippingCost,
 		TotalAmount:             total,
 		HsCode:                  hsCode,
 		CountryOfOrigin:         country,

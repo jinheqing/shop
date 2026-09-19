@@ -35,40 +35,40 @@ func NewCustomProductHandler(
 // ==================== 请求 DTO ====================
 
 // CustomProductCreateRequest — POST /custom-products
+// 修复 (2026-09-19): 仅 title + unit_price 为必填，其余全部可选并在 handler 里填默认值
 type CustomProductCreateRequest struct {
-	// 必填
-	Title             string  `json:"title" binding:"required"`
-	RawTeaSource      string  `json:"raw_tea_source" binding:"required"`
-	CustomRequirement string  `json:"custom_requirement" binding:"required"`
-	TeaType           string  `json:"tea_type" binding:"required"`
-	TeaShape          string  `json:"tea_shape" binding:"required"`
-	InnerPackaging    string  `json:"inner_packaging" binding:"required"`
-	OuterPackaging    string  `json:"outer_packaging" binding:"required"`
-	QrCodePosition    string  `json:"qr_code_position" binding:"required"`
-	UnitPrice         float64 `json:"unit_price" binding:"required,gt=0"`
-	Quantity          int     `json:"quantity" binding:"required,gt=0"`
-	ShippingCost      float64 `json:"shipping_cost" binding:"required,gte=0"`
-	LeadTime          string  `json:"lead_time" binding:"required"`
-	HarvestDate       string  `json:"harvest_date" binding:"required"`
-	RoastingDate      string  `json:"roasting_date" binding:"required"`
-	TeaGardenLocation  string  `json:"tea_garden_location" binding:"required"`
-	MasterName        string  `json:"master_name" binding:"required"`
-	StorageLocation   string  `json:"storage_location" binding:"required"`
+	Title             string   `json:"title" binding:"required"`
+	UnitPrice         float64  `json:"unit_price" binding:"required,gt=0"`
 
-	// 可选
-	TeaShapeWeight    *int   `json:"tea_shape_weight,omitempty"`
-	SmokedWithFlower  bool   `json:"smoked_with_flower"`
-	FlowerType        string `json:"flower_type,omitempty"`
-	ProductCardText   string `json:"product_card_text,omitempty"`
-	ProductCardFormat string `json:"product_card_format,omitempty"`
-	SKU               string `json:"sku,omitempty"`
+	// 以下全部可选，handler 填默认值
+	RawTeaSource      *string  `json:"raw_tea_source,omitempty"`
+	CustomRequirement *string  `json:"custom_requirement,omitempty"`
+	TeaType           *string  `json:"tea_type,omitempty"`
+	TeaShape          *string  `json:"tea_shape,omitempty"`
+	InnerPackaging    *string  `json:"inner_packaging,omitempty"`
+	OuterPackaging    *string  `json:"outer_packaging,omitempty"`
+	QrCodePosition    *string  `json:"qr_code_position,omitempty"`
+	Quantity          *int     `json:"quantity,omitempty"`
+	ShippingCost      *float64 `json:"shipping_cost,omitempty"`
+	LeadTime          *string  `json:"lead_time,omitempty"`
+	HarvestDate       *string  `json:"harvest_date,omitempty"`
+	RoastingDate      *string  `json:"roasting_date,omitempty"`
+	TeaGardenLocation  *string  `json:"tea_garden_location,omitempty"`
+	MasterName        *string  `json:"master_name,omitempty"`
+	StorageLocation   *string  `json:"storage_location,omitempty"`
+
+	TeaShapeWeight    *int    `json:"tea_shape_weight,omitempty"`
+	SmokedWithFlower  *bool   `json:"smoked_with_flower,omitempty"`
+	FlowerType        string  `json:"flower_type,omitempty"`
+	ProductCardText   string  `json:"product_card_text,omitempty"`
+	ProductCardFormat string  `json:"product_card_format,omitempty"`
+	SKU               string  `json:"sku,omitempty"`
 	SgsReportID       *uint64 `json:"sgs_report_id,omitempty"`
-        IsBespoke         *bool   `json:"is_bespoke,omitempty"`
-        NonRefundable     *bool   `json:"non_refundable,omitempty"`
+	IsBespoke         *bool   `json:"is_bespoke,omitempty"`
+	NonRefundable     *bool   `json:"non_refundable,omitempty"`
 
-        // 直播定制字段（2026-09 补齐前后端漂移）
-        IncludeCustomLive bool   `json:"include_custom_live"`
-        LiveScheduledDate string `json:"live_scheduled_date,omitempty"`
+	IncludeCustomLive  *bool   `json:"include_custom_live,omitempty"`
+	LiveScheduledDate *string `json:"live_scheduled_date,omitempty"`
 }
 
 // CustomProductUpdateRequest — PUT /custom-products/:id（所有字段可选 patch）
@@ -115,24 +115,18 @@ func (h *CustomProductHandler) Create(c *gin.Context) {
 		return
 	}
 
-	harvest, err := time.Parse("2006-01-02", req.HarvestDate)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "invalid harvest_date (expect YYYY-MM-DD)"})
-		return
-	}
-	roasting, err := time.Parse("2006-01-02", req.RoastingDate)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "invalid roasting_date (expect YYYY-MM-DD)"})
-		return
-	}
+	now := time.Now()
+	today := now.Format("2006-01-02")
+	teaType := valOr(req.TeaType, "Pu'er")
+	quantity := valOrInt(req.Quantity, 100)
+	shippingCost := valOrFloat(req.ShippingCost, 0)
 
-	// live_scheduled_date — 可选
-	var liveScheduled *time.Time
-	if req.LiveScheduledDate != "" {
-		if t, err := time.Parse("2006-01-02", req.LiveScheduledDate); err == nil {
-			liveScheduled = &t
-		}
-	}
+	harvestStr := valOr(req.HarvestDate, today)
+	roastingStr := valOr(req.RoastingDate, today)
+	harvest, _ := time.Parse("2006-01-02", harvestStr)
+	roasting, _ := time.Parse("2006-01-02", roastingStr)
+
+	liveScheduled := parseOptionalDate(req.LiveScheduledDate)
 
 	isBespoke := true
 	if req.IsBespoke != nil {
@@ -142,46 +136,55 @@ func (h *CustomProductHandler) Create(c *gin.Context) {
 	if req.NonRefundable != nil {
 		nonRefundable = *req.NonRefundable
 	}
+	smoked := false
+	if req.SmokedWithFlower != nil {
+		smoked = *req.SmokedWithFlower
+	}
+	includeLive := false
+	if req.IncludeCustomLive != nil {
+		includeLive = *req.IncludeCustomLive
+	}
+
+	sku := req.SKU
+	if sku == "" {
+		sku = fmt.Sprintf("SKU-%s-%d%04d-%03d", teaType, now.Year(), now.YearDay(), now.Nanosecond()%1000)
+	}
 
 	staffID := middleware.GetSubjectID(c)
 
 	p := &models.CustomProduct{
-		ProductToken:     nil, // publish 时生成
-		Version:          1,
-		Status:           models.CustomProductStatusDraft,
-		IsBespoke:        isBespoke,
-		NonRefundable:    nonRefundable,
-		Title:            req.Title,
-		RawTeaSource:     req.RawTeaSource,
-		CustomRequirement: req.CustomRequirement,
-		TeaType:          req.TeaType,
-		TeaShape:         req.TeaShape,
-		TeaShapeWeight:   req.TeaShapeWeight,
-		SmokedWithFlower: req.SmokedWithFlower,
-		FlowerType:       req.FlowerType,
-		InnerPackaging:   req.InnerPackaging,
-		OuterPackaging:   req.OuterPackaging,
-		ProductCardText:  req.ProductCardText,
-		QrCodePosition:   req.QrCodePosition,
-		SKU:              func() string { if req.SKU != "" { return req.SKU }; return fmt.Sprintf("SKU-%s-%d%04d-%03d", req.TeaType, time.Now().Year(), time.Now().YearDay(), time.Now().Nanosecond()%1000) }(),
-		UnitPrice:        req.UnitPrice,
-		Quantity:         req.Quantity,
-		ShippingCost:     req.ShippingCost,
-		TotalAmount:      h.svc.CalcTotalAmount(req.UnitPrice, req.Quantity, req.ShippingCost),
-		LeadTime:         req.LeadTime,
-		HarvestDate:      harvest,
-		RoastingDate:     roasting,
-		TeaGardenLocation: req.TeaGardenLocation,
-		MasterName:       req.MasterName,
-		StorageLocation:  req.StorageLocation,
-		SgsReportID:      req.SgsReportID,
-		IncludeCustomLive: req.IncludeCustomLive,
+		ProductToken:      nil,
+		Version:           1,
+		Status:            models.CustomProductStatusDraft,
+		IsBespoke:         isBespoke,
+		NonRefundable:     nonRefundable,
+		Title:             req.Title,
+		RawTeaSource:      valOr(req.RawTeaSource, ""),
+		CustomRequirement: valOr(req.CustomRequirement, ""),
+		TeaType:           teaType,
+		TeaShape:          valOr(req.TeaShape, "cake"),
+		TeaShapeWeight:    req.TeaShapeWeight,
+		SmokedWithFlower:  smoked,
+		FlowerType:        req.FlowerType,
+		InnerPackaging:    valOr(req.InnerPackaging, ""),
+		OuterPackaging:    valOr(req.OuterPackaging, ""),
+		ProductCardText:   req.ProductCardText,
+		ProductCardFormat: func() string { if req.ProductCardFormat != "" { return req.ProductCardFormat }; return "vertical" }(),
+		QrCodePosition:    valOr(req.QrCodePosition, "right-bottom"),
+		SKU:               sku,
+		UnitPrice:         req.UnitPrice,
+		Quantity:          quantity,
+		ShippingCost:      shippingCost,
+		TotalAmount:       h.svc.CalcTotalAmount(req.UnitPrice, quantity, shippingCost),
+		LeadTime:          valOr(req.LeadTime, "14-21 days"),
+		HarvestDate:       harvest,
+		RoastingDate:      roasting,
+		TeaGardenLocation:  valOr(req.TeaGardenLocation, ""),
+		MasterName:        valOr(req.MasterName, ""),
+		StorageLocation:   valOr(req.StorageLocation, ""),
+		SgsReportID:       req.SgsReportID,
+		IncludeCustomLive: includeLive,
 		LiveScheduledDate: liveScheduled,
-	}
-	if req.ProductCardFormat != "" {
-		p.ProductCardFormat = req.ProductCardFormat
-	} else {
-		p.ProductCardFormat = "vertical"
 	}
 	if staffID > 0 {
 		p.CreatedByStaffID = &staffID
@@ -195,6 +198,16 @@ func (h *CustomProductHandler) Create(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, p)
+}
+
+// ===== helpers =====
+func valOr(p *string, def string) string { if p != nil && *p != "" { return *p }; return def }
+func valOrInt(p *int, def int) int { if p != nil && *p > 0 { return *p }; return def }
+func valOrFloat(p *float64, def float64) float64 { if p != nil { return *p }; return def }
+func parseOptionalDate(p *string) *time.Time {
+	if p == nil || *p == "" { return nil }
+	if t, err := time.Parse("2006-01-02", *p); err == nil { return &t }
+	return nil
 }
 
 // List — GET /custom-products
