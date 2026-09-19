@@ -41,6 +41,9 @@ export const routes = [
   // Invoice
   { path: '/orders/:id/invoice', name: 'invoice', component: () => import('@/views/InvoiceView.vue'), props: true, meta: { requiresAuth: true } },
 
+  // 推荐人短链 — 老客户 Copy 出来的 /r/ABC123，跳去 MagicLink 并自动带上 ?r=ABC123
+  { path: '/r/:code', name: 'referral-short', redirect: to => ({ path: '/magic-link', query: { r: to.params.code as string } }) },
+
   // 主播端 H5 (手机端开播, LiveKit App WebRTC 推流)
   // 从 admin-dashboard "Go Live" 弹窗里点 "📱 Mobile" 跳转，带 host_token / livekit_url / room_id query
   { path: '/host', name: 'host-live', component: () => import('@/views/HostLive.vue'), meta: { title: 'Host · Live' } },
