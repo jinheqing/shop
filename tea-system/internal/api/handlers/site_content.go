@@ -37,7 +37,7 @@ func (h *SiteContentHandler) List(c *gin.Context) {
 }
 
 // GetPublic — GET /public/site-contents/:key (公开, 不需要登录)
-// 前端 Home/About 等页面用来动态拉取 CMS 配置的首页内容
+// 2026-09-19 修复: SiteContent 模型没有 is_published 字段，去掉那个过滤
 func (h *SiteContentHandler) GetPublic(c *gin.Context) {
 	key := c.Param("key")
 	if key == "" {
@@ -45,14 +45,13 @@ func (h *SiteContentHandler) GetPublic(c *gin.Context) {
 		return
 	}
 
-	// 只返回 is_published = true 的条目
 	var items []models.SiteContent
-	if err := h.DB.Where("page_key = ? AND is_published = ?", key, true).
+	if err := h.DB.Where("page_key = ?", key).
 		Order("section_key").
 		Limit(100).
 		Find(&items).Error; err != nil {
 		log.Error().Err(err).Str("key", key).Msg("site_content: public lookup failed")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "lookup failed"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "lookup failed: " + err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"items": items})
