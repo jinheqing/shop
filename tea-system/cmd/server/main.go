@@ -136,7 +136,7 @@ func main() {
 		IMWS:          handlers.NewIMWSHandler(imHub, messageRepo, translateSvc, cfg.JWT.Secret),
 
 		Order:       handlers.NewOrderHandler(orderRepo, customProductRepo, orderSM, db.Audit),
-		Payment:     handlers.NewPaymentHandler(orderRepo, paymentSvc, orderSM),
+		Payment:     handlers.NewPaymentHandler(orderRepo, paymentSvc, orderSM, db.Business),
 		Invoice:     handlers.NewInvoiceHandler(invoiceSvc, orderRepo, invoiceRepo),
 		Declaration: handlers.NewDeclarationHandler(invoiceRepo),
 		Ledger:      handlers.NewLedgerHandler(invoiceRepo),

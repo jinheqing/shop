@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
+	"gorm.io/gorm"
 
 	"tea-system/internal/models"
 	"tea-system/internal/repository"
@@ -23,17 +24,20 @@ type PaymentHandler struct {
 	repo         *repository.OrderRepo
 	paymentSvc   *service.PaymentService
 	stateMachine *service.OrderStateMachine
+	db           *gorm.DB
 }
 
 func NewPaymentHandler(
 	repo *repository.OrderRepo,
 	paymentSvc *service.PaymentService,
 	stateMachine *service.OrderStateMachine,
+	db *gorm.DB,
 ) *PaymentHandler {
 	return &PaymentHandler{
 		repo:         repo,
 		paymentSvc:   paymentSvc,
 		stateMachine: stateMachine,
+		db:           db,
 	}
 }
 
@@ -220,14 +224,18 @@ func (h *PaymentHandler) processCallback(c *gin.Context, cb *service.CallbackRes
 		return
 	}
 
-	// 5. 支付成功 → 订单状态流转（状态机校验）
+	// 5. 支付成功 → 订单状态流转（状态机校验 + 写 state_log）
 	if status == models.PaymentStatusSuccess {
 		if h.stateMachine.CanTransition(order.State, models.OrderStatePaid) {
-			if err := h.repo.UpdateState(ctx, order.ID, models.OrderStatePaid); err != nil {
+			if err := h.repo.LogStateChange(ctx, order.ID, order.State, models.OrderStatePaid, "payment confirmed via "+gateway, 0, nil); err != nil {
 				log.Error().Err(err).Uint64("order_id", order.ID).Msg("payment: order state update failed")
 			}
 			// ===== 推荐人自动触发（幂等）=====
-			UpdateReferralOnOrderPaid(h.db, order.UserID, order.ID, order.TotalAmount)
+			var uid uint64
+			if order.UserID != nil {
+				uid = *order.UserID
+			}
+			UpdateReferralOnOrderPaid(h.db, uid, order.ID, order.TotalAmount)
 		} else {
 			log.Warn().Str("from", order.State).Msg("payment: cannot transition to paid (invalid from state)")
 		}

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
@@ -125,13 +126,17 @@ func (h *ReferralHandler) Create(c *gin.Context) {
 		staffID = id.(uint64)
 	}
 
+	var staffIDPtr *uint64
+	if staffID > 0 {
+		staffIDPtr = &staffID
+	}
 	r := &models.Referral{
 		ReferrerUserID:   req.ReferrerUserID,
 		ReferrerName:     req.ReferrerName,
 		ReferredUserID:   req.ReferredUserID,
 		ReferredName:     referredUser.Name,
 		Source:           req.Source,
-		CreatedByStaffID: staffID,
+		CreatedByStaffID: staffIDPtr,
 		Notes:            req.Notes,
 	}
 	if r.Source == "" {
@@ -331,9 +336,9 @@ func UpdateReferralOnOrderPaid(db *gorm.DB, referredUserID uint64, orderID uint6
 				Count(&existing)
 			if existing == 0 {
 				db.WithContext(ctx).Create(&models.UserGroupMember{
-					GroupID:  group.ID,
-					UserID:   *ref.ReferrerUserID,
-					JoinedAt: time.Now(),
+					GroupID: group.ID,
+					UserID:  *ref.ReferrerUserID,
+					AddedAt: time.Now(),
 				})
 			}
 		}

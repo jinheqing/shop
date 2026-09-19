@@ -11,6 +11,7 @@ var AllModels = []interface{}{
 	&Message{},
 	&CustomProduct{},
 	&Order{},
+	&OrderStateLog{},
 	&PaymentTransaction{},
 	&Invoice{},
 	&DeclarationLedger{},

@@ -160,6 +160,8 @@ func (r *Router) Setup() *gin.Engine {
 			auth.GET("/orders", r.h.Order.List)
 			auth.GET("/orders/:id", r.h.Order.GetByID)
 			auth.POST("/orders/:id/state", r.h.Order.UpdateState)
+			auth.PUT("/orders/:id/shipping", r.h.Order.UpdateShipping)
+			auth.GET("/orders/:id/state-logs", r.h.Order.StateLogs)
 			auth.POST("/orders/:id/cancel", r.h.Order.Cancel)
 			auth.POST("/orders/:id/payment/init", r.h.Payment.Init)
 

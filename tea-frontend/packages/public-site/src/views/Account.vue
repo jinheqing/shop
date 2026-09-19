@@ -3,6 +3,9 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/api/client'
 
+// 展开的订单 timeline
+const expandedTimeline = ref<Record<number, any>>(null)
+
 const router = useRouter()
 const tab = ref<'orders' | 'chat' | 'broadcasts' | 'garden' | 'referrals'>('orders')
 
@@ -54,6 +57,26 @@ onMounted(load)
 
 function logout() { localStorage.removeItem('user_token'); router.push('/') }
 
+// timeline 展开/收起
+async function toggleTimeline(orderId: number) {
+  if (expandedTimeline.value && expandedTimeline.value[orderId]) {
+    const copy: any = { ...expandedTimeline.value }
+    delete copy[orderId]
+    expandedTimeline.value = copy
+    return
+  }
+  try {
+    const tl = await api.get(`/orders/${orderId}/timeline`)
+    expandedTimeline.value = { ...(expandedTimeline.value || {}), [orderId]: tl }
+  } catch {}
+}
+
+function formatTime(iso: string) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  return d.toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
+
 function resolveUrl(url: string) {
   if (!url) return ''
   if (url.startsWith('http')) return url
@@ -86,7 +109,7 @@ function resolveUrl(url: string) {
         { key: 'orders', label: 'Orders & Bespoke' },
         { key: 'chat', label: 'Conversations' },
         { key: 'broadcasts', label: 'Private Broadcasts' },
-        { key: 'garden', label: 'Garden & Invitations' },,
+        { key: 'garden', label: 'Garden & Invitations' },
         { key: 'referrals', label: 'Share · The · Tea' },
       ]" :key="t.key"
         :class="['ac-tab', tab === t.key ? 'ac-tab--active' : '']"
@@ -113,10 +136,55 @@ function resolveUrl(url: string) {
               </header>
               <h3 class="ac-card-title">{{ o.custom_product_snapshot?.title || 'Bespoke Pu\'er' }}</h3>
               <p class="ac-card-meta">{{ o.custom_product_snapshot?.raw_tea_source?.slice(0, 60) || '' }}</p>
+
+              <!-- 物流信息（如果有） -->
+              <div v-if="o.courier || o.tracking_no || o.shipped_at" class="ac-shipping">
+                <div v-if="o.courier" class="ac-shipping-line">
+                  <span class="ac-list-dot ac-list-dot--gold"></span>
+                  {{ o.courier }}
+                  <span v-if="o.tracking_no" class="ac-mono ac-tracking-no">{{ o.tracking_no }}</span>
+                </div>
+                <div v-if="o.eta_at" class="ac-shipping-line">
+                  <span class="ac-list-dot"></span>
+                  ETA {{ formatTime(o.eta_at) }}
+                </div>
+                <div v-if="o.shipped_at && !o.courier" class="ac-shipping-line">
+                  <span class="ac-list-dot"></span>
+                  Dispatched {{ formatTime(o.shipped_at) }}
+                </div>
+              </div>
+
               <footer class="ac-card-foot">
                 <span class="ac-price">£{{ o.total_amount }}</span>
-                <a :href="`/orders/${o.id}/invoice`" class="ac-link">Invoice →</a>
+                <div class="flex gap-3 items-center">
+                  <button @click="toggleTimeline(o.id)" class="ac-link-btn">
+                    {{ expandedTimeline?.[o.id] ? 'Hide Timeline' : 'View Journey' }}
+                  </button>
+                  <a :href="`/orders/${o.id}/invoice`" class="ac-link">Invoice →</a>
+                </div>
               </footer>
+
+              <!-- 展开的 Timeline -->
+              <div v-if="expandedTimeline?.[o.id]?.events" class="ac-timeline">
+                <div
+                  v-for="(ev, i) in expandedTimeline[o.id].events"
+                  :key="i"
+                  class="ac-tl-item"
+                >
+                  <span class="ac-list-dot"></span>
+                  <div class="flex-1">
+                    <span class="ac-tl-type">{{ ev.type.replace(/_/g, ' ') }}</span>
+                    <span class="ac-mono ml-2">{{ formatTime(ev.at) }}</span>
+                    <div v-if="ev.detail?.from_state && ev.detail?.to_state" class="ac-tl-detail">
+                      {{ ev.detail.from_state }} → {{ ev.detail.to_state }}
+                      <span v-if="ev.detail.reason" class="ac-tl-reason">"{{ ev.detail.reason }}"</span>
+                    </div>
+                    <div v-else-if="ev.detail?.courier" class="ac-tl-detail">
+                      📮 {{ ev.detail.courier }} {{ ev.detail.tracking_no || '' }}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </article>
           </div>
         </div>
@@ -390,6 +458,53 @@ function resolveUrl(url: string) {
   transition: color 300ms ease-out;
 }
 .ac-link:hover { color: #0B0A09; }
+
+/* Link button (non-anchor) */
+.ac-link-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 11px; color: #C5A572;
+  letter-spacing: 0.1em; font-family: 'Inter', sans-serif;
+  padding: 0;
+  transition: color 300ms ease-out;
+}
+.ac-link-btn:hover { color: #0B0A09; }
+
+/* Shipping block on order card */
+.ac-shipping {
+  padding: 10px 0;
+  margin: 8px 0 12px;
+  border-top: 1px dashed rgba(11,10,9,0.1);
+  border-bottom: 1px dashed rgba(11,10,9,0.1);
+}
+.ac-shipping-line {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 12px; color: #6b6459;
+  margin-bottom: 4px;
+}
+.ac-shipping-line:last-child { margin-bottom: 0; }
+.ac-tracking-no { font-size: 11px; color: #0B0A09; }
+
+/* Timeline (collapsible on order card) */
+.ac-timeline {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(11,10,9,0.08);
+}
+.ac-tl-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 8px 0;
+  border-bottom: 0.5px solid rgba(11,10,9,0.05);
+  font-size: 12px;
+}
+.ac-tl-type {
+  text-transform: uppercase; letter-spacing: 0.12em;
+  color: #0B0A09; font-weight: 500;
+}
+.ac-tl-detail {
+  margin-top: 2px;
+  color: #6b6459; font-size: 11px;
+}
+.ac-tl-reason { color: #8a8578; font-style: italic; margin-left: 6px; }
 
 /* Broadcast card */
 .ac-card--broadcast .ac-rec-dot {

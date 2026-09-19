@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
@@ -58,7 +59,13 @@ type OrderCreateRequest struct {
 // OrderStateRequest — POST /orders/:id/state
 type OrderStateRequest struct {
 	TargetState string `json:"target_state" binding:"required"`
-	Reason      string `json:"reason,omitempty"`
+	Reason      string `json:"reason,omitempty"` // 顾问填写的备注（物流号、集装箱号等）
+
+	// 可选的物流信息（在 shipped 状态转换时填入）
+	Courier    string `json:"courier,omitempty"`    // "FedEx" / "DHL" / "EMS" / "Private"
+	TrackingNo string `json:"tracking_no,omitempty"` // FedEx 追踪号 / 集装箱号 / AWB 号
+	ShippedAt  string `json:"shipped_at,omitempty"`  // RFC3339 时间字符串
+	EtaAt      string `json:"eta_at,omitempty"`      // RFC3339 时间字符串
 }
 
 // ==================== handlers ====================
@@ -271,18 +278,52 @@ func (h *OrderHandler) UpdateState(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.UpdateState(c.Request.Context(), id, req.TargetState); err != nil {
-		log.Error().Err(err).Msg("order: update state failed")
+	// 从 JWT 取 staffID
+	staffID := uint64(0)
+	if middleware.GetSubjectType(c) == "staff" {
+		staffID = middleware.GetSubjectID(c)
+	}
+	if staffID == 0 {
+		staffID = o.StaffID // fallback：用订单原来的顾问
+	}
+
+	// 构建 shippingPatch（只有在 shipped 状态转换时才填）
+	shippingPatch := map[string]interface{}{}
+	if req.TargetState == models.OrderStateShipped {
+		if req.Courier != "" {
+			shippingPatch["courier"] = req.Courier
+		}
+		if req.TrackingNo != "" {
+			shippingPatch["tracking_no"] = req.TrackingNo
+		}
+		if req.ShippedAt != "" {
+			if t, err := time.Parse(time.RFC3339, req.ShippedAt); err == nil {
+				shippingPatch["shipped_at"] = t
+			}
+		}
+		if req.EtaAt != "" {
+			if t, err := time.Parse(time.RFC3339, req.EtaAt); err == nil {
+				shippingPatch["eta_at"] = t
+			}
+		}
+	}
+
+	// 事务里写 state_log + 更新订单
+	if err := h.repo.LogStateChange(c.Request.Context(), id, o.State, req.TargetState, req.Reason, staffID, shippingPatch); err != nil {
+		log.Error().Err(err).Msg("order: log state change failed")
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "update state failed"})
 		return
 	}
 
-	o.State = req.TargetState
-	c.JSON(http.StatusOK, o)
+	// 返回更新后的订单
+	updated, _ := h.repo.GetByID(c.Request.Context(), id)
+	if updated == nil {
+		c.JSON(http.StatusOK, gin.H{"id": id, "state": req.TargetState})
+		return
+	}
+	c.JSON(http.StatusOK, updated)
 }
 
-// Cancel — POST /orders/:id/cancel
-// 语义：任何可取消状态 → cancelled（终态），内部复用状态机 transition 校验
 func (h *OrderHandler) Cancel(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -347,7 +388,7 @@ func rawToJSONMap(raw json.RawMessage) (models.JSONMap, error) {
 }
 
 // Timeline — GET /orders/:id/timeline
-// 聚合订单状态变化、审计日志等事件，按时间排序返回时间线
+// 聚合订单状态变化（state_logs）、审计日志、物流信息等事件，按时间排序返回时间线
 func (h *OrderHandler) Timeline(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -355,7 +396,6 @@ func (h *OrderHandler) Timeline(c *gin.Context) {
 		return
 	}
 
-	// 1. 订单本身（必须存在）
 	o, err := h.repo.GetByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, repository.ErrOrderNotFound) {
@@ -367,27 +407,68 @@ func (h *OrderHandler) Timeline(c *gin.Context) {
 		return
 	}
 
-	// 2. 构建时间线事件
 	type TimelineEvent struct {
-		At      string                 `json:"at"`
-		Type    string                 `json:"type"`     // order_state_change / audit / payment / declaration / live_room
-		Detail  map[string]interface{} `json:"detail"`
+		At     string                 `json:"at"`
+		Type   string                 `json:"type"`   // order_created / state_change / audit / order_updated / shipping
+		Detail map[string]interface{} `json:"detail"`
 	}
+	type rawEvent struct {
+		at    time.Time
+		event TimelineEvent
+	}
+	var raw []rawEvent
 
-	var events []TimelineEvent
-
-	// 事件 A — 订单创建
-	events = append(events, TimelineEvent{
+	// 事件 1 — 订单创建
+	raw = append(raw, rawEvent{at: o.CreatedAt, event: TimelineEvent{
 		At:   o.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 		Type: "order_created",
 		Detail: map[string]interface{}{
-			"order_no": o.OrderNo,
+			"order_no":    o.OrderNo,
 			"initial_state": o.State,
-			"staff_id": o.StaffID,
+			"staff_id":    o.StaffID,
 		},
-	})
+	}})
 
-	// 事件 B — 审计日志（从独立 audit 库查）
+	// 事件 2 — 状态流转日志（核心！顾问每次改状态都会写一条）
+	stateLogs, _ := h.repo.GetStateLogs(c.Request.Context(), id)
+	for _, sl := range stateLogs {
+		detail := map[string]interface{}{
+			"from_state": sl.FromState,
+			"to_state":   sl.ToState,
+			"staff_id":   sl.StaffID,
+		}
+		if sl.Reason != "" {
+			detail["reason"] = sl.Reason
+		}
+		raw = append(raw, rawEvent{at: sl.CreatedAt, event: TimelineEvent{
+			At:     sl.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
+			Type:   "state_change",
+			Detail: detail,
+		}})
+	}
+
+	// 事件 3 — 物流发出（如果有 shipped_at 且状态流转里没有体现）
+	if o.ShippedAt != nil {
+		shippingDetail := map[string]interface{}{
+			"shipped_at": o.ShippedAt.UTC().Format("2006-01-02T15:04:05Z"),
+		}
+		if o.Courier != "" {
+			shippingDetail["courier"] = o.Courier
+		}
+		if o.TrackingNo != "" {
+			shippingDetail["tracking_no"] = o.TrackingNo
+		}
+		if o.EtaAt != nil {
+			shippingDetail["eta_at"] = o.EtaAt.UTC().Format("2006-01-02T15:04:05Z")
+		}
+		raw = append(raw, rawEvent{at: *o.ShippedAt, event: TimelineEvent{
+			At:     o.ShippedAt.UTC().Format("2006-01-02T15:04:05Z"),
+			Type:   "shipping",
+			Detail: shippingDetail,
+		}})
+	}
+
+	// 事件 4 — 审计日志
 	if h.auditDB != nil {
 		var logs []models.AuditLog
 		ptr := id
@@ -397,29 +478,60 @@ func (h *OrderHandler) Timeline(c *gin.Context) {
 			Find(&logs)
 		for _, l := range logs {
 			detail := map[string]interface{}{
-				"action":  l.Action,
+				"action":   l.Action,
 				"staff_id": l.StaffID,
 			}
 			if l.Detail != nil {
 				detail["extra"] = l.Detail
 			}
-			events = append(events, TimelineEvent{
+			raw = append(raw, rawEvent{at: l.CreatedAt, event: TimelineEvent{
 				At:     l.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 				Type:   "audit",
 				Detail: detail,
-			})
+			}})
 		}
 	}
 
-	// 事件 C — 订单最后更新
+	// 事件 5 — 订单最后更新（兜底）
 	if o.UpdatedAt.After(o.CreatedAt) {
-		events = append(events, TimelineEvent{
+		raw = append(raw, rawEvent{at: o.UpdatedAt, event: TimelineEvent{
 			At:   o.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 			Type: "order_updated",
 			Detail: map[string]interface{}{
 				"state": o.State,
 			},
-		})
+		}})
+	}
+
+	// 按时间升序排序
+	for i := 1; i < len(raw); i++ {
+		key := raw[i]
+		j := i - 1
+		for j >= 0 && raw[j].at.After(key.at) {
+			raw[j+1] = raw[j]
+			j--
+		}
+		raw[j+1] = key
+	}
+
+	events := make([]TimelineEvent, len(raw))
+	for i, r := range raw {
+		events[i] = r.event
+	}
+
+	// 附带物流快照
+	shipping := map[string]interface{}{}
+	if o.Courier != "" {
+		shipping["courier"] = o.Courier
+	}
+	if o.TrackingNo != "" {
+		shipping["tracking_no"] = o.TrackingNo
+	}
+	if o.ShippedAt != nil {
+		shipping["shipped_at"] = o.ShippedAt.UTC().Format("2006-01-02T15:04:05Z")
+	}
+	if o.EtaAt != nil {
+		shipping["eta_at"] = o.EtaAt.UTC().Format("2006-01-02T15:04:05Z")
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -428,5 +540,73 @@ func (h *OrderHandler) Timeline(c *gin.Context) {
 		"state":     o.State,
 		"events":    events,
 		"event_cnt": len(events),
+		"shipping":  shipping,
 	})
+}
+
+// UpdateShipping — PUT /orders/:id/shipping
+// 独立更新物流信息（不改变订单状态，顾问可在 shipped 之后补填 courier/追踪号）
+func (h *OrderHandler) UpdateShipping(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "invalid id"})
+		return
+	}
+
+	var req struct {
+		Courier    string `json:"courier,omitempty"`
+		TrackingNo string `json:"tracking_no,omitempty"`
+		ShippedAt  string `json:"shipped_at,omitempty"`
+		EtaAt      string `json:"eta_at,omitempty"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": err.Error()})
+		return
+	}
+
+	var shippedAt, etaAt *time.Time
+	if req.ShippedAt != "" {
+		if t, perr := time.Parse(time.RFC3339, req.ShippedAt); perr == nil {
+			shippedAt = &t
+		}
+	}
+	if req.EtaAt != "" {
+		if t, perr := time.Parse(time.RFC3339, req.EtaAt); perr == nil {
+			etaAt = &t
+		}
+	}
+
+	if err := h.repo.UpdateShippingInfo(c.Request.Context(), id, req.Courier, req.TrackingNo, shippedAt, etaAt); err != nil {
+		if errors.Is(err, repository.ErrOrderNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "order not found"})
+			return
+		}
+		log.Error().Err(err).Msg("order: update shipping failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "update shipping failed"})
+		return
+	}
+
+	o, _ := h.repo.GetByID(c.Request.Context(), id)
+	if o != nil {
+		c.JSON(http.StatusOK, o)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"id": id})
+}
+
+// StateLogs — GET /orders/:id/state-logs
+// 返回订单所有状态流转记录
+func (h *OrderHandler) StateLogs(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "invalid id"})
+		return
+	}
+	logs, err := h.repo.GetStateLogs(c.Request.Context(), id)
+	if err != nil {
+		log.Error().Err(err).Msg("order: state logs failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "internal error"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"items": logs, "cnt": len(logs)})
 }

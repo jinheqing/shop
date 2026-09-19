@@ -66,12 +66,18 @@ type User struct {
 	LastLoginRegion       string     `gorm:"column:last_login_region;size:100" json:"last_login_region,omitempty"`
 
 	// ===== 推荐人相关 =====
-	ReferralSource    string  `gorm:"column:referral_source;size:50" json:"referral_source,omitempty"`                     // youtube / friend / search / other
-	ReferrerName      string  `gorm:"column:referrer_name;size:100" json:"referrer_name,omitempty"`                        // 朋友推荐时输入的名字（可能匹配不上系统里的用户）
-	ReferrerUserID    *uint64 `gorm:"column:referrer_user_id" json:"referrer_user_id,omitempty"`                           // 如果推荐人也在系统里，关联其 ID
-	ReferralShortCode string  `gorm:"column:referral_short_code;size:20;uniqueIndex" json:"referral_short_code,omitempty"` // 专属推荐短链 code
+        ReferralSource    string  `gorm:"column:referral_source;size:50" json:"referral_source,omitempty"`                     // youtube / friend / search / other
+        ReferrerName      string  `gorm:"column:referrer_name;size:100" json:"referrer_name,omitempty"`                        // 朋友推荐时输入的名字（可能匹配不上系统里的用户）
+        ReferrerUserID    *uint64 `gorm:"column:referrer_user_id" json:"referrer_user_id,omitempty"`                           // 如果推荐人也在系统里，关联其 ID
+        ReferralShortCode string  `gorm:"column:referral_short_code;size:20;uniqueIndex" json:"referral_short_code,omitempty"` // 专属推荐短链 code
 
-	CreatedAt time.Time  `gorm:"column:created_at;not null" json:"created_at"`
+        // ===== B2B 公司账户（精品酒店/茶室/企业礼品）=====
+        AccountType   string `gorm:"column:account_type;size:20;default:'personal'" json:"account_type"` // "personal" / "business"
+        CompanyName   string `gorm:"column:company_name;size:200" json:"company_name,omitempty"`
+        VatNumber     string `gorm:"column:vat_number;size:50" json:"vat_number,omitempty"`
+        CompanyRegNo  string `gorm:"column:company_reg_no;size:50" json:"company_reg_no,omitempty"`
+
+        CreatedAt time.Time  `gorm:"column:created_at;not null" json:"created_at"`
 	UpdatedAt time.Time  `gorm:"column:updated_at;not null" json:"updated_at"`
 	DeletedAt *time.Time `gorm:"column:deleted_at" json:"-"`
 

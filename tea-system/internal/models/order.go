@@ -37,8 +37,15 @@ type Order struct {
 	BillingAddressSnapshot  JSONMap  `gorm:"column:billing_address_snapshot;not null;type:jsonb" json:"billing_address_snapshot"`
 	DeliveryAddressSnapshot JSONMap  `gorm:"column:delivery_address_snapshot;not null;type:jsonb" json:"delivery_address_snapshot"`
 	LiveRoomID            *uint64   `gorm:"column:live_room_id" json:"live_room_id,omitempty"`
-	CreatedAt             time.Time `gorm:"column:created_at;not null" json:"created_at"`
-	UpdatedAt             time.Time `gorm:"column:updated_at;not null" json:"updated_at"`
+
+	// ===== 物流追踪（手动填写，顾问控制）=====
+	Courier       string     `gorm:"column:courier;size:50" json:"courier,omitempty"`        // "FedEx" / "DHL" / "EMS" / "Private"
+	TrackingNo    string     `gorm:"column:tracking_no;size:100" json:"tracking_no,omitempty"` // FedEx 追踪号 / 集装箱号 / AWB 号
+	ShippedAt     *time.Time `gorm:"column:shipped_at" json:"shipped_at,omitempty"`           // 实际发出时间
+	EtaAt         *time.Time `gorm:"column:eta_at" json:"eta_at,omitempty"`                   // 预计送达日期
+
+	CreatedAt             time.Time  `gorm:"column:created_at;not null" json:"created_at"`
+	UpdatedAt             time.Time  `gorm:"column:updated_at;not null" json:"updated_at"`
 	DeletedAt             *time.Time `gorm:"column:deleted_at" json:"-"`
 
 	User          *User         `gorm:"-:migration;foreignKey:UserID" json:"user,omitempty"`

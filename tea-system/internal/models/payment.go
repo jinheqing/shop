@@ -52,6 +52,13 @@ type Invoice struct {
 	HsCode         string    `gorm:"column:hs_code;not null;size:20" json:"hs_code"`
 	CountryOfOrigin string   `gorm:"column:country_of_origin;not null;size:50" json:"country_of_origin"`
 	TotalAmount    float64   `gorm:"column:total_amount;not null;type:numeric(10,2)" json:"total_amount"`
+
+	// ===== B2B 公司抬头 =====
+	CompanyName        string `gorm:"column:company_name;size:200" json:"company_name,omitempty"`
+	CompanyAddress     string `gorm:"column:company_address;size:500" json:"company_address,omitempty"`
+	VatNumber          string `gorm:"column:vat_number;size:50" json:"vat_number,omitempty"`
+	CompanyRegNo       string `gorm:"column:company_reg_no;size:50" json:"company_reg_no,omitempty"`
+
 	CreatedAt      time.Time `gorm:"column:created_at;not null" json:"created_at"`
 	UpdatedAt      time.Time `gorm:"column:updated_at;not null" json:"updated_at"`
 

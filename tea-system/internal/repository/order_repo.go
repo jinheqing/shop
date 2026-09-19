@@ -313,3 +313,82 @@ func (r *OrderRepo) ListPaymentTransactions(ctx context.Context, gateway, status
 	}
 	return list, total, nil
 }
+
+// ============================================================
+// OrderStateLog — 状态流转日志
+// ============================================================
+
+// LogStateChange 在一次事务里写状态变更记录 + 同步更新 Orders 表
+// 同时支持附加 shipping 字段（在 shipped 状态转换时填入）
+func (r *OrderRepo) LogStateChange(ctx context.Context, orderID uint64, fromState, toState, reason string, staffID uint64, shippingPatch map[string]interface{}) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 1. 写 state_log
+		logEntry := models.OrderStateLog{
+			OrderID:   orderID,
+			FromState: fromState,
+			ToState:   toState,
+			Reason:    reason,
+			StaffID:   staffID,
+			CreatedAt: time.Now(),
+		}
+		if err := tx.Create(&logEntry).Error; err != nil {
+			return err
+		}
+
+		// 2. 更新订单状态 + 可能附加 shipping 字段
+		patch := map[string]interface{}{
+			"state":      toState,
+			"updated_at": time.Now(),
+		}
+		for k, v := range shippingPatch {
+			patch[k] = v
+		}
+		res := tx.Model(&models.Order{}).Where("id = ?", orderID).Updates(patch)
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return ErrOrderNotFound
+		}
+		return nil
+	})
+}
+
+// GetStateLogs 查一个订单的所有状态流转日志（按时间正序）
+func (r *OrderRepo) GetStateLogs(ctx context.Context, orderID uint64) ([]models.OrderStateLog, error) {
+	var logs []models.OrderStateLog
+	if err := r.db.WithContext(ctx).
+		Where("order_id = ?", orderID).
+		Order("created_at ASC").
+		Find(&logs).Error; err != nil {
+		return nil, err
+	}
+	return logs, nil
+}
+
+// UpdateShippingInfo 独立更新物流信息（不触发状态变更，只改 courier/tracking_no/shipped_at/eta_at）
+func (r *OrderRepo) UpdateShippingInfo(ctx context.Context, orderID uint64, courier, trackingNo string, shippedAt, etaAt *time.Time) error {
+	patch := map[string]interface{}{
+		"updated_at": time.Now(),
+	}
+	if courier != "" {
+		patch["courier"] = courier
+	}
+	if trackingNo != "" {
+		patch["tracking_no"] = trackingNo
+	}
+	if shippedAt != nil {
+		patch["shipped_at"] = *shippedAt
+	}
+	if etaAt != nil {
+		patch["eta_at"] = *etaAt
+	}
+	res := r.db.WithContext(ctx).Model(&models.Order{}).Where("id = ?", orderID).Updates(patch)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return ErrOrderNotFound
+	}
+	return nil
+}
