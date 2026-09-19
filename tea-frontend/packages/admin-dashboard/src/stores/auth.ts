@@ -4,13 +4,19 @@ import { api } from '@/api/client'
 
 export const useAuth = defineStore('auth', () => {
   const token = ref(localStorage.getItem('staff_token') || '')
-  const user = ref<any>(null)
+  const user = ref<any>(
+    localStorage.getItem('staff_token')
+      ? { email: localStorage.getItem('staff_email') || '', role: localStorage.getItem('staff_role') || '' }
+      : null
+  )
 
   async function login(email: string, password: string) {
     const data: any = await api.post('/staff/login', { email, password })
     token.value = data.access_token
     user.value = { email, role: data.role }
     localStorage.setItem('staff_token', token.value)
+    localStorage.setItem('staff_role', data.role)
+    localStorage.setItem('staff_email', email)
     return data
   }
 
@@ -18,6 +24,8 @@ export const useAuth = defineStore('auth', () => {
     token.value = ''
     user.value = null
     localStorage.removeItem('staff_token')
+    localStorage.removeItem('staff_role')
+    localStorage.removeItem('staff_email')
   }
 
   return { token, user, login, logout }
