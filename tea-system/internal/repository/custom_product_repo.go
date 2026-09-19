@@ -41,11 +41,11 @@ func (r *CustomProductRepo) GetByID(ctx context.Context, id uint64) (*models.Cus
 	return &p, nil
 }
 
-// GetByToken — 按 product_token 查询（公开接口用）
+// GetByToken — 按 product_token 查询（公开接口用，不限状态）
 func (r *CustomProductRepo) GetByToken(ctx context.Context, token string) (*models.CustomProduct, error) {
 	var p models.CustomProduct
 	err := r.db.WithContext(ctx).
-		Where("product_token = ? AND status = ?", token, models.CustomProductStatusPublished).
+		Where("product_token = ?", token).
 		First(&p).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrCustomProductNotFound

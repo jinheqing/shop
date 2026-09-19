@@ -152,8 +152,11 @@ func (h *CustomProductHandler) Create(c *gin.Context) {
 
 	staffID := middleware.GetSubjectID(c)
 
-	p := &models.CustomProduct{
-		ProductToken:      nil,
+        // 生成 product_token 便于后续报价页/结账页访问（与 CreatePublic 一致）
+        token, _ := h.svc.GenerateProductToken()
+
+        p := &models.CustomProduct{
+                ProductToken:      &token,
 		Version:           1,
 		Status:            models.CustomProductStatusDraft,
 		IsBespoke:         isBespoke,
@@ -197,7 +200,12 @@ func (h *CustomProductHandler) Create(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, p)
+	c.JSON(http.StatusCreated, gin.H{
+                "code":    0,
+                "message": "custom product created",
+                "token":   token,
+                "product": p,
+        })
 }
 
 // ===== helpers =====

@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { RouterLink } from 'vue-router'
 import { api } from '@/api/client'
+
+const router = useRouter()
 
 const step = ref(1)
 const submitting = ref(false)
@@ -60,10 +63,20 @@ async function submit() {
         roasting_date: today,
         storage_location: 'London (temporary)',
       }
-      await api.post('/custom-products', payload)
+      const resp: any = await api.post('/custom-products', payload)
+      const quoteToken = resp?.token || resp?.product?.product_token || resp?.data?.token
+      if (quoteToken) {
+        router.push(`/quote/${quoteToken}`)
+        return
+      }
     } else {
       // 未登录 → 调公开接口（带 RateLimit，字段有默认值兜底）
-      await api.post('/public/custom-products', basePayload)
+      const resp: any = await api.post('/public/custom-products', basePayload)
+      const quoteToken = resp?.token || resp?.data?.token
+      if (quoteToken) {
+        router.push(`/quote/${quoteToken}`)
+        return
+      }
     }
     success.value = true
   } catch (e: any) {
