@@ -1,0 +1,60 @@
+{
+  "header": {
+    "bespoke": "定制",
+    "tea_gardens": "茶园",
+    "live": "直播",
+    "quality": "品质",
+    "about": "关于",
+    "faq": "常见问题",
+    "contact": "联系",
+    "sign_in": "登录",
+    "magic_link": "魔法链接",
+    "speak_advisor": "呼叫顾问",
+    "my_account": "我的账户",
+    "bespoke_blending": "定制调配",
+    "live_cameras": "直播摄像头"
+  },
+  "footer": {
+    "only_18": "仅限18岁以上",
+    "age_notice": "您必须年满18岁才能购买。非药用产品。",
+    "sgs_notice": "SGS 检测 · 增值税号 GB123456789 · ICO 注册（待定）",
+    "brand_desc": "单一产区普洱茶，从云雾茶园到茶杯全程可追溯。直播茶园，SGS 认证，45天内为您定制调配。",
+    "shop": "商城",
+    "account": "账户",
+    "legal": "法律与隐私",
+    "my_orders": "我的订单",
+    "chat_advisor": "与顾问聊天",
+    "contact_us": "联系我们",
+    "privacy_gdpr": "隐私 · GDPR",
+    "terms": "服务条款",
+    "cookie_policy": "Cookie 政策",
+    "data_request": "数据主体请求",
+    "faq": "常见问题",
+    "copyright": "© 2026 UK Tea House Ltd. · Company No. 12345678 · VAT GB123456789",
+    "registered": "注册于英格兰与威尔士 · ICO 注册（待定）· 自托管伦敦基础设施"
+  },
+  "home": {
+    "badge": "单一产区 · 直接来自云南",
+    "title": "普洱茶，",
+    "title_accent": "可追溯",
+    "title_suffix": "至茶园。",
+    "desc": "扫描每个定制盒上的二维码。查看茶园、揉茶师傅的名字，以及展示种植地的实时摄像头——每天24小时。",
+    "create_blend": "创建你的配方 →",
+    "watch_live": "📷 观看直播茶园",
+    "cloud_garden": "云雾茶园直供",
+    "cloud_garden_desc": "每批茶叶都关联到茶园村庄、师傅姓名和采摘日期。",
+    "sgs_certified": "SGS 认证",
+    "sgs_desc": "所有产品均经 SGS 中国独立检测农药、重金属和微生物。",
+    "bespoke_blending": "定制调配",
+    "bespoke_desc": "选择茶园、烘焙程度和包装。属于你自己的茶——从叶到杯——45天内完成。"
+  },
+  "login": {
+    "welcome": "欢迎回来 🍃",
+    "email": "邮箱",
+    "password": "密码",
+    "sign_in": "登录",
+    "signing_in": "登录中...",
+    "magic_link": "🔬 或使用魔法链接登录（无需密码）",
+    "network_error": "网络错误"
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "header": {
+    "bespoke": "Bespoke",
+    "tea_gardens": "Tea Gardens",
+    "live": "Live",
+    "quality": "Quality",
+    "about": "About",
+    "faq": "FAQ",
+    "contact": "Contact",
+    "sign_in": "Sign In",
+    "magic_link": "Magic Link",
+    "speak_advisor": "Speak with an Advisor",
+    "my_account": "My Account",
+    "bespoke_blending": "Bespoke Blending",
+    "live_cameras": "Live Cameras"
+  },
+  "footer": {
+    "only_18": "18+ only",
+    "age_notice": "You must be 18 or older to purchase. Not a medicinal product.",
+    "sgs_notice": "SGS tested · VAT GB123456789 · ICO registered (pending)",
+    "brand_desc": "Single-origin Pu'er tea, traceable from cloud tea garden to cup. Live-streamed farms, SGS-certified, bespoke blended for you inside 45 days.",
+    "shop": "Shop",
+    "account": "Account",
+    "legal": "Legal & Privacy",
+    "my_orders": "My Orders",
+    "chat_advisor": "Chat with Advisor",
+    "contact_us": "Contact Us",
+    "privacy_gdpr": "Privacy · GDPR",
+    "terms": "Terms of Service",
+    "cookie_policy": "Cookie Policy",
+    "data_request": "Data Subject Request",
+    "faq": "FAQ",
+    "copyright": "© 2026 UK Tea House Ltd. · Company No. 12345678 · VAT GB123456789",
+    "registered": "Registered in England & Wales · ICO registered (pending) · Self-hosted infrastructure in London"
+  },
+  "home": {
+    "badge": "Single Origin · Direct From Yunnan",
+    "title": "Pu'er Tea,",
+    "title_accent": "Traceable",
+    "title_suffix": "to the Garden.",
+    "desc": "Scan the QR on every bespoke box. See the tea garden, the master who rolled your leaves, and a live camera showing where it grew — 24 hours a day.",
+    "create_blend": "Create Your Blend →",
+    "watch_live": "📷 Watch Live Gardens",
+    "cloud_garden": "Cloud Garden Sourced",
+    "cloud_garden_desc": "Every batch linked to its tea garden village, master name, and harvest date.",
+    "sgs_certified": "SGS Certified",
+    "sgs_desc": "All products independently tested by SGS China for pesticides, heavy metals, microbiology.",
+    "bespoke_blending": "Bespoke Blending",
+    "bespoke_desc": "Choose tea garden, roast level, packaging. Your own tea — from leaf to cup — inside 45 days."
+  },
+  "login": {
+    "welcome": "Welcome Back 🍃",
+    "email": "Email",
+    "password": "Password",
+    "sign_in": "Sign In",
+    "signing_in": "Signing in...",
+    "magic_link": "🔬 Or sign in with magic link (no password)",
+    "network_error": "Network error"
+  }
+}

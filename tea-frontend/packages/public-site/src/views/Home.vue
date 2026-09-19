@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { getSlowPresets } from '@/api/live'
 import type { CustomProduct } from '@/api/products'
 import { getPublished } from '@/api/products'
 
+const { t } = useI18n()
 const presets = ref<any[]>([])
 const featured = ref<CustomProduct[]>([])
 
@@ -23,22 +25,22 @@ onMounted(async () => {
 
     <div class="max-w-7xl mx-auto px-6 py-32 text-center md:text-left relative">
       <span class="inline-block px-5 py-1.5 bg-white/10 backdrop-blur rounded-full text-xs tracking-[0.25em] uppercase mb-8 border border-white/15">
-        Single Origin · Direct From Yunnan
+        {{ t('home.badge') }}
       </span>
       <h1 class="font-display font-semibold text-5xl md:text-7xl lg:text-8xl leading-[1.05] max-w-4xl mb-8 tracking-tight">
-        Pu'er Tea,<br/> <span class="italic">Traceable</span> to the Garden.
+        {{ t('home.title') }}<br/> <span class="italic">{{ t('home.title_accent') }}</span> {{ t('home.title_suffix') }}
       </h1>
       <p class="text-lg md:text-xl text-white/80 max-w-2xl mb-12 leading-relaxed">
-        Scan the QR on every bespoke box. See the tea garden, the master who rolled your leaves, and a live camera showing where it grew — 24 hours a day.
+        {{ t('home.desc') }}
       </p>
       <div class="flex flex-col sm:flex-row gap-4 justify-center md:justify-start items-center md:items-start">
         <RouterLink to="/bespoke"
           class="px-9 py-4 bg-white text-tea-900 rounded-full font-medium hover:bg-tea-100 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 text-center tracking-wide">
-          Create Your Blend →
+          {{ t('home.create_blend') }}
         </RouterLink>
         <RouterLink to="/live"
           class="px-9 py-4 border border-white/50 rounded-full font-medium hover:bg-white/15 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 text-center tracking-wide">
-          📷 Watch Live Gardens
+          {{ t('home.watch_live') }}
         </RouterLink>
       </div>
     </div>
@@ -50,18 +52,18 @@ onMounted(async () => {
       <div class="grid md:grid-cols-3 gap-12 md:gap-16">
         <div class="text-center">
           <div class="w-16 h-16 bg-tea-100 rounded-full flex items-center justify-center text-2xl mx-auto mb-6">🏔️</div>
-          <h3 class="font-display text-xl mb-3 text-tea-900">Cloud Garden Sourced</h3>
-          <p class="text-tea-700 text-sm leading-relaxed">Every batch linked to its tea garden village, master name, and harvest date.</p>
+          <h3 class="font-display text-xl mb-3 text-tea-900">{{ t('home.cloud_garden') }}</h3>
+          <p class="text-tea-700 text-sm leading-relaxed">{{ t('home.cloud_garden_desc') }}</p>
         </div>
         <div class="text-center">
           <div class="w-16 h-16 bg-tea-100 rounded-full flex items-center justify-center text-2xl mx-auto mb-6">🔬</div>
-          <h3 class="font-display text-xl mb-3 text-tea-900">SGS Certified</h3>
-          <p class="text-tea-700 text-sm leading-relaxed">All products independently tested by SGS China for pesticides, heavy metals, microbiology.</p>
+          <h3 class="font-display text-xl mb-3 text-tea-900">{{ t('home.sgs_certified') }}</h3>
+          <p class="text-tea-700 text-sm leading-relaxed">{{ t('home.sgs_desc') }}</p>
         </div>
         <div class="text-center">
           <div class="w-16 h-16 bg-tea-100 rounded-full flex items-center justify-center text-2xl mx-auto mb-6">📦</div>
-          <h3 class="font-display text-xl mb-3 text-tea-900">Bespoke Blending</h3>
-          <p class="text-tea-700 text-sm leading-relaxed">Choose tea garden, roast level, packaging. Your own tea — from leaf to cup — inside 45 days.</p>
+          <h3 class="font-display text-xl mb-3 text-tea-900">{{ t('home.bespoke_blending') }}</h3>
+          <p class="text-tea-700 text-sm leading-relaxed">{{ t('home.bespoke_desc') }}</p>
         </div>
       </div>
     </div>

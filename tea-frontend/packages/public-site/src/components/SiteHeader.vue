@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 
+const { t } = useI18n()
 const token = localStorage.getItem('user_token')
 const route = useRoute()
 const mobileOpen = ref(false)
@@ -14,6 +16,16 @@ onMounted(() => { window.addEventListener('scroll', onScroll) })
 onUnmounted(() => { window.removeEventListener('scroll', onScroll) })
 
 function closeMobile() { mobileOpen.value = false }
+
+const mobileNav = [
+  { to: '/bespoke', label: t('header.bespoke_blending') },
+  { to: '/tea-gardens', label: t('header.tea_gardens') },
+  { to: '/live', label: t('header.live_cameras') },
+  { to: '/quality', label: t('header.quality') },
+  { to: '/about', label: t('header.about') },
+  { to: '/faq', label: t('header.faq') },
+  { to: '/contact', label: t('header.contact') },
+]
 </script>
 
 <template>
@@ -36,13 +48,13 @@ function closeMobile() { mobileOpen.value = false }
       <!-- Desktop nav -->
       <nav class="hidden md:flex items-center gap-7 text-sm tracking-wide"
            :class="scrolled ? 'text-tea-700' : 'text-white/90'">
-        <RouterLink to="/bespoke" class="hover:text-tea-900 transition">Bespoke</RouterLink>
-        <RouterLink to="/tea-gardens" class="hover:text-tea-900 transition">Tea Gardens</RouterLink>
-        <RouterLink to="/live" class="hover:text-tea-900 transition">Live</RouterLink>
-        <RouterLink to="/quality" class="hover:text-tea-900 transition">Quality</RouterLink>
-        <RouterLink to="/about" class="hover:text-tea-900 transition">About</RouterLink>
-        <RouterLink to="/faq" class="hover:text-tea-900 transition">FAQ</RouterLink>
-        <RouterLink to="/contact" class="hover:text-tea-900 transition">Contact</RouterLink>
+        <RouterLink to="/bespoke" class="hover:text-tea-900 transition">{{ t('header.bespoke') }}</RouterLink>
+        <RouterLink to="/tea-gardens" class="hover:text-tea-900 transition">{{ t('header.tea_gardens') }}</RouterLink>
+        <RouterLink to="/live" class="hover:text-tea-900 transition">{{ t('header.live') }}</RouterLink>
+        <RouterLink to="/quality" class="hover:text-tea-900 transition">{{ t('header.quality') }}</RouterLink>
+        <RouterLink to="/about" class="hover:text-tea-900 transition">{{ t('header.about') }}</RouterLink>
+        <RouterLink to="/faq" class="hover:text-tea-900 transition">{{ t('header.faq') }}</RouterLink>
+        <RouterLink to="/contact" class="hover:text-tea-900 transition">{{ t('header.contact') }}</RouterLink>
       </nav>
 
       <!-- Right CTA -->
@@ -51,21 +63,21 @@ function closeMobile() { mobileOpen.value = false }
           class="px-4 py-2 rounded-full transition"
           :class="scrolled
             ? 'text-tea-800 hover:bg-tea-100'
-            : 'text-white hover:bg-white/10'">Sign In</RouterLink>
+            : 'text-white hover:bg-white/10'">{{ t('header.sign_in') }}</RouterLink>
         <RouterLink v-if="!token" to="/magic-link"
           class="px-4 py-2 rounded-full border transition"
           :class="scrolled
             ? 'border-tea-300 text-tea-800 hover:bg-tea-100'
-            : 'border-white/40 text-white hover:bg-white/10'">Magic Link</RouterLink>
+            : 'border-white/40 text-white hover:bg-white/10'">{{ t('header.magic_link') }}</RouterLink>
         <!-- Concierge — 老钱核心：永远可见，永远能叫顾问，不依赖登录 -->
         <RouterLink to="/chat"
           :class="scrolled
             ? 'text-tea-700 hover:text-tea-900'
             : 'text-white hover:text-white/80'"
-          title="Chat with an Advisor">
+          :title="t('header.speak_advisor')">
           <span class="hidden lg:inline-flex items-center gap-2">
             <span class="w-1 h-1 rounded-full" :class="scrolled ? 'bg-gold' : 'bg-gold'"></span>
-            <span class="text-[11px] uppercase tracking-lux">Speak with an Advisor</span>
+            <span class="text-[11px] uppercase tracking-lux">{{ t('header.speak_advisor') }}</span>
           </span>
           <span class="lg:hidden">Chat</span>
         </RouterLink>
@@ -74,7 +86,7 @@ function closeMobile() { mobileOpen.value = false }
             class="px-4 py-2 rounded-full transition"
             :class="scrolled
               ? 'bg-tea-800 text-white hover:bg-tea-900'
-              : 'bg-white text-tea-900 hover:bg-tea-100'">My Account</RouterLink>
+              : 'bg-white text-tea-900 hover:bg-tea-100'">{{ t('header.my_account') }}</RouterLink>
         </template>
       </div>
 
@@ -99,29 +111,21 @@ function closeMobile() { mobileOpen.value = false }
       <div v-if="mobileOpen"
         class="md:hidden bg-white border-t border-tea-100 shadow-lg">
         <nav class="max-w-7xl mx-auto px-6 py-4 flex flex-col gap-1">
-          <RouterLink v-for="item in ([
-            {to:'/bespoke', label:'Bespoke Blending'},
-            {to:'/tea-gardens', label:'Tea Gardens'},
-            {to:'/live', label:'Live Cameras'},
-            {to:'/quality', label:'SGS Quality'},
-            {to:'/about', label:'About'},
-            {to:'/faq', label:'FAQ'},
-            {to:'/contact', label:'Contact'},
-          ])" :key="item.to" :to="item.to" @click="closeMobile"
+          <RouterLink v-for="item in mobileNav" :key="item.to" :to="item.to" @click="closeMobile"
             class="py-3 border-b border-tea-50 text-tea-800 hover:text-tea-900 transition"
             :class="route.path === item.to ? 'font-medium text-tea-900' : ''">{{ item.label }}</RouterLink>
           <div class="pt-4 flex flex-col gap-2">
             <!-- Concierge 永远在最前 — 老钱核心 -->
             <RouterLink to="/chat" @click="closeMobile"
               class="w-full py-3 text-center rounded-full bg-tea-900 text-ivory-100 hover:bg-tea-800 transition">
-              Speak with an Advisor
+              {{ t('header.speak_advisor') }}
             </RouterLink>
             <RouterLink v-if="!token" to="/login" @click="closeMobile"
-              class="w-full py-3 text-center rounded-full border border-tea-300 text-tea-800 hover:bg-tea-100 transition">Sign In</RouterLink>
+              class="w-full py-3 text-center rounded-full border border-tea-300 text-tea-800 hover:bg-tea-100 transition">{{ t('header.sign_in') }}</RouterLink>
             <RouterLink v-if="!token" to="/magic-link" @click="closeMobile"
-              class="w-full py-3 text-center rounded-full border border-tea-300 text-tea-800 hover:bg-tea-100 transition">Magic Link</RouterLink>
+              class="w-full py-3 text-center rounded-full border border-tea-300 text-tea-800 hover:bg-tea-100 transition">{{ t('header.magic_link') }}</RouterLink>
             <RouterLink v-if="token" to="/account" @click="closeMobile"
-              class="w-full py-3 text-center rounded-full bg-tea-800 text-white hover:bg-tea-900 transition">My Account</RouterLink>
+              class="w-full py-3 text-center rounded-full bg-tea-800 text-white hover:bg-tea-900 transition">{{ t('header.my_account') }}</RouterLink>
           </div>
         </nav>
       </div>
