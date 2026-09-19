@@ -26,8 +26,8 @@ export const routes = [
   { path: '/magic-link', name: 'magic-link', component: () => import('@/views/MagicLink.vue'), meta: { title: 'Magic Link Login' } },
   { path: '/account', name: 'account', component: () => import('@/views/Account.vue'), meta: { title: 'My Account', requiresAuth: true } },
 
-  // IM chat
-  { path: '/chat', name: 'chat', component: () => import('@/views/Chat.vue'), meta: { title: 'Chat with Advisor' } },
+  // IM chat (requires login — Ford-style: click → login → chat)
+  { path: '/chat', name: 'chat', component: () => import('@/views/Chat.vue'), meta: { title: 'Chat with Advisor', requiresAuth: true } },
 
   // Company / legal
   { path: '/about', name: 'about', component: () => import('@/views/About.vue'), meta: { title: 'About Us' } },

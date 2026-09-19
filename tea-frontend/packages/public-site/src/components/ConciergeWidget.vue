@@ -17,7 +17,17 @@ const router = useRouter()
 
 window.addEventListener('scroll', () => { scrolled.value = window.scrollY > 400 })
 
-function goChat() { open.value = false; router.push('/chat') }
+function toggle() { open.value = !open.value }
+
+function goChat() {
+  const token = localStorage.getItem('user_token')
+  if (!token) {
+    router.push('/magic-link?redirect=/chat')
+  } else {
+    open.value = false
+    router.push('/chat')
+  }
+}
 
 async function submit() {
   const key = 'concierge_inquiries'
