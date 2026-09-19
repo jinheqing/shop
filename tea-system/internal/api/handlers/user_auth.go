@@ -23,6 +23,7 @@ type UserAuthHandler struct {
 	passwordSvc      *service.PasswordService
 	jwtSvc           *service.JWTService
 	magicLinkSvc     *service.MagicLinkService
+	geoipSvc         *service.GeoIPService
 	db               *gorm.DB
 }
 
@@ -31,6 +32,7 @@ func NewUserAuthHandler(
 	passwordSvc *service.PasswordService,
 	jwtSvc *service.JWTService,
 	magicLinkSvc *service.MagicLinkService,
+	geoipSvc *service.GeoIPService,
 	db *gorm.DB,
 ) *UserAuthHandler {
 	return &UserAuthHandler{
@@ -38,6 +40,7 @@ func NewUserAuthHandler(
 		passwordSvc:  passwordSvc,
 		jwtSvc:       jwtSvc,
 		magicLinkSvc: magicLinkSvc,
+		geoipSvc:     geoipSvc,
 		db:           db,
 	}
 }
@@ -144,6 +147,15 @@ func (h *UserAuthHandler) MagicLinkVerify(c *gin.Context) {
 		mergedCount += customCount
 	}
 
+	// 捕获 IP + 归属地
+	clientIP := c.ClientIP()
+	if h.geoipSvc != nil {
+		geo := h.geoipSvc.Lookup(ctx, clientIP)
+		if geo != nil {
+			_ = h.userRepo.UpdateLoginGeo(ctx, user.ID, geo.IP, geo.City, geo.Country, geo.CountryCode, geo.Region)
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"access_token":          accessToken,
 		"refresh_token":         refreshToken,
@@ -195,6 +207,15 @@ func (h *UserAuthHandler) UserLogin(c *gin.Context) {
 
 	accessToken, _ := h.jwtSvc.GenerateUserToken(user.ID, user.Email)
 	refreshToken, _ := h.jwtSvc.GenerateRefreshToken("user", user.ID)
+
+	// 捕获 IP + 归属地
+	clientIP := c.ClientIP()
+	if h.geoipSvc != nil {
+		geo := h.geoipSvc.Lookup(ctx, clientIP)
+		if geo != nil {
+			_ = h.userRepo.UpdateLoginGeo(ctx, user.ID, geo.IP, geo.City, geo.Country, geo.CountryCode, geo.Region)
+		}
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"access_token":  accessToken,

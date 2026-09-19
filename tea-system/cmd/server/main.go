@@ -105,6 +105,7 @@ func main() {
 	lkSvc := service.NewLiveKitService(cfg.LiveKit.URL, cfg.LiveKit.APIKey, cfg.LiveKit.APISecret)
 	translateSvc := service.NewTranslateService(cfg.TranslateServiceURL)
 	paymentSvc := service.NewPaymentService(cfg.Payment.BaseURL, cfg.Payment.APIKey, cfg.Payment.APISecret)
+	geoipSvc := service.NewGeoIPService(rdb)
 
 	orderSM := service.NewOrderStateMachine()
 	customProductSvc := service.NewCustomProductService()
@@ -126,7 +127,7 @@ func main() {
 	h := &api.Handlers{
 		Health:    handlers.NewHealthHandler(cfg.Server.Version),
 		StaffAuth: handlers.NewStaffAuthHandler(staffRepo, userRepo, passwordSvc, jwtSvc, mfaSvc, rdb, db.Audit),
-		UserAuth:  handlers.NewUserAuthHandler(userRepo, passwordSvc, jwtSvc, magicLinkSvc, db.Business),
+		UserAuth:  handlers.NewUserAuthHandler(userRepo, passwordSvc, jwtSvc, magicLinkSvc, geoipSvc, db.Business),
 
 		CustomProduct: handlers.NewCustomProductHandler(customProductRepo, customProductSvc),
 		LiveKit:       handlers.NewLiveKitTokenHandler(lkSvc, cfg),

@@ -59,6 +59,11 @@ type User struct {
 	DataDeleteCompletedAt *time.Time `gorm:"column:data_delete_completed_at" json:"data_delete_completed_at,omitempty"`
 	DsarRequestCount      int       `gorm:"column:dsar_request_count;default:0" json:"dsar_request_count"`
 	LastLoginAt           *time.Time `gorm:"column:last_login_at" json:"last_login_at,omitempty"`
+	LastLoginIP           string    `gorm:"column:last_login_ip;size:50" json:"last_login_ip,omitempty"`
+	LastLoginCity         string    `gorm:"column:last_login_city;size:100" json:"last_login_city,omitempty"`
+	LastLoginCountry      string    `gorm:"column:last_login_country;size:100" json:"last_login_country,omitempty"`
+	LastLoginCountryCode  string    `gorm:"column:last_login_country_code;size:10" json:"last_login_country_code,omitempty"`
+	LastLoginRegion       string    `gorm:"column:last_login_region;size:100" json:"last_login_region,omitempty"`
 	CreatedAt             time.Time `gorm:"column:created_at;not null" json:"created_at"`
 	UpdatedAt             time.Time `gorm:"column:updated_at;not null" json:"updated_at"`
 	DeletedAt             *time.Time `gorm:"column:deleted_at" json:"-"`

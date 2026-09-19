@@ -53,5 +53,21 @@
     "invalid_credentials": "账号或密码错误",
     "welcome_back": "欢迎回来！",
     "dev_note": "默认管理员账号（仅开发环境）— 首次登录后请立即修改"
+  },
+  "users": {
+    "title": "客户列表",
+    "reload": "刷新",
+    "name": "姓名",
+    "email": "邮箱",
+    "location": "归属地",
+    "ip": "最近 IP",
+    "verified": "已验证",
+    "last_login": "最近登录",
+    "signed_up": "注册时间",
+    "actions": "操作",
+    "orders": "订单",
+    "export": "导出",
+    "yes": "是",
+    "no": "否"
   }
 }

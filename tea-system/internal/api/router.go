@@ -66,6 +66,9 @@ func NewRouter(cfg *config.Config, db *gorm.DB, auditDB *gorm.DB, rdb *redis.Cli
 }
 
 func (r *Router) Setup() *gin.Engine {
+	// 信任 nginx 反向代理，让 c.ClientIP() 能读取 X-Forwarded-For / X-Real-IP
+	_ = r.engine.SetTrustedProxies([]string{"127.0.0.1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"})
+
 	r.engine.Use(middleware.Recovery())
 	r.engine.Use(middleware.Logging())
 	r.engine.Use(middleware.CORS(nil))

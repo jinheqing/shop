@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -46,6 +47,21 @@ func (r *UserRepo) Create(ctx context.Context, user *models.User) error {
 
 func (r *UserRepo) Update(ctx context.Context, user *models.User) error {
 	return r.db.WithContext(ctx).Save(user).Error
+}
+
+// UpdateLoginGeo — 更新用户最近登录的 IP 和归属地
+func (r *UserRepo) UpdateLoginGeo(ctx context.Context, userID uint64, ip, city, country, countryCode, region string) error {
+	now := time.Now()
+	return r.db.WithContext(ctx).Model(&models.User{}).
+		Where("id = ?", userID).
+		Updates(map[string]interface{}{
+			"last_login_ip":           ip,
+			"last_login_city":         city,
+			"last_login_country":      country,
+			"last_login_country_code": countryCode,
+			"last_login_region":       region,
+			"last_login_at":           now,
+		}).Error
 }
 
 // List — User 列表（分页，admin 用）

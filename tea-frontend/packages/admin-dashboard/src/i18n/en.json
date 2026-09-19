@@ -53,5 +53,21 @@
     "invalid_credentials": "Invalid credentials",
     "welcome_back": "Welcome back!",
     "dev_note": "Default admin (dev only) — change immediately on first login"
+  },
+  "users": {
+    "title": "Customer Users",
+    "reload": "Reload",
+    "name": "Name",
+    "email": "Email",
+    "location": "Location",
+    "ip": "Last IP",
+    "verified": "Verified",
+    "last_login": "Last Login",
+    "signed_up": "Signed Up",
+    "actions": "Actions",
+    "orders": "Orders",
+    "export": "Export",
+    "yes": "Yes",
+    "no": "No"
   }
 }
