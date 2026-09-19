@@ -65,6 +65,20 @@
           <el-input-number v-model="cfg.vat_rate" :precision="2" :step="0.5" :min="0" :max="50" />
         </el-form-item>
 
+        <!-- 推荐人自动规则 -->
+        <el-divider content-position="left">Referral Automation</el-divider>
+        <el-alert type="info" :closable="false" show-icon class="mb-3">
+          推荐人系统规则 — 无需重新上线，改完立即生效。默认：£100 / 累计 3 个
+        </el-alert>
+        <el-form-item label="Friend Order Threshold (£)">
+          <el-input-number v-model="cfg.referral_min_order_amount" :precision="0" :step="10" :min="0" />
+          <div class="text-xs text-gray-400 mt-1">朋友订单金额 ≥ 这个数才触发推荐奖励（礼物 + 进组检查）。设 0 = 所有订单都触发</div>
+        </el-form-item>
+        <el-form-item label="Auto-Invite to KOL Group">
+          <el-input-number v-model="cfg.referral_count_to_vip" :precision="0" :step="1" :min="1" :max="50" />
+          <div class="text-xs text-gray-400 mt-1">推荐人累计有多少个"有效推荐"后，系统自动把他拉进 KOL 伙伴用户组（闭门品鉴会、限量茶先购、茶园参观）</div>
+        </el-form-item>
+
         <el-form-item>
           <el-button type="primary" :loading="saving" @click="save">Save All</el-button>
           <el-button @click="load">Reload</el-button>
@@ -93,7 +107,9 @@ const cfg = ref<any>({
   paypal_client_secret: '',
   paypal_mode: 'sandbox',
   currency: 'GBP',
-  vat_rate: 20
+  vat_rate: 20,
+  referral_min_order_amount: 100,
+  referral_count_to_vip: 3
 })
 
 async function load() {

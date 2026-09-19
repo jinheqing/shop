@@ -288,24 +288,38 @@ func UpdateReferralOnOrderPaid(db *gorm.DB, referredUserID uint64, orderID uint6
 	ref.FriendOrderAmount = orderAmount
 	db.WithContext(ctx).Save(&ref)
 
-	// 3. 查配置
+	// 3. 查配置（从 site_contents 表 page_key='system_config', section_key='payment_config' 读）
 	threshold := 100.0  // 默认 £100
 	countThreshold := 3 // 默认 3 个
-	var cfg struct {
-		Value string `gorm:"column:value"`
-	}
-	if db.WithContext(ctx).Raw(
-		`SELECT value FROM system_config WHERE key = ?`, "referral_min_order_amount",
-	).Scan(&cfg).Error == nil && cfg.Value != "" {
-		if v, err := strconv.ParseFloat(cfg.Value, 64); err == nil {
-			threshold = v
+
+	var paymentCfg models.SiteContent
+	if db.WithContext(ctx).
+		Where("page_key = ? AND section_key = ?", "system_config", "payment_config").
+		First(&paymentCfg).Error == nil {
+		// payment_config 的 Content 里存了所有系统配置（支付 + 推荐规则）
+		if v, ok := paymentCfg.Content["referral_min_order_amount"]; ok {
+			switch t := v.(type) {
+			case string:
+				if f, err := strconv.ParseFloat(t, 64); err == nil {
+					threshold = f
+				}
+			case float64:
+				threshold = t
+			case int:
+				threshold = float64(t)
+			}
 		}
-	}
-	if db.WithContext(ctx).Raw(
-		`SELECT value FROM system_config WHERE key = ?`, "referral_count_to_vip",
-	).Scan(&cfg).Error == nil && cfg.Value != "" {
-		if v, err := strconv.Atoi(cfg.Value); err == nil {
-			countThreshold = v
+		if v, ok := paymentCfg.Content["referral_count_to_vip"]; ok {
+			switch t := v.(type) {
+			case string:
+				if i, err := strconv.Atoi(t); err == nil {
+					countThreshold = i
+				}
+			case float64:
+				countThreshold = int(t)
+			case int:
+				countThreshold = t
+			}
 		}
 	}
 
