@@ -7,7 +7,7 @@ import (
 // DeclarationLedger — 物流报关台账
 type DeclarationLedger struct {
 	ID                       uint64     `gorm:"primaryKey;column:id" json:"id"`
-	OrderID                  uint64     `gorm:"column:order_id;uniqueIndex;not null" json:"order_id"`
+	OrderID                  uint64     `gorm:"column:order_id;not null" json:"order_id"`
 	CustomsDeclarationNo     string     `gorm:"column:customs_declaration_no;size:50" json:"customs_declaration_no,omitempty"`
 	HsCode                   string     `gorm:"column:hs_code;not null;size:20" json:"hs_code"`
 	CommodityDesc            string     `gorm:"column:commodity_desc;not null;type:text" json:"commodity_desc"`
@@ -33,7 +33,7 @@ func (DeclarationLedger) TableName() string {
 // ForeignExchangeLedger — 收汇台账
 type ForeignExchangeLedger struct {
 	ID                   uint64     `gorm:"primaryKey;column:id" json:"id"`
-	OrderID              uint64     `gorm:"column:order_id;uniqueIndex;not null" json:"order_id"`
+	OrderID              uint64     `gorm:"column:order_id;not null" json:"order_id"`
 	PaymentGateway       string     `gorm:"column:payment_gateway;not null;size:20" json:"payment_gateway"`
 	GatewayTransactionID string     `gorm:"column:gateway_transaction_id;not null;size:100" json:"gateway_transaction_id"`
 	AmountGBP            float64    `gorm:"column:amount_gbp;not null;type:numeric(10,2)" json:"amount_gbp"`
