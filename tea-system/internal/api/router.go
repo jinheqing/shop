@@ -113,10 +113,10 @@ func (r *Router) Setup() *gin.Engine {
 
 			// ===== 新增缺失后端路由 =====
 			// Staff CRUD (admin/supervisor)
-			auth.GET("/staff", r.h.StaffAuth.StaffList)
-			auth.POST("/staff", r.h.StaffAuth.StaffCreate)
-			auth.POST("/staff/:id/toggle", r.h.StaffAuth.StaffToggle)
-			auth.DELETE("/staff/:id", r.h.StaffAuth.StaffDelete)
+			auth.GET("/staff", middleware.RequireRole("admin", "supervisor"), r.h.StaffAuth.StaffList)
+			auth.POST("/staff", middleware.RequireRole("admin", "supervisor"), r.h.StaffAuth.StaffCreate)
+			auth.POST("/staff/:id/toggle", middleware.RequireRole("admin", "supervisor"), r.h.StaffAuth.StaffToggle)
+			auth.DELETE("/staff/:id", middleware.RequireRole("admin", "supervisor"), r.h.StaffAuth.StaffDelete)
 			// Users (customers) list
 			auth.GET("/users", middleware.RequireRole("admin", "supervisor"), r.h.StaffAuth.UserList)
 			// System Config
@@ -138,9 +138,9 @@ func (r *Router) Setup() *gin.Engine {
 			auth.GET("/custom-products", r.h.CustomProduct.List)
 			auth.GET("/custom-products/:id", r.h.CustomProduct.GetByID)
 			auth.PUT("/custom-products/:id", r.h.CustomProduct.Update)
-			auth.DELETE("/custom-products/:id", r.h.CustomProduct.Delete)
-			auth.POST("/custom-products/:id/publish", r.h.CustomProduct.Publish)
-			auth.POST("/custom-products/:id/review", r.h.CustomProduct.Review)
+			auth.DELETE("/custom-products/:id", middleware.RequireRole("admin", "supervisor"), r.h.CustomProduct.Delete)
+			auth.POST("/custom-products/:id/publish", middleware.RequireRole("admin", "supervisor"), r.h.CustomProduct.Publish)
+			auth.POST("/custom-products/:id/review", middleware.RequireRole("admin", "supervisor"), r.h.CustomProduct.Review)
 
 			// Step 11: LiveKit
 			auth.POST("/livekit/token", r.h.LiveKit.Token)
