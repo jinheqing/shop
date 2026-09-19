@@ -1,10 +1,16 @@
-import axios from 'axios'
+import axios, { type AxiosInstance } from 'axios'
 
-export const api = axios.create({
+export const api: AxiosInstance & {
+  post<T = any>(url: string, data?: any, config?: any): Promise<T>
+  get<T = any>(url: string, config?: any): Promise<T>
+  put<T = any>(url: string, data?: any, config?: any): Promise<T>
+  delete<T = any>(url: string, config?: any): Promise<T>
+  patch<T = any>(url: string, data?: any, config?: any): Promise<T>
+} = axios.create({
   baseURL: import.meta.env.VITE_API_BASE || '/api/v1',
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' }
-})
+}) as any
 
 // upload — 文件上传 helper，调用 POST /api/v1/upload?type=image|video|file
 // 返回后端响应里的 file.url（形如 /uploads/image/xxx.jpg）
