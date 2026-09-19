@@ -111,20 +111,32 @@ func (h *LiveKitTokenHandler) TokenForOBS(c *gin.Context) {
 		return
 	}
 
-	// RTMP 地址: rtmp://host:1935/live/{roomId}
+	// RTMP 地址: 优先使用后台配置的 OBS 推流域名
 	rtmpPort := h.cfg.MediaMTX.RTMPPort
 	if rtmpPort == 0 {
 		rtmpPort = 1935
 	}
 	rtmpHost := "localhost"
 	if h.cfg.LiveKit.URL != "" {
-		// 简单从 LIVEKIT_URL 提取 host
 		rtmpHost = extractHost(h.cfg.LiveKit.URL, rtmpHost)
 	}
-	obsRTMPURL := "rtmp://" + rtmpHost + ":" + strconv.Itoa(rtmpPort) + "/live/" + req.RoomName
+
+	var obsRTMPURL string
+	if h.cfg.OBS.PushDomain != "" {
+		// 后台配置了推流域名，直接使用
+		obsRTMPURL = h.cfg.OBS.PushDomain + "/" + req.RoomName
+	} else {
+		obsRTMPURL = "rtmp://" + rtmpHost + ":" + strconv.Itoa(rtmpPort) + "/live/" + req.RoomName
+	}
 	obsRTMPKey := req.RoomName
 
-	webURL := service.MediaMTXWebURL(h.cfg.MediaMTX.WebRTCURL, req.RoomName)
+	var webURL string
+	if h.cfg.OBS.PullDomain != "" {
+		// 后台配置了拉流域名
+		webURL = h.cfg.OBS.PullDomain + "/" + req.RoomName
+	} else {
+		webURL = service.MediaMTXWebURL(h.cfg.MediaMTX.WebRTCURL, req.RoomName)
+	}
 
 	c.JSON(http.StatusOK, hostTokenResponse{
 		Token:      token,

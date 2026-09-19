@@ -99,7 +99,7 @@ func main() {
 		cfg.JWT.Secret, cfg.JWT.StaffExpireMin, cfg.JWT.UserExpireMin, cfg.JWT.RefreshExpireDay,
 	)
 	mfaSvc := service.NewMFAService(staffRepo)
-	mailSvc := service.NewMailService(cfg.Mail.APIKey, cfg.App.Domain, cfg.Mail.FromAddr)
+	mailSvc := service.NewMailService(cfg.Mail.APIKey, cfg.App.Domain, cfg.Mail.FromAddr, cfg.Mail.Provider)
 	magicLinkSvc := service.NewMagicLinkService(rdb, mailSvc, cfg.App.Domain)
 
 	lkSvc := service.NewLiveKitService(cfg.LiveKit.URL, cfg.LiveKit.APIKey, cfg.LiveKit.APISecret)

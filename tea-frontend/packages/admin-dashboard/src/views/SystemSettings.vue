@@ -48,14 +48,19 @@
     <el-card>
       <template #header><b>② Mail Service</b><span class="ml-2 text-xs text-gray-400">section = <code>mail</code></span></template>
       <el-form :model="mail" label-width="180px" class="max-w-3xl">
-        <el-form-item label="SMTP Host">
-          <el-input v-model="mail.smtp_host" placeholder="smtp.mailgun.org" />
+        <el-form-item label="Provider">
+          <el-select v-model="mail.provider" placeholder="Select provider">
+            <el-option label="AokSend (国内)" value="aoksend" />
+            <el-option label="Mailgun (海外)" value="mailgun" />
+          </el-select>
+          <div class="text-xs text-gray-400 mt-1">选择邮件服务商，AokSend 适合国内用户，Mailgun 适合海外</div>
         </el-form-item>
         <el-form-item label="From Address">
-          <el-input v-model="mail.from_addr" placeholder="tea@ukteahouse.co.uk" />
+          <el-input v-model="mail.from_addr" placeholder="noreply@tea.7758521.sbs" />
         </el-form-item>
         <el-form-item label="API Key">
-          <el-input v-model="mail.api_key" type="password" show-password placeholder="Mailgun / Resend API key" />
+          <el-input v-model="mail.api_key" type="password" show-password placeholder="AokSend / Mailgun API key" />
+          <div class="text-xs text-gray-400 mt-1">在对应服务商后台获取 API Key</div>
         </el-form-item>
         <el-form-item>
           <el-button type="primary" :loading="saving.mail" @click="save('mail', mail)">Save Mail</el-button>
@@ -64,9 +69,33 @@
       </el-form>
     </el-card>
 
+    <!-- Group 2.5: OBS Push/Pull Stream -->
+    <el-card>
+      <template #header><b>③ OBS Push/Pull Stream</b><span class="ml-2 text-xs text-gray-400">section = <code>obs</code></span></template>
+      <el-alert title="配置 OBS 直播推流和拉流（播放）域名。留空则使用默认 MediaMTX 本地地址。" type="info" :closable="false" class="mb-3" />
+      <el-form :model="obs" label-width="180px" class="max-w-3xl">
+        <el-form-item label="Push Domain">
+          <el-input v-model="obs.push_domain" placeholder="rtmp://38.76.188.92:1935/live" />
+          <div class="text-xs text-gray-400 mt-1">OBS Studio 推流地址，格式: rtmp://IP:PORT/live</div>
+        </el-form-item>
+        <el-form-item label="Pull Domain">
+          <el-input v-model="obs.pull_domain" placeholder="https://tea.7758521.sbs/webrtc/live" />
+          <div class="text-xs text-gray-400 mt-1">WebRTC 播放地址，格式: https://域名/webrtc/live</div>
+        </el-form-item>
+        <el-form-item label="RTMP Port">
+          <el-input-number v-model="obs.rtmp_port" :min="1" :max="65535" placeholder="1935" />
+          <div class="text-xs text-gray-400 mt-1">默认 1935，一般不需要修改</div>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :loading="saving.obs" @click="save('obs', obs)">Save OBS</el-button>
+          <el-tag v-if="savedAt.obs" type="success" class="ml-2">Saved {{ savedAt.obs }}</el-tag>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
     <!-- Group 3: Translate Engine -->
     <el-card>
-      <template #header><b>③ Translate Engine</b><span class="ml-2 text-xs text-gray-400">section = <code>translate</code></span></template>
+      <template #header><b>④ Translate Engine</b><span class="ml-2 text-xs text-gray-400">section = <code>translate</code></span></template>
       <el-form :model="translate" label-width="200px" class="max-w-3xl">
         <el-form-item label="Engine Base URL">
           <el-input v-model="translate.service_url" placeholder="http://translate-engine:8090" />
@@ -82,7 +111,7 @@
 
     <!-- Group 4: Media Nodes / WireGuard -->
     <el-card>
-      <template #header><b>④ Media Nodes / WireGuard</b><span class="ml-2 text-xs text-gray-400">section = <code>nodes</code></span></template>
+      <template #header><b>⑤ Media Nodes / WireGuard</b><span class="ml-2 text-xs text-gray-400">section = <code>nodes</code></span></template>
       <el-form :model="nodes" label-width="200px" class="max-w-3xl">
         <el-form-item label="WG IP Start">
           <el-input v-model="nodes.wg_ip_start" placeholder="10.10.0.10" />
@@ -101,7 +130,7 @@
 
     <!-- Group 5: Server Metadata -->
     <el-card>
-      <template #header><b>⑤ Server Metadata</b><span class="ml-2 text-xs text-gray-400">section = <code>server</code></span></template>
+      <template #header><b>⑥ Server Metadata</b><span class="ml-2 text-xs text-gray-400">section = <code>server</code></span></template>
       <el-form :model="server" label-width="180px" class="max-w-3xl">
         <el-form-item label="API Version">
           <el-input v-model="server.version" placeholder="0.5.0" />
@@ -116,7 +145,7 @@
 
     <!-- Group 6: LiveKit SFU -->
     <el-card>
-      <template #header><b>⑥ LiveKit SFU</b><span class="ml-2 text-xs text-gray-400">section = <code>livekit</code></span></template>
+      <template #header><b>⑦ LiveKit SFU</b><span class="ml-2 text-xs text-gray-400">section = <code>livekit</code></span></template>
       <el-alert title="⚠️ LIVEKIT_API_KEY / LIVEKIT_API_SECRET are production secrets. Be careful editing here — values are stored in plaintext in site_contents (JSONB)." type="warning" show-icon :closable="false" class="mb-3" />
       <el-form :model="livekit" label-width="200px" class="max-w-3xl">
         <el-form-item label="SFU WebSocket URL">
@@ -137,7 +166,7 @@
 
     <!-- Group 7: Admin Seed (⚠️ dev only) -->
     <el-card>
-      <template #header><b>⑦ Admin Seed</b><span class="ml-2 text-xs text-gray-400">section = <code>seed_admin</code> · <span class="text-red-400">dev only — only applies when staff table is empty</span></span></template>
+      <template #header><b>⑧ Admin Seed</b><span class="ml-2 text-xs text-gray-400">section = <code>seed_admin</code> · <span class="text-red-400">dev only — only applies when staff table is empty</span></span></template>
       <el-alert title="⚠️ These credentials are only used on FIRST START when staff table is empty. Changing them here won't reset existing staff passwords." type="warning" show-icon :closable="false" class="mb-3" />
       <el-form :model="seedAdmin" label-width="200px" class="max-w-3xl">
         <el-form-item label="Seed Email">
@@ -158,7 +187,7 @@
 
     <!-- Group 8: Runtime Status (read-only) -->
     <el-card>
-      <template #header><b>⑧ Runtime Status</b> <span class="text-xs text-gray-400">(read-only)</span></template>
+      <template #header><b>⑨ Runtime Status</b> <span class="text-xs text-gray-400">(read-only)</span></template>
       <div class="grid grid-cols-2 gap-4">
         <div>Config entries in DB: <b>{{ knownKeys.length }}</b></div>
         <div>LiveKit URL: <b>{{ livekit.url || '(not set — using env)' }}</b></div>
@@ -166,6 +195,9 @@
         <div>Current loaded version: <b>{{ server.version || '(not set — using env default)' }}</b></div>
         <div>Service name: <b>{{ app.service_name }}</b></div>
         <div>Magic-link domain: <b>{{ app.domain || '(not set)' }}</b></div>
+        <div>Mail Provider: <b>{{ mail.provider || '(not set — default mailgun)' }}</b></div>
+        <div>OBS Push: <b>{{ obs.push_domain || '(not set — using default)' }}</b></div>
+        <div>OBS Pull: <b>{{ obs.pull_domain || '(not set — using default)' }}</b></div>
       </div>
       <el-button class="mt-3" @click="loadAll">Reload All from DB</el-button>
     </el-card>
@@ -179,10 +211,11 @@ import { api } from '../api/client'
 
 // ——— 预置 schema：每个 key 对应一个默认 JSON body ———
 type Section = Record<string, any>
-const knownKeys = ref<string[]>(['app', 'mail', 'translate', 'nodes', 'server', 'livekit', 'seed_admin'])
+const knownKeys = ref<string[]>(['app', 'mail', 'obs', 'translate', 'nodes', 'server', 'livekit', 'seed_admin'])
 
 const app      = reactive<Section>({ domain: '', service_name: '', contact_email: '' })
-const mail     = reactive<Section>({ smtp_host: '', from_addr: '', api_key: '' })
+const mail     = reactive<Section>({ provider: '', smtp_host: '', from_addr: '', api_key: '' })
+const obs      = reactive<Section>({ push_domain: '', pull_domain: '', rtmp_port: 1935 })
 const translate = reactive<Section>({ service_url: '' })
 const nodes    = reactive<Section>({ wg_ip_start: '', wg_ip_prefix: '' })
 const server   = reactive<Section>({ version: '' })
@@ -192,7 +225,7 @@ const seedAdmin = reactive<Section>({ email: '', name: '', password: '' })
 const saving = reactive<Record<string, boolean>>({})
 const savedAt = reactive<Record<string, string>>({})
 
-const sections: Record<string, Section> = { app, mail, translate, nodes, server, livekit, seedAdmin }
+const sections: Record<string, Section> = { app, mail, obs, translate, nodes, server, livekit, seedAdmin }
 
 async function loadAll() {
   for (const key of knownKeys.value) {

@@ -25,6 +25,7 @@ type Config struct {
 	Node               NodeConfig
 	App                AppConfig
 	TranslateServiceURL string // translate 引擎地址（从 TRANSLATE_SERVICE_URL 或 DB section "translate" 读取）
+	OBS                 OBSConfig
 }
 
 type ServerConfig struct {
@@ -71,6 +72,13 @@ type MailConfig struct {
 	SMTPHost string
 	FromAddr string
 	APIKey   string
+	Provider string // 邮件服务商：aoksend / mailgun / smtp
+}
+
+type OBSConfig struct {
+	PushDomain string // OBS 推流域名，如 rtmp://38.76.188.92:1935/live
+	PullDomain string // 播放拉流域名，如 https://tea.7758521.sbs/webrtc/live
+	RTMPPort   int    // RTMP 端口，默认 1935
 }
 
 type PaymentConfig struct {
@@ -278,6 +286,19 @@ func applyOverrides(c *Config, key string, v map[string]any) {
 		}
 		if a := str("api_key"); a != "" {
 			c.Mail.APIKey = a
+		}
+		if p := str("provider"); p != "" {
+			c.Mail.Provider = p
+		}
+	case "obs":
+		if p := str("push_domain"); p != "" {
+			c.OBS.PushDomain = p
+		}
+		if p := str("pull_domain"); p != "" {
+			c.OBS.PullDomain = p
+		}
+		if port, ok := v["rtmp_port"].(float64); ok {
+			c.OBS.RTMPPort = int(port)
 		}
 	case "translate":
 		if u := str("service_url"); u != "" {

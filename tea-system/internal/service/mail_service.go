@@ -11,26 +11,26 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// MailService — 邮件发送（Mailgun EU 节点，GDPR 合规）
-// 生产走 Mailgun API，dev 环境记录到日志（不真发）
+// MailService — 邮件发送（支持 AokSend / Mailgun / SMTP）
+// 生产根据 provider 走对应 API，dev 环境记录到日志（不真发）
 type MailService struct {
-	apiKey  string
-	domain  string
-	from    string
-	devMode bool // true 时只打日志，不真调用 Mailgun
-	httpCli *http.Client
+	apiKey   string
+	domain   string
+	from     string
+	provider string // aoksend / mailgun / smtp
+	devMode  bool // true 时只打日志，不真发
+	httpCli  *http.Client
 }
 
-func NewMailService(apiKey, domain, from string) *MailService {
+func NewMailService(apiKey, domain, from, provider string) *MailService {
 	devMode := apiKey == "" || apiKey == "key-xxxxxxxxxxxxxxxxxxxxxxx" || apiKey == "CHANGE_ME"
 	return &MailService{
-		apiKey:  apiKey,
-		domain:  domain,
-		from:    from,
-		devMode: devMode,
-		httpCli: &http.Client{
-			Timeout: 10 * time.Second,
-		},
+		apiKey:   apiKey,
+		domain:   domain,
+		from:     from,
+		provider: provider,
+		devMode:  devMode,
+		httpCli:  &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
@@ -74,7 +74,7 @@ func (m *MailService) SendLiveInvitation(ctx context.Context, toEmail, roomName,
 func (m *MailService) send(ctx context.Context, toEmail, subject, textBody, htmlBody string) error {
 	if m.devMode {
 		log.Warn().
-			Str("mailgun_api_key", "(dev mode, not sending)").
+			Str("provider", m.provider).
 			Str("to", toEmail).
 			Str("subject", subject).
 			Str("body_preview", textBody[:min(len(textBody), 80)]).
@@ -82,6 +82,55 @@ func (m *MailService) send(ctx context.Context, toEmail, subject, textBody, html
 		return nil
 	}
 
+	switch m.provider {
+	case "aoksend":
+		return m.sendAokSend(ctx, toEmail, subject, textBody, htmlBody)
+	case "mailgun":
+		return m.sendMailgun(ctx, toEmail, subject, textBody, htmlBody)
+	default:
+		// 默认走 mailgun 兼容
+		return m.sendMailgun(ctx, toEmail, subject, textBody, htmlBody)
+	}
+}
+
+// sendAokSend — 通过 AokSend API 发送邮件
+func (m *MailService) sendAokSend(ctx context.Context, toEmail, subject, textBody, htmlBody string) error {
+	payload := map[string]interface{}{
+		"from":     m.from,
+		"to":       toEmail,
+		"subject":  subject,
+		"text":     textBody,
+		"html":     htmlBody,
+		"apiKey":   m.apiKey,
+	}
+	body, _ := json.Marshal(payload)
+
+	req, err := http.NewRequestWithContext(ctx, "POST",
+		"https://api.aoksend.com/api/v1/send",
+		bytes.NewReader(body),
+	)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+m.apiKey)
+
+	resp, err := m.httpCli.Do(req)
+	if err != nil {
+		return fmt.Errorf("aoksend: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		return fmt.Errorf("aoksend returned %d", resp.StatusCode)
+	}
+
+	log.Info().Str("to", toEmail).Str("subject", subject).Str("provider", "aoksend").Msg("📧 mail sent")
+	return nil
+}
+
+// sendMailgun — 通过 Mailgun API 发送邮件
+func (m *MailService) sendMailgun(ctx context.Context, toEmail, subject, textBody, htmlBody string) error {
 	payload := map[string]interface{}{
 		"from":    m.from,
 		"to":      toEmail,
@@ -111,7 +160,7 @@ func (m *MailService) send(ctx context.Context, toEmail, subject, textBody, html
 		return fmt.Errorf("mailgun returned %d", resp.StatusCode)
 	}
 
-	log.Info().Str("to", toEmail).Str("subject", subject).Msg("📧 mail sent")
+	log.Info().Str("to", toEmail).Str("subject", subject).Str("provider", "mailgun").Msg("📧 mail sent")
 	return nil
 }
 
