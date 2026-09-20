@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 
 const token = localStorage.getItem('user_token')
@@ -14,12 +14,16 @@ onMounted(() => { window.addEventListener('scroll', onScroll) })
 onUnmounted(() => { window.removeEventListener('scroll', onScroll) })
 
 function closeMobile() { mobileOpen.value = false }
+
+// 非首页没有暗色 Hero 背景，始终用深色文字 + 白底
+const isHome = computed(() => route.path === '/')
+const dark = computed(() => scrolled.value || !isHome.value)
 </script>
 
 <template>
   <header
     class="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
-    :class="scrolled
+    :class="dark
       ? 'bg-white/90 backdrop-blur shadow-sm border-b border-tea-100'
       : 'bg-transparent'"
   >
@@ -29,13 +33,13 @@ function closeMobile() { mobileOpen.value = false }
         <span class="text-2xl">🍃</span>
         <span
           class="font-display text-xl tracking-brand"
-          :class="scrolled ? 'text-tea-900' : 'text-white'"
+          :class="dark ? 'text-tea-900' : 'text-white'"
         >UK Tea House</span>
       </RouterLink>
 
       <!-- Desktop nav -->
       <nav class="hidden md:flex items-center gap-7 text-sm tracking-wide"
-           :class="scrolled ? 'text-tea-700' : 'text-white/90'">
+           :class="dark ? 'text-tea-700' : 'text-white/90'">
         <RouterLink to="/bespoke" class="hover:text-tea-900 transition">Bespoke</RouterLink>
         <RouterLink to="/tea-gardens" class="hover:text-tea-900 transition">Tea Gardens</RouterLink>
         <RouterLink to="/live" class="hover:text-tea-900 transition">Live</RouterLink>
@@ -49,22 +53,22 @@ function closeMobile() { mobileOpen.value = false }
       <div class="hidden md:flex items-center gap-2 text-sm">
         <RouterLink v-if="!token" to="/login"
           class="px-4 py-2 rounded-full transition"
-          :class="scrolled
+          :class="dark
             ? 'text-tea-800 hover:bg-tea-100'
             : 'text-white hover:bg-white/10'">Sign In</RouterLink>
         <RouterLink v-if="!token" to="/magic-link"
           class="px-4 py-2 rounded-full border transition"
-          :class="scrolled
+          :class="dark
             ? 'border-tea-300 text-tea-800 hover:bg-tea-100'
             : 'border-white/40 text-white hover:bg-white/10'">Magic Link</RouterLink>
         <!-- Concierge — 老钱核心：永远可见，永远能叫顾问，不依赖登录 -->
         <RouterLink to="/chat"
-          :class="scrolled
+          :class="dark
             ? 'text-tea-700 hover:text-tea-900'
             : 'text-white hover:text-white/80'"
           title="Chat with an Advisor">
           <span class="hidden lg:inline-flex items-center gap-2">
-            <span class="w-1 h-1 rounded-full" :class="scrolled ? 'bg-gold' : 'bg-gold'"></span>
+            <span class="w-1 h-1 rounded-full" :class="dark ? 'bg-gold' : 'bg-gold'"></span>
             <span class="text-[11px] uppercase tracking-lux">Speak with an Advisor</span>
           </span>
           <span class="lg:hidden">Chat</span>
@@ -72,7 +76,7 @@ function closeMobile() { mobileOpen.value = false }
         <template v-if="token">
           <RouterLink to="/account"
             class="px-4 py-2 rounded-full transition"
-            :class="scrolled
+            :class="dark
               ? 'bg-tea-800 text-white hover:bg-tea-900'
               : 'bg-white text-tea-900 hover:bg-tea-100'">My Account</RouterLink>
         </template>
@@ -82,7 +86,7 @@ function closeMobile() { mobileOpen.value = false }
       <button
         @click="mobileOpen = !mobileOpen"
         class="md:hidden w-10 h-10 rounded-lg flex items-center justify-center transition"
-        :class="scrolled ? 'text-tea-900 hover:bg-tea-100' : 'text-white hover:bg-white/10'"
+        :class="dark ? 'text-tea-900 hover:bg-tea-100' : 'text-white hover:bg-white/10'"
         aria-label="Toggle menu"
       >
         <svg v-if="!mobileOpen" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
