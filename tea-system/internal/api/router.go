@@ -124,6 +124,9 @@ func (r *Router) Setup() *gin.Engine {
 			auth.DELETE("/staff/:id", middleware.RequireRole("admin", "supervisor"), r.h.StaffAuth.StaffDelete)
 			// Users (customers) list
 			auth.GET("/users", middleware.RequireRole("admin", "supervisor"), r.h.StaffAuth.UserList)
+			// Current user profile
+			auth.GET("/users/me", r.h.UserAuth.Me)
+			auth.PUT("/users/me", r.h.UserAuth.UpdateMe)
 			// System Config
 			auth.GET("/system/config", middleware.RequireRole("admin", "supervisor"), r.h.SystemConfig.List)
 			auth.GET("/system/config/:key", middleware.RequireRole("admin", "supervisor"), r.h.SystemConfig.Get)

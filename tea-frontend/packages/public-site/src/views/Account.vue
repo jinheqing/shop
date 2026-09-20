@@ -4,13 +4,60 @@ import { useRouter } from 'vue-router'
 import { api } from '@/api/client'
 
 const router = useRouter()
-const tab = ref<'orders' | 'chat' | 'broadcasts' | 'garden'>('orders')
+const tab = ref<'profile' | 'orders' | 'chat' | 'broadcasts' | 'garden'>('profile')
 
 const orders = ref<any[]>([])
 const quotes = ref<any[]>([])
 const conversations = ref<any[]>([])
 const recordings = ref<any[]>([])
 const userGroups = ref<any[]>([])
+
+// ===== Profile =====
+const profile = ref({
+  name: '',
+  email: '',
+  phone: '',
+  billing_address: { line1: '', city: '', postcode: '', country: '' },
+  delivery_address: { line1: '', city: '', postcode: '', country: '' },
+  referred_by_name: '',
+  social_accounts: { whatsapp: '', wechat: '', instagram: '', telegram: '' },
+})
+const saving = ref(false)
+const saveMsg = ref('')
+
+async function loadProfile() {
+  try {
+    const r: any = await api.get('/users/me')
+    profile.value.name = r.name || ''
+    profile.value.email = r.email || ''
+    profile.value.phone = r.phone || ''
+    profile.value.billing_address = { ...profile.value.billing_address, ...(r.billing_address || {}) }
+    profile.value.delivery_address = { ...profile.value.delivery_address, ...(r.delivery_address || {}) }
+    profile.value.referred_by_name = r.referred_by_name || ''
+    profile.value.social_accounts = { ...profile.value.social_accounts, ...(r.social_accounts || {}) }
+  } catch {}
+}
+
+async function saveProfile() {
+  saving.value = true
+  saveMsg.value = ''
+  try {
+    const payload: any = {
+      name: profile.value.name.trim(),
+      phone: profile.value.phone.trim(),
+      referred_by_name: profile.value.referred_by_name.trim(),
+      billing_address: profile.value.billing_address,
+      delivery_address: profile.value.delivery_address,
+      social_accounts: profile.value.social_accounts,
+    }
+    await api.put('/users/me', payload)
+    saveMsg.value = 'Your details have been recorded.'
+  } catch (e: any) {
+    saveMsg.value = e?.message || 'Could not save. Please try again.'
+  } finally {
+    saving.value = false
+  }
+}
 
 // Garden privileges derived from userGroups
 const gardenPrivileges = computed(() => {
@@ -33,6 +80,8 @@ const gardenPrivileges = computed(() => {
 })
 
 async function load() {
+  // Profile
+  loadProfile()
   // Orders + Quotes
   try { orders.value = (await api.get('/orders') as any)?.items || [] } catch {}
   try { quotes.value = (await api.get('/custom-products/published') as any)?.items || [] } catch {}
@@ -79,6 +128,7 @@ function resolveUrl(url: string) {
     <!-- Tabs -->
     <nav class="ac-tabs">
       <button v-for="t in [
+        { key: 'profile', label: 'Profile' },
         { key: 'orders', label: 'Orders & Bespoke' },
         { key: 'chat', label: 'Conversations' },
         { key: 'broadcasts', label: 'Private Broadcasts' },
@@ -91,6 +141,128 @@ function resolveUrl(url: string) {
     </nav>
 
     <main class="ac-body">
+      <!-- ====== Tab 0: Profile ====== -->
+      <section v-if="tab === 'profile'">
+        <div class="ac-section">
+          <h2 class="ac-section-title uppercase-caps">Your · Details</h2>
+          <p class="ac-section-desc font-serif">
+            These details help your advisor serve you better. They are never shared.
+          </p>
+
+          <!-- Status message -->
+          <div v-if="saveMsg" class="ac-profile-msg" :class="saveMsg.includes('recorded') ? 'ac-profile-msg--ok' : 'ac-profile-msg--err'">
+            <span class="w-1 h-1 rounded-full" :class="saveMsg.includes('recorded') ? 'bg-gold' : 'bg-red-400'"></span>
+            <span>{{ saveMsg }}</span>
+          </div>
+
+          <div class="ac-profile-grid">
+            <!-- Name -->
+            <div class="ac-field">
+              <label class="ac-label">Full · Name</label>
+              <input v-model="profile.name" type="text" placeholder="e.g. James Harrington"
+                class="ac-input" />
+            </div>
+
+            <!-- Email (read-only) -->
+            <div class="ac-field">
+              <label class="ac-label">Email · (Cannot · Be · Changed)</label>
+              <input :value="profile.email" type="email" disabled
+                class="ac-input ac-input--disabled" />
+            </div>
+
+            <!-- Phone -->
+            <div class="ac-field">
+              <label class="ac-label">Phone</label>
+              <input v-model="profile.phone" type="tel" placeholder="+44 ..."
+                class="ac-input" />
+            </div>
+
+            <!-- Referred by -->
+            <div class="ac-field">
+              <label class="ac-label">Introduced · By · (Optional)</label>
+              <input v-model="profile.referred_by_name" type="text" placeholder="Name of the member who introduced you"
+                class="ac-input" />
+            </div>
+          </div>
+
+          <!-- Social accounts -->
+          <div class="ac-subsection">
+            <h3 class="ac-subsection-title uppercase-caps">Where · We · May · Reach · You</h3>
+            <p class="ac-section-desc font-serif">
+              Share the social accounts you use most — your advisor may use these for a more personal line of communication.
+            </p>
+            <div class="ac-profile-grid">
+              <div class="ac-field">
+                <label class="ac-label">WhatsApp</label>
+                <input v-model="profile.social_accounts.whatsapp" type="text" placeholder="Number or handle"
+                  class="ac-input" />
+              </div>
+              <div class="ac-field">
+                <label class="ac-label">WeChat</label>
+                <input v-model="profile.social_accounts.wechat" type="text" placeholder="WeChat ID"
+                  class="ac-input" />
+              </div>
+              <div class="ac-field">
+                <label class="ac-label">Instagram</label>
+                <input v-model="profile.social_accounts.instagram" type="text" placeholder="@handle"
+                  class="ac-input" />
+              </div>
+              <div class="ac-field">
+                <label class="ac-label">Telegram</label>
+                <input v-model="profile.social_accounts.telegram" type="text" placeholder="@handle"
+                  class="ac-input" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Addresses -->
+          <div class="ac-subsection">
+            <h3 class="ac-subsection-title uppercase-caps">Addresses · On · File</h3>
+            <div class="ac-address-grid">
+              <div>
+                <h4 class="ac-address-label uppercase-caps">Billing</h4>
+                <div class="ac-field">
+                  <input v-model="profile.billing_address.line1" type="text" placeholder="Address line 1" class="ac-input" />
+                </div>
+                <div class="ac-field-row">
+                  <div class="ac-field">
+                    <input v-model="profile.billing_address.city" type="text" placeholder="City" class="ac-input" />
+                  </div>
+                  <div class="ac-field">
+                    <input v-model="profile.billing_address.postcode" type="text" placeholder="Postcode" class="ac-input" />
+                  </div>
+                </div>
+                <div class="ac-field">
+                  <input v-model="profile.billing_address.country" type="text" placeholder="Country" class="ac-input" />
+                </div>
+              </div>
+              <div>
+                <h4 class="ac-address-label uppercase-caps">Delivery</h4>
+                <div class="ac-field">
+                  <input v-model="profile.delivery_address.line1" type="text" placeholder="Address line 1" class="ac-input" />
+                </div>
+                <div class="ac-field-row">
+                  <div class="ac-field">
+                    <input v-model="profile.delivery_address.city" type="text" placeholder="City" class="ac-input" />
+                  </div>
+                  <div class="ac-field">
+                    <input v-model="profile.delivery_address.postcode" type="text" placeholder="Postcode" class="ac-input" />
+                  </div>
+                </div>
+                <div class="ac-field">
+                  <input v-model="profile.delivery_address.country" type="text" placeholder="Country" class="ac-input" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button @click="saveProfile" :disabled="saving"
+            class="ac-save-btn uppercase-caps">
+            {{ saving ? 'Saving · · ·' : 'Save · Details' }}
+          </button>
+        </div>
+      </section>
+
       <!-- ====== Tab 1: Orders & Bespoke ====== -->
       <section v-if="tab === 'orders'">
         <!-- Orders -->
@@ -268,6 +440,7 @@ function resolveUrl(url: string) {
   display: flex; gap: 32px;
   border-bottom: 1px solid rgba(11,10,9,0.08);
   padding: 0 48px;
+  overflow-x: auto;
 }
 .ac-tab {
   background: none; border: none;
@@ -276,6 +449,7 @@ function resolveUrl(url: string) {
   padding: 20px 0; cursor: pointer;
   border-bottom: 2px solid transparent;
   transition: all 300ms ease-out;
+  white-space: nowrap;
 }
 .ac-tab:hover { color: #0B0A09; }
 .ac-tab--active { color: #0B0A09; border-bottom-color: #C5A572; }
@@ -286,10 +460,94 @@ function resolveUrl(url: string) {
 .ac-section-title {
   font-family: 'Inter', sans-serif;
   font-size: 10px; color: #C5A572;
-  margin: 0 0 24px;
+  margin: 0 0 16px;
   padding-bottom: 12px;
   border-bottom: 1px solid rgba(197,165,114,0.2);
 }
+.ac-section-desc {
+  font-size: 14px; color: #6b6459;
+  margin: 0 0 28px; line-height: 1.6;
+}
+.ac-subsection { margin-top: 48px; }
+.ac-subsection-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 10px; color: #0B0A09;
+  margin: 0 0 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(11,10,9,0.08);
+}
+
+/* Profile form */
+.ac-profile-msg {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 18px; margin-bottom: 28px;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 14px;
+  border: 1px solid rgba(11,10,9,0.1);
+  background: #FBF9F4;
+}
+.ac-profile-msg--ok { color: #6b6459; }
+.ac-profile-msg--err { color: #B4645A; border-color: rgba(180,100,90,0.3); }
+
+.ac-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+  margin-bottom: 8px;
+}
+.ac-field { margin-bottom: 18px; }
+.ac-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ac-label {
+  display: block;
+  font-family: 'Inter', sans-serif;
+  font-size: 10px; color: #C5A572;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.ac-input {
+  width: 100%;
+  padding: 12px 14px;
+  background: #fff;
+  border: 1px solid rgba(197,165,114,0.25);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 16px; color: #0B0A09;
+  outline: none;
+  transition: border-color 300ms ease-out;
+}
+.ac-input:focus { border-color: #C5A572; }
+.ac-input--disabled {
+  background: #F8F5EF;
+  color: #8a8578;
+  cursor: not-allowed;
+}
+
+.ac-address-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+.ac-address-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 10px; color: #8a8578;
+  letter-spacing: 0.22em;
+  margin-bottom: 14px;
+}
+
+.ac-save-btn {
+  margin-top: 12px;
+  padding: 14px 36px;
+  background: #0B0A09;
+  color: #C5A572;
+  border: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  cursor: pointer;
+  transition: background 300ms ease-out;
+}
+.ac-save-btn:hover { background: #2A2520; }
+.ac-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* Cards */
 .ac-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; }
@@ -403,4 +661,15 @@ function resolveUrl(url: string) {
 }
 .ac-foot a { color: #8a8578; text-decoration: none; transition: color 300ms; }
 .ac-foot a:hover { color: #0B0A09; }
+
+/* Mobile */
+@media (max-width: 640px) {
+  .ac-head { padding: 32px 20px 0; }
+  .ac-head-inner { flex-direction: column; align-items: flex-start; }
+  .ac-head-right { align-items: flex-start; }
+  .ac-tabs { padding: 0 20px; gap: 20px; }
+  .ac-body { padding: 32px 20px 60px; }
+  .ac-address-grid { grid-template-columns: 1fr; gap: 24px; }
+  .ac-title { font-size: 34px; }
+}
 </style>

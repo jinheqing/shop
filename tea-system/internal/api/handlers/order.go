@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
@@ -23,20 +25,26 @@ import (
 type OrderHandler struct {
 	repo         *repository.OrderRepo
 	customRepo   *repository.CustomProductRepo
+	userRepo     *repository.UserRepo
 	stateMachine *service.OrderStateMachine
+	mailSvc      *service.MailService
 	auditDB      *gorm.DB
 }
 
 func NewOrderHandler(
 	repo *repository.OrderRepo,
 	customRepo *repository.CustomProductRepo,
+	userRepo *repository.UserRepo,
 	stateMachine *service.OrderStateMachine,
+	mailSvc *service.MailService,
 	auditDB *gorm.DB,
 ) *OrderHandler {
 	return &OrderHandler{
 		repo:         repo,
 		customRepo:   customRepo,
+		userRepo:     userRepo,
 		stateMachine: stateMachine,
+		mailSvc:      mailSvc,
 		auditDB:      auditDB,
 	}
 }
@@ -57,9 +65,12 @@ type OrderCreateRequest struct {
 }
 
 // OrderStateRequest — POST /orders/:id/state
+// 可选携带物流信息（当 target_state = shipped 时使用）
 type OrderStateRequest struct {
-	TargetState string `json:"target_state" binding:"required"`
-	Reason      string `json:"reason,omitempty"`
+	TargetState    string `json:"target_state" binding:"required"`
+	Reason         string `json:"reason,omitempty"`
+	TrackingNumber string `json:"tracking_number,omitempty"`
+	ShippingCarrier string `json:"shipping_carrier,omitempty"`
 }
 
 // ==================== handlers ====================
@@ -245,6 +256,8 @@ func (h *OrderHandler) GetByID(c *gin.Context) {
 }
 
 // UpdateState — POST /orders/:id/state
+// 当 target_state = shipped 时，可携带 tracking_number / shipping_carrier，
+// 并自动向客户发送物流通知邮件。
 func (h *OrderHandler) UpdateState(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -280,13 +293,49 @@ func (h *OrderHandler) UpdateState(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.UpdateState(c.Request.Context(), id, req.TargetState); err != nil {
+	// 构建 patch
+	patch := map[string]interface{}{
+		"state":      req.TargetState,
+		"updated_at": time.Now(),
+	}
+
+	// 发货时记录物流信息 + 发货时间
+	isShipped := req.TargetState == models.OrderStateShipped
+	if isShipped {
+		if req.TrackingNumber != "" {
+			patch["tracking_number"] = req.TrackingNumber
+		}
+		if req.ShippingCarrier != "" {
+			patch["shipping_carrier"] = req.ShippingCarrier
+		}
+		patch["shipped_at"] = time.Now()
+	}
+
+	if err := h.repo.Update(c.Request.Context(), id, patch); err != nil {
 		log.Error().Err(err).Msg("order: update state failed")
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "update state failed"})
 		return
 	}
 
 	o.State = req.TargetState
+
+	// 发货 → 异步发送物流通知邮件
+	if isShipped && o.UserID != nil && h.mailSvc != nil {
+		go func(userID uint64, orderNo, carrier, trackingNo string) {
+			ctx := context.Background()
+			user, uerr := h.userRepo.GetByID(ctx, userID)
+			if uerr != nil || user == nil {
+				log.Warn().Uint64("order_id", id).Msg("shipping mail: user not found, skip")
+				return
+			}
+			if err := h.mailSvc.SendShippingNotification(ctx, user.Email, orderNo, carrier, trackingNo); err != nil {
+				log.Error().Err(err).Str("to", user.Email).Str("order_no", orderNo).Msg("shipping mail: send failed")
+			} else {
+				log.Info().Str("to", user.Email).Str("order_no", orderNo).Msg("shipping notification sent")
+			}
+		}(*o.UserID, o.OrderNo, req.ShippingCarrier, req.TrackingNumber)
+	}
+
 	c.JSON(http.StatusOK, o)
 }
 

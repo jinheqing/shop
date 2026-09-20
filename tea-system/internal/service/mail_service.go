@@ -59,9 +59,55 @@ func (m *MailService) SendMagicLink(ctx context.Context, toEmail, magicURL strin
 
 // SendOrderNotification — 订单状态变更通知
 func (m *MailService) SendOrderNotification(ctx context.Context, toEmail, orderNo, newState string) error {
-	subject := fmt.Sprintf("📦 订单 %s 状态更新：%s", orderNo, newState)
-	textBody := fmt.Sprintf("您的订单 %s 状态变更为：%s", orderNo, newState)
+	subject := fmt.Sprintf("Order %s — Status Update: %s", orderNo, newState)
+	textBody := fmt.Sprintf("Your order %s has been updated to: %s", orderNo, newState)
 	return m.send(ctx, toEmail, subject, textBody, textBody)
+}
+
+// SendShippingNotification — 发货/物流更新通知（含物流单号与承运商）
+func (m *MailService) SendShippingNotification(ctx context.Context, toEmail, orderNo, carrier, trackingNo string) error {
+	subject := fmt.Sprintf("Your Order %s Has Been Dispatched", orderNo)
+
+	trackingLine := ""
+	if trackingNo != "" {
+		trackingLine = fmt.Sprintf("Tracking Number: %s", trackingNo)
+	}
+	carrierLine := ""
+	if carrier != "" {
+		carrierLine = fmt.Sprintf("Carrier: %s", carrier)
+	}
+
+	textBody := fmt.Sprintf(
+		"Dear Member,\n\n"+
+			"Your bespoke order %s has been dispatched from our atelier.\n\n"+
+			"%s\n%s\n\n"+
+			"Should you wish to discuss your delivery, your advisor remains at your service.\n\n"+
+			"— UK Tea House",
+		orderNo, carrierLine, trackingLine,
+	)
+
+	htmlBody := fmt.Sprintf(`
+<div style="font-family: Georgia, 'Times New Roman', serif; max-width: 520px; margin: 0 auto; color: #0B0A09;">
+  <div style="border-bottom: 1px solid #C5A572; padding-bottom: 16px; margin-bottom: 24px;">
+    <h2 style="margin: 0; font-weight: 400; letter-spacing: 0.05em;">UK Tea House</h2>
+  </div>
+  <p style="font-size: 15px; line-height: 1.7;">Dear Member,</p>
+  <p style="font-size: 15px; line-height: 1.7;">
+    Your bespoke order <strong>%s</strong> has been dispatched from our atelier.
+  </p>
+  <div style="background: #F8F5EF; border-left: 2px solid #C5A572; padding: 16px 20px; margin: 20px 0;">
+    %s<br>
+    %s
+  </div>
+  <p style="font-size: 14px; line-height: 1.7; color: #6b6459;">
+    Should you wish to discuss your delivery, your advisor remains at your service.
+  </p>
+  <p style="font-size: 13px; color: #8a8578; margin-top: 32px; border-top: 1px solid #C5A572; padding-top: 16px;">
+    — UK Tea House
+  </p>
+</div>`, orderNo, carrierLine, trackingLine)
+
+	return m.send(ctx, toEmail, subject, textBody, htmlBody)
 }
 
 // SendLiveInvitation — 直播预告

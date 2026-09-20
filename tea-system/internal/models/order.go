@@ -37,6 +37,9 @@ type Order struct {
 	BillingAddressSnapshot  JSONMap  `gorm:"column:billing_address_snapshot;not null;type:jsonb" json:"billing_address_snapshot"`
 	DeliveryAddressSnapshot JSONMap  `gorm:"column:delivery_address_snapshot;not null;type:jsonb" json:"delivery_address_snapshot"`
 	LiveRoomID            *uint64   `gorm:"column:live_room_id" json:"live_room_id,omitempty"`
+	TrackingNumber        string    `gorm:"column:tracking_number;size:60" json:"tracking_number,omitempty"`
+	ShippingCarrier       string    `gorm:"column:shipping_carrier;size:50" json:"shipping_carrier,omitempty"`
+	ShippedAt             *time.Time `gorm:"column:shipped_at" json:"shipped_at,omitempty"`
 	CreatedAt             time.Time `gorm:"column:created_at;not null" json:"created_at"`
 	UpdatedAt             time.Time `gorm:"column:updated_at;not null" json:"updated_at"`
 	DeletedAt             *time.Time `gorm:"column:deleted_at" json:"-"`

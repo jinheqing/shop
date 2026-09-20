@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
+	"tea-system/internal/middleware"
 	"tea-system/internal/models"
 	"tea-system/internal/repository"
 	"tea-system/internal/service"
@@ -201,6 +203,121 @@ func (h *UserAuthHandler) UserLogin(c *gin.Context) {
 		"refresh_token": refreshToken,
 		"token_type":    "Bearer",
 		"expires_in":    120 * 60,
+	})
+}
+
+// ==================== 用户资料 (Me) ====================
+
+// UserProfileUpdateRequest — PUT /users/me
+type UserProfileUpdateRequest struct {
+	Name               string          `json:"name" binding:"omitempty,max=100"`
+	Phone              string          `json:"phone" binding:"omitempty,max=30"`
+	BillingAddress     json.RawMessage `json:"billing_address,omitempty"`
+	DeliveryAddress    json.RawMessage `json:"delivery_address,omitempty"`
+	PreferredLanguage  string          `json:"preferred_language" binding:"omitempty,oneof=en zh"`
+	PreferredTimezone  string          `json:"preferred_timezone" binding:"omitempty,max=50"`
+	ReferredByName     string          `json:"referred_by_name" binding:"omitempty,max=100"`
+	SocialAccounts     json.RawMessage `json:"social_accounts,omitempty"`
+}
+
+// Me — GET /users/me  返回当前登录用户完整资料
+func (h *UserAuthHandler) Me(c *gin.Context) {
+	userID := middleware.GetSubjectID(c)
+	ctx := c.Request.Context()
+
+	user, err := h.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "user not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"id":                 user.ID,
+		"name":               user.Name,
+		"email":              user.Email,
+		"phone":              user.Phone,
+		"billing_address":    user.BillingAddress,
+		"delivery_address":   user.DeliveryAddress,
+		"preferred_language": user.PreferredLanguage,
+		"preferred_timezone": user.PreferredTimezone,
+		"preferred_advisor_id": user.PreferredAdvisorID,
+		"referred_by_name":   user.ReferredByName,
+		"social_accounts":    user.SocialAccounts,
+		"consent_marketing":  user.ConsentMarketing,
+		"consent_analytics":  user.ConsentAnalytics,
+		"created_at":         user.CreatedAt,
+	})
+}
+
+// UpdateMe — PUT /users/me  更新当前用户资料
+func (h *UserAuthHandler) UpdateMe(c *gin.Context) {
+	var req UserProfileUpdateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": err.Error()})
+		return
+	}
+
+	userID := middleware.GetSubjectID(c)
+	ctx := c.Request.Context()
+
+	user, err := h.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"code": 404, "message": "user not found"})
+		return
+	}
+
+	// 逐字段更新（仅更新非空字段）
+	if req.Name != "" {
+		user.Name = req.Name
+	}
+	if req.Phone != "" {
+		user.Phone = req.Phone
+	}
+	if req.PreferredLanguage != "" {
+		user.PreferredLanguage = req.PreferredLanguage
+	}
+	if req.PreferredTimezone != "" {
+		user.PreferredTimezone = req.PreferredTimezone
+	}
+	if req.ReferredByName != "" {
+		user.ReferredByName = req.ReferredByName
+	}
+	if len(req.BillingAddress) > 0 {
+		if m, err := rawToJSONMap(req.BillingAddress); err == nil {
+			user.BillingAddress = m
+		}
+	}
+	if len(req.DeliveryAddress) > 0 {
+		if m, err := rawToJSONMap(req.DeliveryAddress); err == nil {
+			user.DeliveryAddress = m
+		}
+	}
+	if len(req.SocialAccounts) > 0 {
+		if m, err := rawToJSONMap(req.SocialAccounts); err == nil {
+			user.SocialAccounts = m
+		}
+	}
+
+	if err := h.userRepo.Update(ctx, user); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "update failed"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "profile updated",
+		"user": gin.H{
+			"id":                 user.ID,
+			"name":               user.Name,
+			"email":              user.Email,
+			"phone":              user.Phone,
+			"billing_address":    user.BillingAddress,
+			"delivery_address":   user.DeliveryAddress,
+			"preferred_language": user.PreferredLanguage,
+			"preferred_timezone": user.PreferredTimezone,
+			"referred_by_name":   user.ReferredByName,
+			"social_accounts":    user.SocialAccounts,
+		},
 	})
 }
 

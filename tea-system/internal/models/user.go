@@ -53,6 +53,8 @@ type User struct {
 	PreferredLanguage     string    `gorm:"column:preferred_language;size:10;default:'en'" json:"preferred_language"`
 	PreferredTimezone     string    `gorm:"column:preferred_timezone;size:50;default:'Europe/London'" json:"preferred_timezone"`
 	PreferredAdvisorID    *uint64   `gorm:"column:preferred_advisor_id" json:"preferred_advisor_id,omitempty"`
+	ReferredByName        string    `gorm:"column:referred_by_name;size:100" json:"referred_by_name,omitempty"`
+	SocialAccounts        JSONMap   `gorm:"column:social_accounts;type:jsonb" json:"social_accounts,omitempty"`
 	ConsentMarketing      bool      `gorm:"column:consent_marketing;default:false" json:"consent_marketing"`
 	ConsentAnalytics      bool      `gorm:"column:consent_analytics;default:false" json:"consent_analytics"`
 	DataDeleteRequestedAt *time.Time `gorm:"column:data_delete_requested_at" json:"data_delete_requested_at,omitempty"`
