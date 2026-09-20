@@ -20,19 +20,33 @@ async function load() {
 }
 onMounted(load)
 
-async function transition(state: string) {
+const trackingNumber = ref('')
+const shippingCarrier = ref('')
+
+async function transition(state: string, extra: Record<string, string> = {}) {
   try {
-    await api.post(`/orders/${id}/state`, { state })
+    await api.post(`/orders/${id}/state`, { target_state: state, ...extra })
     ElMessage.success(`→ ${state}`)
+    if (state === 'shipped') { trackingNumber.value = ''; shippingCarrier.value = '' }
     load()
   } catch (e: any) { ElMessage.error(e?.message || 'Transition failed') }
+}
+async function shipWithTracking() {
+  if (!trackingNumber.value || !shippingCarrier.value) {
+    ElMessage.warning('Please enter tracking number and carrier')
+    return
+  }
+  await transition('shipped', {
+    tracking_number: trackingNumber.value,
+    shipping_carrier: shippingCarrier.value,
+  })
 }
 async function cancel() { await api.post(`/orders/${id}/cancel`); ElMessage.success('Cancelled'); load() }
 async function regenInv() { await api.post(`/orders/${id}/invoice/regenerate`); ElMessage.success('Invoice regenerated'); load() }
 
 const timeline = computed(() => {
   if (!order.value) return []
-  const states = ['ordering','paid','pending_declaration','producing','ready_for_delivery','pending_customs','customs_clear','shipped','completed']
+  const states = ['ordering','paid','pending_declaration','producing','ready_for_production','pending_customs','customs_clear','shipped','completed']
   const idx = states.indexOf(order.value.state)
   return states.map((s, i) => ({ name: s, done: i < idx, current: i === idx }))
 })
@@ -64,13 +78,28 @@ const timeline = computed(() => {
             <el-button v-if="order.state==='ordering'" type="success" @click="transition('paid')">Mark Paid</el-button>
             <el-button v-if="order.state==='paid'" @click="transition('pending_declaration')">→ Declaration</el-button>
             <el-button v-if="order.state==='paid' || order.state==='pending_declaration'" type="warning" @click="transition('producing')">→ Producing</el-button>
-            <el-button v-if="order.state==='producing'" type="warning" @click="transition('ready_for_delivery')">→ Ready for Delivery</el-button>
-            <el-button v-if="order.state==='ready_for_delivery'" @click="transition('pending_customs')">→ Pending Customs</el-button>
+            <el-button v-if="order.state==='producing'" type="warning" @click="transition('ready_for_production')">→ Ready for Production</el-button>
+            <el-button v-if="order.state==='ready_for_production'" @click="transition('pending_customs')">→ Pending Customs</el-button>
             <el-button v-if="order.state==='pending_customs'" type="primary" @click="transition('customs_clear')">→ Customs Clear</el-button>
-            <el-button v-if="order.state==='customs_clear'" type="primary" @click="transition('shipped')">→ Shipped</el-button>
+            <el-button v-if="order.state==='customs_clear'" type="primary" @click="shipWithTracking">→ Shipped</el-button>
             <el-button v-if="order.state==='shipped'" type="success" @click="transition('completed')">→ ✅ Completed</el-button>
             <el-button v-if="order.state!=='cancelled' && order.state!=='completed'" type="danger" @click="cancel">Cancel Order</el-button>
           </el-space>
+          <div v-if="order.state==='customs_clear'" class="mt-4 flex flex-wrap items-end gap-3 p-3 bg-slate-50 rounded">
+            <div>
+              <label class="block text-xs text-slate-500 mb-1">Tracking Number</label>
+              <el-input v-model="trackingNumber" placeholder="e.g. DHL123456789" style="width:220px" />
+            </div>
+            <div>
+              <label class="block text-xs text-slate-500 mb-1">Shipping Carrier</label>
+              <el-input v-model="shippingCarrier" placeholder="e.g. DHL / FedEx / UPS" style="width:180px" />
+            </div>
+            <el-button type="primary" @click="shipWithTracking">→ Mark Shipped</el-button>
+          </div>
+          <div v-if="order.state==='shipped' || order.state==='completed'" class="mt-3 text-sm text-slate-600">
+            <span class="text-xs text-slate-400 mr-2">Tracking:</span>
+            <span>{{ order.shipping_carrier || '—' }} · {{ order.tracking_number || '—' }}</span>
+          </div>
         </el-card>
 
         <el-card class="mt-4">

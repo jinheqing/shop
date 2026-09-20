@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, nextTick, computed, watch } from 'vue'
-// MessageBubble is defined as a local <script> block component below — accessible in <template>
+import { onMounted, onUnmounted, ref, nextTick, computed, watch, defineComponent, h } from 'vue'
 import { api } from '@/api/client'
 
 // ============ Types ============
@@ -117,7 +116,10 @@ function scrollToBottom() { nextTick(() => { if (scrollRef.value) scrollRef.valu
 
 // ============ Conversations ============
 async function loadConvs() {
-  try { convs.value = (await api.get('/conversations') as any).items || [] } catch {}
+  try {
+    const resp = await api.get('/conversations') as any
+    convs.value = resp.items || resp.data || resp || []
+  } catch {}
 }
 
 async function selectConv(c: any) {
@@ -126,7 +128,7 @@ async function selectConv(c: any) {
   if (!c) return
   try {
     const resp = await api.get(`/conversations/${c.id}/messages`) as any
-    messages.value = resp.items || resp || []
+    messages.value = resp.items || resp.messages || resp.data?.messages || resp.data || resp || []
   } catch { messages.value = [] }
   // join ws room
   if (ws.value?.readyState === WebSocket.OPEN) {
@@ -289,12 +291,9 @@ onMounted(async () => {
 })
 
 onUnmounted(() => { ws.value?.close() })
-</script>
 
-<script lang="ts">
-import { defineComponent, computed, h } from 'vue'
-
-export const MessageBubble = defineComponent({
+// ============ MessageBubble Component ============
+const MessageBubble = defineComponent({
   name: 'MessageBubble',
   props: {
     msg: { type: Object as () => any, required: true },
@@ -388,10 +387,9 @@ export const MessageBubble = defineComponent({
 
         // Content text
         if (m.content && m.content.trim()) {
-          // emoji-only: big
           children.push(h('div', {
-            innerHTML: escapeHtml(m.content)
-          }))
+            class: 'whitespace-pre-wrap break-words'
+          }, m.content))
         }
 
         // Translation badge

@@ -82,7 +82,7 @@ async function invoice(id: number) {
   ElMessage.success(`Invoice generated: ${d.invoice_no}`)
 }
 async function transition(id: number, state: string) {
-  await api.post(`/orders/${id}/state`, { state })
+  await api.post(`/orders/${id}/state`, { target_state: state })
   ElMessage.success(`→ ${state}`)
   load()
 }
