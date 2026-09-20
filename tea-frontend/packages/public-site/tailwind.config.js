@@ -44,9 +44,11 @@ export default {
         vermillion: '#C0392B',
       },
       fontFamily: {
-        display: ['"Playfair Display"', 'Georgia', 'serif'],
+        // 全站统一为 Cormorant Garamond — 比 Playfair Display 更纤细优雅，
+        // 符合 Hermès / Chanel / 老 Savile Row 的传统审美
+        display: ['"Cormorant Garamond"', 'Georgia', 'serif'],
         sans: ['Inter', 'system-ui', 'sans-serif'],
-        serif: ['"Playfair Display"', 'Georgia', 'serif'],
+        serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
         song: ['"Noto Serif SC"', '"思源宋体"', 'serif'],
       },
       letterSpacing: {

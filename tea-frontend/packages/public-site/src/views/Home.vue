@@ -25,7 +25,7 @@ onMounted(async () => {
       <span class="inline-block px-5 py-1.5 bg-white/10 backdrop-blur rounded-full text-xs tracking-[0.25em] uppercase mb-8 border border-white/15">
         Single Origin · Direct From Yunnan
       </span>
-      <h1 class="font-display font-semibold text-5xl md:text-7xl lg:text-8xl leading-[1.05] max-w-4xl mb-8 tracking-tight">
+      <h1 class="font-serif text-5xl md:text-7xl lg:text-8xl leading-[1.05] max-w-4xl mb-8 tracking-tight">
         Pu'er Tea,<br/> <span class="italic">Traceable</span> to the Garden.
       </h1>
       <p class="text-lg md:text-xl text-white/80 max-w-2xl mb-12 leading-relaxed">
@@ -44,24 +44,36 @@ onMounted(async () => {
     </div>
   </section>
 
-  <!-- FEATURES -->
-  <section class="py-24 md:py-28 bg-white">
+  <!-- FEATURES — 老钱审美：不用 emoji，用 hairline 金线 + serif CAPS 标签 -->
+  <section class="py-24 md:py-28 bg-ivory-100">
     <div class="max-w-7xl mx-auto px-6">
       <div class="grid md:grid-cols-3 gap-12 md:gap-16">
         <div class="text-center">
-          <div class="w-16 h-16 bg-tea-100 rounded-full flex items-center justify-center text-2xl mx-auto mb-6">🏔️</div>
-          <h3 class="font-display text-xl mb-3 text-tea-900">Cloud Garden Sourced</h3>
-          <p class="text-tea-700 text-sm leading-relaxed">Every batch linked to its tea garden village, master name, and harvest date.</p>
+          <div class="flex items-center gap-3 justify-center mb-6">
+            <span class="h-px w-8 bg-gold/60"></span>
+            <span class="text-[10px] uppercase tracking-lux text-gold font-sans">Cloud · Garden</span>
+            <span class="h-px w-8 bg-gold/60"></span>
+          </div>
+          <h3 class="font-serif text-xl mb-3 text-ink-900">Sourced · From · The · Mountain</h3>
+          <p class="text-sand text-sm leading-relaxed font-serif">Every batch linked to its tea garden village, master name, and harvest date.</p>
         </div>
         <div class="text-center">
-          <div class="w-16 h-16 bg-tea-100 rounded-full flex items-center justify-center text-2xl mx-auto mb-6">🔬</div>
-          <h3 class="font-display text-xl mb-3 text-tea-900">SGS Certified</h3>
-          <p class="text-tea-700 text-sm leading-relaxed">All products independently tested by SGS China for pesticides, heavy metals, microbiology.</p>
+          <div class="flex items-center gap-3 justify-center mb-6">
+            <span class="h-px w-8 bg-gold/60"></span>
+            <span class="text-[10px] uppercase tracking-lux text-gold font-sans">SGS · Tested</span>
+            <span class="h-px w-8 bg-gold/60"></span>
+          </div>
+          <h3 class="font-serif text-xl mb-3 text-ink-900">Independently · Certified</h3>
+          <p class="text-sand text-sm leading-relaxed font-serif">All products independently tested by SGS China for pesticides, heavy metals, microbiology.</p>
         </div>
         <div class="text-center">
-          <div class="w-16 h-16 bg-tea-100 rounded-full flex items-center justify-center text-2xl mx-auto mb-6">📦</div>
-          <h3 class="font-display text-xl mb-3 text-tea-900">Bespoke Blending</h3>
-          <p class="text-tea-700 text-sm leading-relaxed">Choose tea garden, roast level, packaging. Your own tea — from leaf to cup — inside 45 days.</p>
+          <div class="flex items-center gap-3 justify-center mb-6">
+            <span class="h-px w-8 bg-gold/60"></span>
+            <span class="text-[10px] uppercase tracking-lux text-gold font-sans">Bespoke</span>
+            <span class="h-px w-8 bg-gold/60"></span>
+          </div>
+          <h3 class="font-serif text-xl mb-3 text-ink-900">Crafted · For · You</h3>
+          <p class="text-sand text-sm leading-relaxed font-serif">Choose tea garden, roast level, packaging. Your own tea — from leaf to cup — inside 45 days.</p>
         </div>
       </div>
     </div>

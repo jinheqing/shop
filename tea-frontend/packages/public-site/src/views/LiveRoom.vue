@@ -330,8 +330,6 @@ const formattedElapsed = computed(() => {
   · 颜色只用 off-black / ivory / champagne gold / oak
 -->
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500&display=swap');
-
 :root {
   --off-black:   #0B0A09;
   --ivory:       #F8F5EF;

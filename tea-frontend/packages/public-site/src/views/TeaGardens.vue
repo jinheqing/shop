@@ -236,7 +236,7 @@ onMounted(load)
           </RouterLink>
         </div>
 
-        <div v-if="loading" class="text-center py-20 text-tea-500 font-sans text-sm tracking-wide">Loading tea gardens…</div>
+        <div v-if="loading" class="text-center py-20 text-sand font-sans text-sm tracking-wide">Loading tea gardens…</div>
 
         <div v-else class="grid md:grid-cols-2 gap-px bg-gold/15">
           <div v-for="(g, i) in gardens" :key="g.id || g.name"

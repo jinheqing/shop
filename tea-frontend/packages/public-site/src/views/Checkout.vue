@@ -1,8 +1,16 @@
 <script setup lang="ts">
+// ============================================================
+// Checkout.vue — 老钱审美结算页
+// ============================================================
+// - off-black Hero + 象牙白表单
+// - 不用 emoji 当 icon，用 hairline 金线分隔
+// - 不用 alert() 弹原生对话框，用 in-page 状态条
+// - 单一主行动 "Confirm · Order · With · 2Checkout"
+// ============================================================
+
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getByToken, type CustomProduct } from '@/api/products'
-import { createOrder, initPayment } from '@/api/orders'
 
 const route = useRoute()
 const router = useRouter()
@@ -14,18 +22,21 @@ const form = ref({
   delivery: { address: '', city: 'London', postcode: '', country: 'UK' },
 })
 const loading = ref(false)
+const errorMsg = ref('')
 
 onMounted(async () => {
   try { product.value = await getByToken(route.params.token as string) }
-  catch { product.value = { id: 1, unit_price: 68.5, shipping_cost: 120, title: 'Demo Product', tea_type: 'raw_puer', tea_shape: 'cake', status: 'published', version: 1 } as any }
+  catch {
+    product.value = { id: 1, unit_price: 68.5, shipping_cost: 120, title: 'Demo Product', tea_type: 'raw_puer', tea_shape: 'cake', status: 'published', version: 1 } as any
+  }
 })
 
 const total = () => (product.value?.unit_price || 0) * qty.value + (product.value?.shipping_cost || 0)
 
 const place = async () => {
+  errorMsg.value = ''
   loading.value = true
   try {
-    // 使用用户自己的 user_token 下单（不伪造 staff 身份）
     const userToken = localStorage.getItem('user_token')
     if (!userToken) {
       router.push('/magic-link?redirect=' + encodeURIComponent('/checkout/' + route.params.token))
@@ -41,7 +52,7 @@ const place = async () => {
       })
     }).then(x=>x.json())
     if (order.code && order.code !== 0 && order.code !== 201) {
-      alert('Order failed: ' + (order.message || JSON.stringify(order)))
+      errorMsg.value = 'Order could not be placed: ' + (order.message || 'Please try again, or speak with your advisor.')
       return
     }
     const pay = await fetch(`/api/v1/orders/${order.id}/payment/init`, {
@@ -50,57 +61,118 @@ const place = async () => {
     }).then(x=>x.json())
     if (pay.checkout_url) window.location.href = pay.checkout_url
     else router.push('/')
-  } catch (e: any) { alert('Error: ' + e.message) }
-  finally { loading.value = false }
+  } catch (e: any) {
+    errorMsg.value = 'An error occurred: ' + e.message + '. Please try again, or speak with your advisor.'
+  } finally { loading.value = false }
 }
 </script>
 
 <template>
-  <div class="pt-20 min-h-screen bg-tea-50">
-    <div class="max-w-4xl mx-auto px-6 py-12">
-      <h1 class="font-serif text-4xl text-tea-900 mb-8">Secure Checkout</h1>
+  <div class="pt-20 min-h-screen bg-ivory-100">
+    <div class="max-w-5xl mx-auto px-6 py-12 md:py-16">
+
+      <!-- Section title -->
+      <div class="mb-10 md:mb-12 text-center">
+        <div class="flex items-center gap-3 justify-center mb-5">
+          <span class="h-px w-10 bg-gold/50"></span>
+          <span class="text-[10px] uppercase tracking-lux text-gold font-sans">Secure · Checkout</span>
+          <span class="h-px w-10 bg-gold/50"></span>
+        </div>
+        <h1 class="font-serif text-4xl md:text-5xl text-ink-900 mb-3">Confirm · Your · Commission.</h1>
+        <p class="text-sand text-sm font-serif">A secure payment, processed by 2Checkout. Your card details are never stored on our servers.</p>
+      </div>
+
+      <!-- Error banner — in-page, not native alert -->
+      <div v-if="errorMsg" class="mb-8 p-5 bg-ink-900 text-ivory-100" style="border-radius: 2px;">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="w-1 h-1 rounded-full bg-gold"></span>
+          <span class="text-[10px] uppercase tracking-lux text-gold font-sans">Attention</span>
+        </div>
+        <p class="text-sm text-sand font-serif leading-relaxed">{{ errorMsg }}</p>
+      </div>
+
       <div class="grid md:grid-cols-3 gap-8">
+
+        <!-- LEFT — Form -->
         <div class="md:col-span-2 space-y-6">
-          <div class="bg-white rounded-xl p-6 border border-tea-100">
-            <h3 class="font-medium text-tea-900 mb-4">Your Details</h3>
+
+          <!-- Your details -->
+          <div class="bg-white border border-gold/15 p-6 md:p-8" style="border-radius: 2px;">
+            <div class="flex items-center gap-3 mb-5">
+              <span class="h-px w-8 bg-gold/50"></span>
+              <span class="text-[10px] uppercase tracking-lux text-gold font-sans">Your · Details</span>
+            </div>
             <div class="grid grid-cols-2 gap-4">
-              <input v-model="form.name" placeholder="Full name" class="px-4 py-3 border border-tea-200 rounded-lg focus:border-tea-600 focus:outline-none" />
-              <input v-model="form.email" type="email" placeholder="Email" class="px-4 py-3 border border-tea-200 rounded-lg focus:border-tea-600 focus:outline-none" />
+              <input v-model="form.name" placeholder="Full name"
+                class="px-4 py-3 bg-white border border-gold/20 focus:border-gold focus:outline-none font-serif text-ink-900"
+                style="border-radius: 2px;" />
+              <input v-model="form.email" type="email" placeholder="Email"
+                class="px-4 py-3 bg-white border border-gold/20 focus:border-gold focus:outline-none font-serif text-ink-900"
+                style="border-radius: 2px;" />
             </div>
           </div>
 
-          <div class="bg-white rounded-xl p-6 border border-tea-100">
-            <h3 class="font-medium text-tea-900 mb-4">Billing Address</h3>
-            <input v-model="form.billing.address" placeholder="Street address" class="w-full px-4 py-3 border border-tea-200 rounded-lg mb-3 focus:border-tea-600 focus:outline-none" />
+          <!-- Billing address -->
+          <div class="bg-white border border-gold/15 p-6 md:p-8" style="border-radius: 2px;">
+            <div class="flex items-center gap-3 mb-5">
+              <span class="h-px w-8 bg-gold/50"></span>
+              <span class="text-[10px] uppercase tracking-lux text-gold font-sans">Billing · Address</span>
+            </div>
+            <input v-model="form.billing.address" placeholder="Street address"
+              class="w-full px-4 py-3 bg-white border border-gold/20 focus:border-gold focus:outline-none font-serif text-ink-900 mb-3"
+              style="border-radius: 2px;" />
             <div class="grid grid-cols-3 gap-3">
-              <input v-model="form.billing.city" placeholder="City" class="px-4 py-3 border border-tea-200 rounded-lg focus:border-tea-600 focus:outline-none" />
-              <input v-model="form.billing.postcode" placeholder="Postcode" class="px-4 py-3 border border-tea-200 rounded-lg focus:border-tea-600 focus:outline-none" />
-              <input v-model="form.billing.country" placeholder="Country" :value="'UK'" class="px-4 py-3 border border-tea-200 rounded-lg focus:border-tea-600 focus:outline-none" />
+              <input v-model="form.billing.city" placeholder="City"
+                class="px-4 py-3 bg-white border border-gold/20 focus:border-gold focus:outline-none font-serif text-ink-900"
+                style="border-radius: 2px;" />
+              <input v-model="form.billing.postcode" placeholder="Postcode"
+                class="px-4 py-3 bg-white border border-gold/20 focus:border-gold focus:outline-none font-serif text-ink-900"
+                style="border-radius: 2px;" />
+              <input :value="'UK'" placeholder="Country"
+                class="px-4 py-3 bg-white border border-gold/20 font-serif text-ink-900"
+                style="border-radius: 2px;" />
             </div>
           </div>
         </div>
 
-        <div class="bg-white rounded-xl p-6 border border-tea-100 h-fit sticky top-24">
-          <h3 class="font-medium text-tea-900 mb-4">Order Summary</h3>
-          <div class="flex gap-3 mb-4 pb-4 border-b border-tea-100">
-            <div class="w-16 h-16 bg-gradient-to-br from-tea-700 to-tea-400 rounded-lg flex items-center justify-center text-2xl">🍵</div>
-            <div class="flex-1">
-              <div class="text-sm font-medium text-tea-900">{{ product?.title }}</div>
-              <div class="text-xs text-tea-500">£{{ product?.unit_price }} × {{ qty }}</div>
+        <!-- RIGHT — Order Summary (sticky) -->
+        <div class="bg-white border border-gold/15 p-6 md:p-8 h-fit md:sticky md:top-24" style="border-radius: 2px;">
+          <div class="flex items-center gap-3 mb-5">
+            <span class="h-px w-8 bg-gold/50"></span>
+            <span class="text-[10px] uppercase tracking-lux text-gold font-sans">Order · Summary</span>
+          </div>
+
+          <!-- Product line — 不用 emoji，用 hairline 金色方形 -->
+          <div class="flex gap-3 mb-4 pb-4 border-b border-gold/10">
+            <div class="w-16 h-16 bg-ink-900 border border-gold/30 flex items-center justify-center" style="border-radius: 2px;">
+              <span class="font-serif text-gold text-2xl">T</span>
             </div>
-            <div class="text-sm font-medium">£{{ ((product?.unit_price||0)*qty).toFixed(2) }}</div>
+            <div class="flex-1">
+              <div class="text-sm font-serif text-ink-900">{{ product?.title }}</div>
+              <div class="text-[11px] uppercase tracking-lux text-sand font-sans mt-1">£{{ product?.unit_price }} × {{ qty }}</div>
+            </div>
+            <div class="text-sm font-serif text-ink-900">£{{ ((product?.unit_price||0)*qty).toFixed(2) }}</div>
           </div>
+
           <div class="space-y-2 text-sm">
-            <div class="flex justify-between text-tea-600"><span>Subtotal</span><span>£{{ ((product?.unit_price||0)*qty).toFixed(2) }}</span></div>
-            <div class="flex justify-between text-tea-600"><span>Shipping (UK)</span><span>£{{ product?.shipping_cost }}</span></div>
+            <div class="flex justify-between text-sand font-serif"><span>Subtotal</span><span>£{{ ((product?.unit_price||0)*qty).toFixed(2) }}</span></div>
+            <div class="flex justify-between text-sand font-serif"><span>Shipping · UK</span><span>£{{ product?.shipping_cost }}</span></div>
           </div>
-          <div class="flex justify-between pt-4 mt-4 border-t border-tea-100 font-serif text-xl">
+
+          <div class="flex justify-between pt-4 mt-4 border-t border-gold/10 font-serif text-xl text-ink-900">
             <span>Total</span><span>£{{ total().toFixed(2) }}</span>
           </div>
-          <button :disabled="loading" @click="place" class="w-full mt-6 py-4 bg-tea-900 text-white rounded-lg font-medium hover:bg-tea-800 transition disabled:opacity-50">
-            {{ loading ? 'Redirecting to 2Checkout...' : 'Pay Securely →' }}
+
+          <button :disabled="loading" @click="place"
+            class="w-full mt-6 py-4 bg-ink-900 text-ivory-100 hover:bg-ink-800 transition-duration-lux text-[11px] uppercase tracking-lux font-sans disabled:opacity-50 disabled:cursor-not-allowed"
+            style="border-radius: 2px;">
+            {{ loading ? 'Redirecting · · ·' : 'Confirm · Order · With · 2Checkout' }}
           </button>
-          <p class="text-xs text-center text-tea-500 mt-4">🔒 256-bit SSL · 2Checkout / PayPal · We never store your card details</p>
+
+          <p class="text-[10px] uppercase tracking-lux text-sand text-center mt-5 leading-loose font-sans">
+            256-bit SSL &middot; 2Checkout &middot; PayPal<br>
+            We never store your card details
+          </p>
         </div>
       </div>
     </div>

@@ -219,8 +219,6 @@ function resolveUrl(url: string) {
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500&display=swap');
-
 .ac-root { min-height: 100vh; background: #F8F5EF; color: #0B0A09; }
 .uppercase-caps { text-transform: uppercase; letter-spacing: 0.28em; }
 
