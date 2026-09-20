@@ -26,6 +26,10 @@ var AllModels = []interface{}{
         &ShortLink{},
         &Recording{},
 
+        // ===== 2026-09: 视频发布系统 =====
+        &VideoCategory{},
+        &Video{},
+
         // ===== 有外键引用的表放最后 =====
         &LiveRoom{},
 }

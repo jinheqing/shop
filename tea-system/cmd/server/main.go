@@ -157,6 +157,7 @@ func main() {
 		UserGroup:  handlers.NewUserGroupHandler(db.Business),
 		ShortLink:  handlers.NewShortLinkHandler(db.Business),
 		Recording:  handlers.NewRecordingHandler(db.Business),
+		Video:      handlers.NewVideoHandler(db.Business),
 	}
 
 	// ── 9. 构造 Router + 启动 HTTP ──

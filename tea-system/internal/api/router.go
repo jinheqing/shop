@@ -48,6 +48,7 @@ type Handlers struct {
         UserGroup    *handlers.UserGroupHandler
         ShortLink    *handlers.ShortLinkHandler
         Recording    *handlers.RecordingHandler
+        Video        *handlers.VideoHandler
 }
 
 type Router struct {
@@ -99,6 +100,10 @@ func (r *Router) Setup() *gin.Engine {
                 v1.GET("/custom-products/published", r.h.CustomProduct.Published)
                 // Public bespoke submission — rate-limited, no auth required
                 v1.POST("/public/custom-products", middleware.RateLimit(2, 10), r.h.CustomProduct.CreatePublic)
+
+                // ===== 2026-09: 公开视频列表 =====
+                v1.GET("/public/videos", r.h.Video.PublishedList)
+                v1.GET("/public/video-categories", r.h.Video.PublishedCategories)
 
 		// ---------- 支付 Webhook ----------
 		v1.POST("/webhooks/2checkout", r.h.Payment.Handle2CheckoutWebhook)
@@ -246,6 +251,17 @@ func (r *Router) Setup() *gin.Engine {
                         auth.PUT("/recordings/:id/visibility", middleware.RequireRole("admin", "supervisor"), r.h.Recording.UpdateVisibility)
                         auth.DELETE("/recordings/:id", middleware.RequireRole("admin", "supervisor"), r.h.Recording.Delete)
                         auth.GET("/my/recordings", r.h.Recording.ListMine)
+
+                        // ===== 2026-09: 视频发布系统 =====
+                        auth.GET("/videos", middleware.RequireRole("admin", "supervisor"), r.h.Video.List)
+                        auth.GET("/videos/:id", middleware.RequireRole("admin", "supervisor"), r.h.Video.Get)
+                        auth.POST("/videos", middleware.RequireRole("admin", "supervisor"), r.h.Video.Create)
+                        auth.PUT("/videos/:id", middleware.RequireRole("admin", "supervisor"), r.h.Video.Update)
+                        auth.DELETE("/videos/:id", middleware.RequireRole("admin", "supervisor"), r.h.Video.Delete)
+                        auth.GET("/video-categories", middleware.RequireRole("admin", "supervisor"), r.h.Video.ListCategories)
+                        auth.POST("/video-categories", middleware.RequireRole("admin", "supervisor"), r.h.Video.CreateCategory)
+                        auth.PUT("/video-categories/:id", middleware.RequireRole("admin", "supervisor"), r.h.Video.UpdateCategory)
+                        auth.DELETE("/video-categories/:id", middleware.RequireRole("admin", "supervisor"), r.h.Video.DeleteCategory)
 
 
 			// 翻译引擎代理
