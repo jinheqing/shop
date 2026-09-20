@@ -32,13 +32,13 @@ onMounted(async () => {
         Scan the QR on every bespoke box. See the tea garden, the master who rolled your leaves, and a live camera showing where it grew — 24 hours a day.
       </p>
       <div class="flex flex-col sm:flex-row gap-4 justify-center md:justify-start items-center md:items-start">
+        <a href="#collection"
+          class="px-9 py-4 bg-white text-ink-900 rounded-full font-medium hover:bg-ivory-100 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 text-center tracking-wide">
+          Shop The Collection →
+        </a>
         <RouterLink to="/bespoke"
-          class="px-9 py-4 bg-white text-tea-900 rounded-full font-medium hover:bg-tea-100 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 text-center tracking-wide">
-          Create Your Blend →
-        </RouterLink>
-        <RouterLink to="/live"
           class="px-9 py-4 border border-white/50 rounded-full font-medium hover:bg-white/15 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 text-center tracking-wide">
-          📷 Watch Live Gardens
+          Design Your Own Blend
         </RouterLink>
       </div>
     </div>
@@ -137,19 +137,19 @@ onMounted(async () => {
     </div>
   </section>
 
-  <!-- FEATURED -->
-  <section class="py-24 bg-ivory-100">
+  <!-- COLLECTION -->
+  <section id="collection" class="py-24 bg-ivory-100">
     <div class="max-w-7xl mx-auto px-6">
       <!-- 区块头：serif 大标题 + 香槟金 hairline -->
       <div class="flex items-end justify-between mb-14 flex-wrap gap-4">
         <div>
           <div class="flex items-center gap-3 mb-4">
             <span class="h-px w-10 bg-gold/50"></span>
-            <span class="text-[10px] uppercase tracking-lux text-gold font-sans">Curated · This Season</span>
+            <span class="text-[10px] uppercase tracking-lux text-gold font-sans">Signature · From The House</span>
           </div>
           <h2 class="font-serif text-4xl text-ink-900">Our Bespoke Collection</h2>
         </div>
-        <RouterLink to="/bespoke" class="text-[11px] uppercase tracking-lux text-sand hover:text-ink-900 transition font-sans">All Bespoke →</RouterLink>
+        <RouterLink to="/bespoke" class="text-[11px] uppercase tracking-lux text-sand hover:text-ink-900 transition font-sans">View Collection →</RouterLink>
       </div>
 
       <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-0 bg-gold/10">
@@ -181,6 +181,42 @@ onMounted(async () => {
           </div>
         </RouterLink>
       </div>
+    </div>
+  </section>
+
+  <!-- YOUR OWN BATCH — Bespoke 独立叙述，不推销，陈述式 -->
+  <section class="py-24 md:py-28 bg-ivory-50 border-t border-gold/15">
+    <div class="max-w-4xl mx-auto px-6 text-center">
+      <!-- 一条极细的金线做呼吸感分隔 -->
+      <div class="flex items-center justify-center gap-4 mb-10">
+        <span class="h-px w-16 bg-gold/40"></span>
+        <span class="text-[10px] uppercase tracking-lux text-gold font-sans">Your Own Batch</span>
+        <span class="h-px w-16 bg-gold/40"></span>
+      </div>
+
+      <h2 class="font-serif text-4xl md:text-5xl text-ink-900 leading-[1.15] mb-6">
+        A tea made,<br/> <em class="not-italic">for</em> you.
+      </h2>
+
+      <p class="text-ink-700 leading-relaxed max-w-xl mx-auto mb-4">
+        Choose the mountain village where your leaves are picked. The roast.
+        The paper it's wrapped in — cotton from Jiangsu, or bamboo from the same forest.
+      </p>
+      <p class="text-ink-700 leading-relaxed max-w-xl mx-auto mb-10">
+        One master in Yunnan will oversee your batch from harvest to box.
+        You can watch the tea grow, live, before it's even picked.
+      </p>
+
+      <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+        <RouterLink to="/bespoke"
+          class="px-9 py-4 bg-ink-900 text-ivory-100 rounded-full font-medium hover:bg-ink-800 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 text-center tracking-wide">
+          Design Your Blend →
+        </RouterLink>
+      </div>
+
+      <p class="text-[10px] uppercase tracking-lux text-sand mt-12 font-sans">
+        Bespoke batches take approximately 45 days · Minimum order £88
+      </p>
     </div>
   </section>
 </template>
