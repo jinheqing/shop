@@ -613,7 +613,8 @@ const formattedElapsed = computed(() => {
 .lux-chat-input:focus { border-bottom-color: var(--champagne); }
 .lux-chat-input::placeholder { color: #a8a195; }
 
-/* ========== 响应式 ========== */
+/* ========== 响应式 — 英国老钱手机使用习惯 ========== */
+/* 老钱用户：大触控区 (44px+)、清晰 serif 标题、不遮挡视频的简洁布局 */
 @media (max-width: 960px) {
   .lux-root { grid-template-columns: 1fr; }
   .lux-sidebar {
@@ -621,10 +622,38 @@ const formattedElapsed = computed(() => {
     border-left: none;
     border-top: 1px solid var(--sand);
   }
-  .lux-stage-wrap { padding: 20px; }
+  .lux-stage-wrap { padding: 16px; }
   .lux-brand-bar { padding: 14px 20px; }
-  .lux-caption-title { font-size: 32px; }
-  .lux-stage-rail { flex-direction: column; gap: 12px; align-items: flex-start; }
+  .lux-caption-title { font-size: 28px; }
+  .lux-stage-rail {
+    flex-direction: column;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 14px 16px;
+  }
   .lux-stage-actions { width: 100%; justify-content: flex-start; flex-wrap: wrap; }
+  /* 按钮加大触控区 — 老钱用户手指可能不灵活 */
+  .lux-btn { padding: 12px 22px; font-size: 12px; }
+  .lux-btn-mini { padding: 10px 16px; }
+}
+@media (max-width: 640px) {
+  /* 超小屏 — 进一步简化 */
+  .lux-brand-mark { font-size: 18px; }
+  .lux-brand-label { display: none; }
+  .lux-caption-title { font-size: 22px; }
+  .lux-caption-sub { font-size: 12px; }
+  .lux-list-label { font-size: 17px; }
+  .lux-stage-rail { padding: 12px; }
+  .lux-stage-meta { gap: 8px; flex-wrap: wrap; }
+  .lux-live-caps { font-size: 11px; }
+  .lux-session-time { font-size: 12px; }
+  .lux-garden-label { font-size: 12px; }
+  /* Chat 全屏 — 手机端不占半屏 */
+  .lux-chat { width: 100vw; }
+  .lux-chat-head { padding: 16px 20px 12px; }
+  .lux-chat-body { padding: 16px; }
+  .lux-chat-foot { padding: 12px 16px 16px; }
+  .lux-bubble-text { font-size: 15px; }
+  .lux-chat-input { font-size: 15px; }
 }
 </style>

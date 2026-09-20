@@ -38,6 +38,7 @@ const routes = [
     { path: 'delivery-inspection', component: () => import('@/views/DeliveryInspection.vue'), meta: { title: 'Delivery Inspection' } },
     { path: 'livekit', component: () => import('@/views/LiveKitRooms.vue'), meta: { title: 'LiveKit Rooms' } },
     { path: 'recordings', component: () => import('@/views/Recordings.vue'), meta: { title: 'Recordings' } },
+    { path: 'videos', component: () => import('@/views/Videos.vue'), meta: { title: 'Video Publishing' } },
     { path: 'user-groups', component: () => import('@/views/UserGroups.vue'), meta: { title: 'User Groups' } },
     { path: 'short-links', component: () => import('@/views/ShortLinks.vue'), meta: { title: 'Short Links' } },
     { path: 'slow-presets', component: () => import('@/views/SlowPresets.vue'), meta: { title: 'Slow Presets' } },

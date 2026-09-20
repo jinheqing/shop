@@ -40,6 +40,7 @@ const menuGroups: MenuGroup[] = [
     { label: 'Slow Presets (24/7)', path: '/slow-presets', icon: 'Clock' },
     { label: 'LiveKit SFU', path: '/livekit', icon: 'Monitor' },
     { label: 'Recordings', path: '/recordings', icon: 'VideoPlay' },
+    { label: 'Video Publishing', path: '/videos', icon: 'Film' },
     { label: 'Short Links', path: '/short-links', icon: 'Link' },
     { label: 'User Groups', path: '/user-groups', icon: 'User', roles: ['admin', 'supervisor'] },
   ]},
