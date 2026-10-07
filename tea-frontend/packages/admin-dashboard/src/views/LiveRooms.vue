@@ -255,7 +255,7 @@
       </el-alert>
 
       <!-- 方案选择 -->
-      <el-tabs :model-value="goLiveRoom?.push_source || 'app_webrtc'" @update:model-value="(v) => { if(goLiveRoom) goLiveRoom.push_source = v }">
+      <el-tabs :model-value="goLiveRoom?.push_source || 'app_webrtc'" @update:model-value="(v: any) => { if(goLiveRoom) goLiveRoom.push_source = v }">
         <!-- === 手机 App WebRTC 推流 (推荐, 支持连麦+翻译) === -->
         <el-tab-pane label="📱 Mobile App WebRTC" name="app_webrtc">
           <div class="text-xs text-slate-500 mb-3">
@@ -510,9 +510,9 @@ async function goLive(row: any) {
   goLiveLoading.value = true
   try {
     // 1) 先 Start（后端状态机 + 触发 LiveKit CreateRoom + 确保 host token）
-    const started = await api.post(`/live-rooms/${row.id}/start`)
+    const started: any = await api.post(`/live-rooms/${row.id}/start`)
     // 2) 拿 OBS/Host token + RTMP/Web 配置
-    const tokenResp = await api.post('/livekit/token-for-obs', {
+    const tokenResp: any = await api.post('/livekit/token-for-obs', {
       room_name: row.room_id,
       identity: 'host-' + row.room_id,
     })
@@ -531,7 +531,7 @@ async function goLive(row: any) {
     // 如果已经是 live（重复 start），直接拿配置
     if (err?.message?.includes('cannot start') || err?.code === 400) {
       try {
-        const tokenResp = await api.post('/livekit/token-for-obs', {
+        const tokenResp: any = await api.post('/livekit/token-for-obs', {
           room_name: row.room_id,
           identity: 'host-' + row.room_id,
         })

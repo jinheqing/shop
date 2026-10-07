@@ -16,6 +16,11 @@ pnpm-store/
 tea-system/server
 tea-system/*.exe
 tea-system/vendor/
+build/
+
+# ─── 备份 / IDE 产物 ───
+*.bak
+.trae-html-share-packages/
 
 # ─── Python ───
 tea-translate/__pycache__/
