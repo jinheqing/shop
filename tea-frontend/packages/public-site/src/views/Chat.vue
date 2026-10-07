@@ -49,12 +49,8 @@ const scrollRef = ref<HTMLElement | null>(null)
 // ============ Emoji Set (lightweight, no external dep) ============
 
 // ============ 我是谁（从 localStorage token 类型推断） ============
-// JWT payload 里有 subject_type: "user" | "staff"，用 token key 名直接推断即可
-const meUserType: 'user' | 'staff' | '' = (() => {
-  if (localStorage.getItem('user_token')) return 'user'
-  if (localStorage.getItem('staff_token')) return 'staff'
-  return ''
-})()
+// ⚠️ meUserType 定义在下方普通 <script> 块（module level），供 MessageBubble 使用
+// <script setup> 与普通 <script> 作用域不互通，勿在此重复声明
 
 // ============ WebSocket ============
 function wsURL(token: string) {
@@ -117,7 +113,8 @@ function scrollToBottom() { nextTick(() => { if (scrollRef.value) scrollRef.valu
 
 // ============ Conversations ============
 async function loadConvs() {
-  try { convs.value = (await api.get('/conversations') as any).items || [] } catch {}
+  // 后端 /conversations 返回 {code:0, data:[...]}（无 items 包装）
+  try { convs.value = (await api.get('/conversations') as any).data || [] } catch {}
 }
 
 async function selectConv(c: any) {
@@ -125,8 +122,9 @@ async function selectConv(c: any) {
   showCardMenu.value = false
   if (!c) return
   try {
+    // 后端消息列表返回 {code:0, data:{messages:[...], count:n}}
     const resp = await api.get(`/conversations/${c.id}/messages`) as any
-    messages.value = resp.items || resp || []
+    messages.value = resp?.data?.messages || []
   } catch { messages.value = [] }
   // join ws room
   if (ws.value?.readyState === WebSocket.OPEN) {
@@ -293,6 +291,16 @@ onUnmounted(() => { ws.value?.close() })
 
 <script lang="ts">
 import { defineComponent, computed, h } from 'vue'
+
+// 我是谁（module level）—— 从 localStorage token 类型推断，供 MessageBubble 判断消息归属
+// JWT payload 里有 subject_type: "user" | "staff"，用 token key 名直接推断
+const meUserType: 'user' | 'staff' | '' = (() => {
+  if (typeof localStorage !== 'undefined') {
+    if (localStorage.getItem('user_token')) return 'user'
+    if (localStorage.getItem('staff_token')) return 'staff'
+  }
+  return ''
+})()
 
 export const MessageBubble = defineComponent({
   name: 'MessageBubble',

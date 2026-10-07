@@ -67,12 +67,31 @@ async function load() {
 onMounted(load)
 
 async function submit() {
+  // 必填项前端校验（与后端 binding/日期解析对齐），避免静默 400
+  const required: Array<[keyof typeof form, string]> = [
+    ['title', 'Title'], ['raw_tea_source', 'Raw Tea Source'], ['custom_requirement', 'Customer Requirement'],
+    ['inner_packaging', 'Inner Packaging'], ['outer_packaging', 'Outer Packaging'],
+    ['unit_price', 'Unit Price'], ['quantity', 'Quantity'], ['lead_time', 'Lead Time'],
+    ['tea_garden_location', 'Tea Garden Location'], ['master_name', 'Master Name'],
+    ['harvest_date', 'Harvest Date'], ['roasting_date', 'Roasting Date'], ['storage_location', 'Storage Location'],
+  ]
+  const missing = required.filter(([k]) => {
+    const v = (form as any)[k]
+    return v === '' || v === null || v === undefined
+  }).map(([, label]) => label)
+  if (missing.length) { ElMessage.warning(`Missing required fields: ${missing.join(', ')}`); return }
+
   const method = editingId.value ? 'put' : 'post'
   const url = editingId.value ? `/custom-products/${editingId.value}` : '/custom-products'
-  if (method === 'post') await api.post(url, form)
-  else await api.put(url, form)
-  ElMessage.success('✅ Saved')
-  open.value = false; editingId.value = null; load()
+  try {
+    if (method === 'post') await api.post(url, form)
+    else await api.put(url, form)
+    ElMessage.success('✅ Saved')
+    open.value = false; editingId.value = null; load()
+  } catch (err: any) {
+    // 后端 400 会带具体原因（binding 错误 / 日期格式），直接展示给用户
+    ElMessage.error(`Save failed: ${err?.message || 'unknown error'}`)
+  }
 }
 function openNew() {
   Object.assign(form, { title: '', raw_tea_source: '', custom_requirement: '', tea_type: 'raw_puer', tea_shape: 'cake', tea_shape_weight: 357, smoked_with_flower: false, flower_type: 'jasmine', inner_packaging: '', outer_packaging: '', product_image_url: '', product_card_text: '', product_card_format: 'vertical', qr_code_position: 'outer_back', unit_price: 0, quantity: 1, shipping_cost: 0, lead_time: '', harvest_date: '', roasting_date: '', tea_garden_location: '', master_name: '', storage_location: '', sgs_report_id: null, include_custom_live: false, live_scheduled_date: '' })
@@ -162,13 +181,13 @@ function total() {
         </el-form-item></el-col>
       </el-row>
       <el-row :gutter="12">
-        <el-col :span="8"><el-form-item label="Shape Weight (g)">
-          <el-input-number v-model="form.tea_shape_weight" :min="50" :max="5000" class="w-full" />
+        <el-col :span="8"><el-form-item label="Shape Weight (g)" label-width="110px">
+          <el-input-number v-model="form.tea_shape_weight" :min="50" :max="5000" controls-position="right" class="w-full" />
         </el-form-item></el-col>
-        <el-col :span="8"><el-form-item label="Flower Smoked">
+        <el-col :span="8"><el-form-item label="Flower Smoked" label-width="110px">
           <el-switch v-model="form.smoked_with_flower" />
         </el-form-item></el-col>
-        <el-col :span="8"><el-form-item label="Flower Type">
+        <el-col :span="8"><el-form-item label="Flower Type" label-width="110px">
           <el-select v-model="form.flower_type" class="w-full" :disabled="!form.smoked_with_flower">
             <el-option value="jasmine">Jasmine 茉莉</el-option>
             <el-option value="osmanthus">Osmanthus 桂花</el-option>
@@ -227,10 +246,12 @@ function total() {
       <!-- Group 5: 价格 -->
       <el-divider content-position="left">💷 Pricing (4)</el-divider>
       <el-row :gutter="12">
-        <el-col :span="6"><el-form-item label="Unit Price (£)" required><el-input-number v-model="form.unit_price" :precision="2" class="w-full" /></el-form-item></el-col>
-        <el-col :span="6"><el-form-item label="Quantity" required><el-input-number v-model="form.quantity" :min="1" class="w-full" /></el-form-item></el-col>
-        <el-col :span="6"><el-form-item label="Shipping (£)"><el-input-number v-model="form.shipping_cost" :precision="2" class="w-full" /></el-form-item></el-col>
-        <el-col :span="6"><el-form-item label="Total (£)"><span class="font-serif text-lg text-tea-700">£{{ total() }}</span></el-form-item></el-col>
+        <el-col :span="12"><el-form-item label="Unit Price (£)" required label-width="110px"><el-input-number v-model="form.unit_price" :precision="2" controls-position="right" class="w-full" /></el-form-item></el-col>
+        <el-col :span="12"><el-form-item label="Quantity" required label-width="110px"><el-input-number v-model="form.quantity" :min="1" controls-position="right" class="w-full" /></el-form-item></el-col>
+      </el-row>
+      <el-row :gutter="12">
+        <el-col :span="12"><el-form-item label="Shipping (£)" label-width="110px"><el-input-number v-model="form.shipping_cost" :precision="2" controls-position="right" class="w-full" /></el-form-item></el-col>
+        <el-col :span="12"><el-form-item label="Total (£)" label-width="110px"><span class="font-serif text-lg text-tea-700">£{{ total() }}</span></el-form-item></el-col>
       </el-row>
       <el-form-item label="Lead Time" required><el-input v-model="form.lead_time" placeholder="45 days from confirmation" /></el-form-item>
 
@@ -241,21 +262,21 @@ function total() {
         <el-col :span="12"><el-form-item label="Master Name" required><el-input v-model="form.master_name" /></el-form-item></el-col>
       </el-row>
       <el-row :gutter="12">
-        <el-col :span="8"><el-form-item label="Harvest Date" required>
+        <el-col :span="12"><el-form-item label="Harvest Date" required label-width="110px">
           <el-date-picker v-model="form.harvest_date" type="date" value-format="YYYY-MM-DD" class="w-full" />
         </el-form-item></el-col>
-        <el-col :span="8"><el-form-item label="Roasting Date" required>
+        <el-col :span="12"><el-form-item label="Roasting Date" required label-width="110px">
           <el-date-picker v-model="form.roasting_date" type="date" value-format="YYYY-MM-DD" class="w-full" />
         </el-form-item></el-col>
-        <el-col :span="8"><el-form-item label="Storage Location" required><el-input v-model="form.storage_location" /></el-form-item></el-col>
       </el-row>
+      <el-form-item label="Storage Location" required><el-input v-model="form.storage_location" /></el-form-item>
 
       <!-- Group 7: SGS + Live -->
       <el-divider content-position="left">🔬 SGS + 🎥 Custom Live (3)</el-divider>
       <el-row :gutter="12">
-        <el-col :span="8"><el-form-item label="SGS Report ID"><el-input-number v-model="form.sgs_report_id" :min="0" class="w-full" /></el-form-item></el-col>
-        <el-col :span="8"><el-form-item label="Include Custom Live"><el-switch v-model="form.include_custom_live" /></el-form-item></el-col>
-        <el-col :span="8"><el-form-item label="Live Scheduled">
+        <el-col :span="8"><el-form-item label="SGS Report ID" label-width="100px"><el-input-number v-model="form.sgs_report_id" :min="0" controls-position="right" class="w-full" /></el-form-item></el-col>
+        <el-col :span="8"><el-form-item label="Custom Live" label-width="100px"><el-switch v-model="form.include_custom_live" /></el-form-item></el-col>
+        <el-col :span="8"><el-form-item label="Live Scheduled" label-width="100px">
           <el-date-picker v-model="form.live_scheduled_date" type="date" value-format="YYYY-MM-DD" class="w-full" :disabled="!form.include_custom_live" />
         </el-form-item></el-col>
       </el-row>

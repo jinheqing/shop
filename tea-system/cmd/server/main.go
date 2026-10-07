@@ -32,6 +32,8 @@ import (
 	"tea-system/internal/models"
 	"tea-system/internal/repository"
 	"tea-system/internal/service"
+
+	"gorm.io/gorm"
 )
 
 func main() {
@@ -93,6 +95,9 @@ func main() {
 	// 确保默认管理员存在（用 repo 查询 + 创建）
 	passwordSvc := service.NewPasswordService()
 	ensureAdminUser(staffRepo, passwordSvc, cfg)
+
+	// 预置公开站点 CMS 内容（管理端 CMS 只能编辑已有行，空表会导致功能不可用）
+	seedSiteContents(db.Business)
 
 	// ── 7. 构造 Service 层 ──
 	jwtSvc := service.NewJWTService(
@@ -251,4 +256,36 @@ func ensureAdminUser(repo *repository.StaffRepo, pwdSvc *service.PasswordService
 
 	// 占位格式: fmt 用到了但 import 里可能不需要
 	_ = fmt.Sprintf
+}
+
+// seedSiteContents — 预置公开站点 CMS 内容行（与 admin-dashboard SiteContent.vue 的 defaults 对齐）
+// 管理端 CMS 页只能编辑/重置已有行，若空表则整个 CMS 功能不可用
+func seedSiteContents(db *gorm.DB) {
+	type seedRow struct {
+		PageKey    string
+		SectionKey string
+		Content    models.JSONMap
+	}
+	defaults := []seedRow{
+		{"home", "hero", models.JSONMap{"title": "Pu'er Tea Direct from Yunnan", "subtitle": "Personalized tea experience"}},
+		{"home", "featured_presets", models.JSONMap{"items": []interface{}{}}},
+		{"home", "quality_sgs", models.JSONMap{"title": "Third-Party Lab Certified", "items": []interface{}{}}},
+		{"about", "story", models.JSONMap{"paragraph": "UK-based Pu'er tea specialist since 2024."}},
+		{"checkout", "contact_us", models.JSONMap{"email": "hello@ukteahouse.co.uk", "phone": "+44 20 7946 0018"}},
+		{"footer", "links", models.JSONMap{"privacy": "/privacy", "terms": "/terms", "gdpr_dsar": "/gdpr-dsar"}},
+	}
+	for _, r := range defaults {
+		var cnt int64
+		db.Model(&models.SiteContent{}).
+			Where("page_key = ? AND section_key = ?", r.PageKey, r.SectionKey).
+			Count(&cnt)
+		if cnt == 0 {
+			db.Create(&models.SiteContent{
+				PageKey:    r.PageKey,
+				SectionKey: r.SectionKey,
+				Content:    r.Content,
+			})
+		}
+	}
+	log.Info().Msg("🌱 Site contents seeded (if empty)")
 }

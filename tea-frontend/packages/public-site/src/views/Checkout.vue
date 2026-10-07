@@ -75,7 +75,7 @@ const place = async () => {
             <div class="grid grid-cols-3 gap-3">
               <input v-model="form.billing.city" placeholder="City" class="px-4 py-3 border border-tea-200 rounded-lg focus:border-tea-600 focus:outline-none" />
               <input v-model="form.billing.postcode" placeholder="Postcode" class="px-4 py-3 border border-tea-200 rounded-lg focus:border-tea-600 focus:outline-none" />
-              <input v-model="form.billing.country" placeholder="Country" :value="'UK'" class="px-4 py-3 border border-tea-200 rounded-lg focus:border-tea-600 focus:outline-none" />
+              <input v-model="form.billing.country" placeholder="Country" class="px-4 py-3 border border-tea-200 rounded-lg focus:border-tea-600 focus:outline-none" />
             </div>
           </div>
         </div>

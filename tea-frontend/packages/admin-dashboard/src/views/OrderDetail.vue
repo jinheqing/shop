@@ -32,7 +32,8 @@ async function regenInv() { await api.post(`/orders/${id}/invoice/regenerate`); 
 
 const timeline = computed(() => {
   if (!order.value) return []
-  const states = ['ordering','paid','pending_declaration','producing','ready_for_delivery','pending_customs','customs_clear','shipped','completed']
+  // 状态链与后端 OrderStateMachine 对齐（producing → ready_for_production）
+  const states = ['ordering','paid','pending_declaration','producing','ready_for_production','pending_customs','customs_clear','shipped','completed']
   const idx = states.indexOf(order.value.state)
   return states.map((s, i) => ({ name: s, done: i < idx, current: i === idx }))
 })
@@ -64,8 +65,8 @@ const timeline = computed(() => {
             <el-button v-if="order.state==='ordering'" type="success" @click="transition('paid')">Mark Paid</el-button>
             <el-button v-if="order.state==='paid'" @click="transition('pending_declaration')">→ Declaration</el-button>
             <el-button v-if="order.state==='paid' || order.state==='pending_declaration'" type="warning" @click="transition('producing')">→ Producing</el-button>
-            <el-button v-if="order.state==='producing'" type="warning" @click="transition('ready_for_delivery')">→ Ready for Delivery</el-button>
-            <el-button v-if="order.state==='ready_for_delivery'" @click="transition('pending_customs')">→ Pending Customs</el-button>
+            <el-button v-if="order.state==='producing'" type="warning" @click="transition('ready_for_production')">→ Ready for Production</el-button>
+            <el-button v-if="order.state==='ready_for_production'" @click="transition('pending_customs')">→ Pending Customs</el-button>
             <el-button v-if="order.state==='pending_customs'" type="primary" @click="transition('customs_clear')">→ Customs Clear</el-button>
             <el-button v-if="order.state==='customs_clear'" type="primary" @click="transition('shipped')">→ Shipped</el-button>
             <el-button v-if="order.state==='shipped'" type="success" @click="transition('completed')">→ ✅ Completed</el-button>

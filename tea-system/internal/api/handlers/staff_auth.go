@@ -419,6 +419,12 @@ func (h *StaffAuthHandler) StaffCreate(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	// 邮箱唯一性预检查 —— 重复时返回 409（业务冲突），而不是触发 DB 约束后报 500
+	email := strings.ToLower(req.Email)
+	if _, err := h.staffRepo.GetByEmail(c.Request.Context(), email); err == nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "email already registered"})
+		return
+	}
 	// 生成初始密码
 	initialPwd := strings.ReplaceAll(time.Now().Format("2006"), "-", "") + "Tea!" + strconv.FormatInt(int64(time.Now().UnixNano()%1000), 10)
 	hash, _ := h.passwordSvc.Hash(initialPwd)
@@ -430,7 +436,7 @@ func (h *StaffAuthHandler) StaffCreate(c *gin.Context) {
 
 	s := models.Staff{
 		Name:           req.Name,
-		Email:          strings.ToLower(req.Email),
+		Email:          email,
 		PasswordHash:   hash,
 		Role:           req.Role,
 		WorkTimezone:   tz,

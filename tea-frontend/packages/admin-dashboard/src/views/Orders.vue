@@ -12,7 +12,8 @@ async function invoice(id: number) {
   ElMessage.success(`Invoice generated: ${d.invoice_no}`)
 }
 async function transition(id: number, state: string) {
-  await api.post(`/orders/${id}/state`, { state })
+  // 后端 OrderStateRequest 期望 target_state（binding:required），不是 state
+  await api.post(`/orders/${id}/state`, { target_state: state })
   ElMessage.success(`→ ${state}`)
   load()
 }
@@ -49,9 +50,11 @@ async function showTimeline(id: number) {
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item command="paid">→ paid</el-dropdown-item>
+                <el-dropdown-item command="pending_declaration">→ pending_declaration</el-dropdown-item>
                 <el-dropdown-item command="producing">→ producing</el-dropdown-item>
                 <el-dropdown-item command="ready_for_production">→ ready_for_production</el-dropdown-item>
                 <el-dropdown-item command="pending_customs">→ pending_customs</el-dropdown-item>
+                <el-dropdown-item command="customs_clear">→ customs_clear</el-dropdown-item>
                 <el-dropdown-item command="shipped">→ shipped</el-dropdown-item>
                 <el-dropdown-item command="completed">→ completed</el-dropdown-item>
               </el-dropdown-menu>

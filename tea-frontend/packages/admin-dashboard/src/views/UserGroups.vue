@@ -24,7 +24,8 @@ const PRIVILEGE_OPTIONS = [
 ]
 
 async function load() {
-  try { list.value = await api.get('/user-groups') } catch { list.value = [] }
+  // 后端返回 {items: [...]}，必须解包（否则 el-table 收到非数组，渲染空白）
+  try { const d: any = await api.get('/user-groups'); list.value = d?.items || d || [] } catch { list.value = [] }
 }
 
 function openNew() {
