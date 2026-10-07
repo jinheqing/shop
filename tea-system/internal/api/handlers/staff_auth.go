@@ -72,6 +72,65 @@ type StaffLoginResponse struct {
 	Email        string `json:"email"`
 }
 
+// ============================================================
+// 登录失败锁定（Redis 计数，滑动窗口）
+//   连续 N 次失败 → 锁定 T 时长；锁定期间即使密码正确也拒绝
+//   默认 N=5 / T=15m，可用 LOGIN_LOCKOUT_ATTEMPTS / LOGIN_LOCKOUT_WINDOW 覆盖
+// ============================================================
+
+const loginFailKeyPrefix = "staff:login_fail:"
+
+// lockoutParams — 读取锁定阈值与窗口（带默认值，环境变量可覆盖）
+func lockoutParams() (maxAttempts int, window time.Duration) {
+	maxAttempts = 5
+	if v := os.Getenv("LOGIN_LOCKOUT_ATTEMPTS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			maxAttempts = n
+		}
+	}
+	window = 15 * time.Minute
+	if v := os.Getenv("LOGIN_LOCKOUT_WINDOW"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			window = d
+		}
+	}
+	return maxAttempts, window
+}
+
+// loginLocked — 邮箱是否处于锁定状态；返回 (locked, retryAfterSeconds)
+func (h *StaffAuthHandler) loginLocked(ctx context.Context, email string) (bool, int64) {
+	maxAttempts, window := lockoutParams()
+	key := loginFailKeyPrefix + email
+	n, err := h.rdb.Get(ctx, key).Int64()
+	if err != nil || n < int64(maxAttempts) {
+		return false, 0
+	}
+	ttl, err := h.rdb.TTL(ctx, key).Result()
+	if err != nil || ttl < 0 {
+		ttl = window
+	}
+	return true, int64(ttl.Seconds()) + 1
+}
+
+// recordLoginFail — 失败计数 +1，并刷新 TTL（持续失败则持续延长锁定）
+func (h *StaffAuthHandler) recordLoginFail(ctx context.Context, email string) {
+	_, window := lockoutParams()
+	key := loginFailKeyPrefix + email
+	pipe := h.rdb.TxPipeline()
+	pipe.Incr(ctx, key)
+	pipe.Expire(ctx, key, window)
+	if _, err := pipe.Exec(ctx); err != nil {
+		log.Warn().Err(err).Str("email", email).Msg("login lockout: redis incr failed")
+	}
+}
+
+// clearLoginFails — 登录成功后清零失败计数
+func (h *StaffAuthHandler) clearLoginFails(ctx context.Context, email string) {
+	if err := h.rdb.Del(ctx, loginFailKeyPrefix+email).Err(); err != nil {
+		log.Warn().Err(err).Str("email", email).Msg("login lockout: redis del failed")
+	}
+}
+
 // Login — POST /staff/login
 func (h *StaffAuthHandler) Login(c *gin.Context) {
 	var req StaffLoginRequest
@@ -81,11 +140,25 @@ func (h *StaffAuthHandler) Login(c *gin.Context) {
 	}
 
 	ctx := c.Request.Context()
+	email := strings.ToLower(req.Email)
+
+	// 0. 锁定检查（在查库之前，锁定账户不产生任何 DB 开销）
+	if locked, retryAfter := h.loginLocked(ctx, email); locked {
+		log.Warn().Str("email", email).Int64("retry_after_s", retryAfter).Msg("staff login blocked: account locked")
+		c.JSON(http.StatusLocked, gin.H{
+			"code":                423,
+			"message":             "account temporarily locked due to repeated failed logins",
+			"retry_after_seconds": retryAfter,
+		})
+		return
+	}
 
 	// 1. 查找 Staff
-	staff, err := h.staffRepo.GetByEmail(ctx, strings.ToLower(req.Email))
+	staff, err := h.staffRepo.GetByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, repository.ErrStaffNotFound) {
+			// 未知邮箱同样计数，防止通过响应差异枚举有效账户
+			h.recordLoginFail(ctx, email)
 			// 安全：统一返回 "email or password invalid"，不要泄露哪个不对
 			c.JSON(http.StatusUnauthorized, gin.H{"code": 401, "message": "email or password invalid"})
 			return
@@ -103,10 +176,13 @@ func (h *StaffAuthHandler) Login(c *gin.Context) {
 
 	// 3. 验证密码
 	if !h.passwordSvc.Verify(staff.PasswordHash, req.Password) {
-		// TODO: 登录失败计数 + 5 次锁定 15 分钟
+		h.recordLoginFail(ctx, email)
 		c.JSON(http.StatusUnauthorized, gin.H{"code": 401, "message": "email or password invalid"})
 		return
 	}
+
+	// 密码正确 → 清零失败计数
+	h.clearLoginFails(ctx, email)
 
 	// 4. 更新 last_login_at
 	_ = h.staffRepo.UpdateLastLogin(ctx, staff.ID)

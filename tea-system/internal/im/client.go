@@ -123,18 +123,9 @@ func (c *Client) WritePump() {
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
-			w, err := c.conn.NextWriter(websocket.TextMessage)
-			if err != nil {
-				return
-			}
-			w.Write(msg)
-
-			n := len(c.send)
-			for i := 0; i < n; i++ {
-				w.Write([]byte{'\n'})
-				w.Write(<-c.send)
-			}
-			if err := w.Close(); err != nil {
+			// 每条消息独立一帧：客户端 JSON.parse 按帧解析，
+			// 之前把多条消息用 '\n' 拼进同一帧会导致前端解析失败
+			if err := c.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
 				return
 			}
 

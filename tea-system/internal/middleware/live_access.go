@@ -12,6 +12,11 @@ import (
 // LiveAccessMiddleware — 检查当前用户是否能访问某个直播
 func LiveAccessMiddleware(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// staff 全放行（管理端需要查看/操作所有房间）
+		if isStaffRequester(c) {
+			c.Next()
+			return
+		}
 		id := c.Param("id")
 		if id == "" {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"code": 400, "message": "missing id"})
@@ -63,6 +68,11 @@ func LiveAccessMiddleware(db *gorm.DB) gin.HandlerFunc {
 // RecordingAccessMiddleware — 同上，针对 Recording
 func RecordingAccessMiddleware(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// staff 全放行
+		if isStaffRequester(c) {
+			c.Next()
+			return
+		}
 		id := c.Param("id")
 		var rec models.Recording
 		if err := db.First(&rec, id).Error; err != nil {
@@ -103,6 +113,12 @@ func RecordingAccessMiddleware(db *gorm.DB) gin.HandlerFunc {
 }
 
 // === 辅助函数 ===
+
+// isStaffRequester — 请求者是否为 staff（JWT sub_type）
+func isStaffRequester(c *gin.Context) bool {
+	v, ok := c.Get(CtxKeyIsStaff)
+	return ok && v.(bool)
+}
 
 func roomVisibleToUser(db *gorm.DB, room *models.LiveRoom, userID uint64) bool {
 	for _, uid := range room.VisibleUserIDs {

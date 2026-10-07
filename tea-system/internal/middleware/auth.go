@@ -73,6 +73,12 @@ func JWTAuth(jwtSecret string) gin.HandlerFunc {
 		c.Set(CtxKeyEmail, claims.Email)
 		c.Set(CtxKeyRole, claims.Role)
 		c.Set(CtxKeyIsStaff, claims.SubjectType == "staff")
+		// 兼容键：handler 里大量使用 user_id / staff_id（uint64），按 subject 类型注入
+		if claims.SubjectType == "user" {
+			c.Set("user_id", claims.SubjectID)
+		} else if claims.SubjectType == "staff" {
+			c.Set("staff_id", claims.SubjectID)
+		}
 
 		c.Next()
 	}

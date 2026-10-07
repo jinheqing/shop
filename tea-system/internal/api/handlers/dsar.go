@@ -56,7 +56,7 @@ func (h *DSARHandler) CreateRequest(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "create failed"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"ticket": ticket, "message": "DSAR request queued — SLA 30 days"})
+	c.JSON(http.StatusCreated, gin.H{"ticket": ticket, "message": "DSAR request queued — SLA 30 days"})
 }
 
 // GET /dsar/requests

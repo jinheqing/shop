@@ -69,6 +69,10 @@ func (r *Router) Setup() *gin.Engine {
 	r.engine.Use(middleware.Recovery())
 	r.engine.Use(middleware.Logging())
 	r.engine.Use(middleware.CORS(nil))
+	// 审计日志：记录所有写操作（POST/PUT/PATCH/DELETE）到独立 audit 库
+	if r.audit != nil {
+		r.engine.Use(middleware.Audit(r.audit))
+	}
 
 	// ============ 公开路由 ============
 	r.engine.GET("/health", r.h.Health.Health)
@@ -183,13 +187,14 @@ func (r *Router) Setup() *gin.Engine {
 			auth.POST("/slow-presets/:id/disable", r.h.SlowPreset.Disable)
 
 			// Step 13: 直播间
+			// 管理端点仅 staff 可用；详情按可见性控制（staff 放行，user 校验名单）
 			auth.POST("/live-rooms", r.h.LiveRoom.Create)
-			auth.GET("/live-rooms", r.h.LiveRoom.List)
-			auth.GET("/live-rooms/:id", r.h.LiveRoom.GetByID)
-			auth.PUT("/live-rooms/:id", r.h.LiveRoom.Update)
-			auth.DELETE("/live-rooms/:id", r.h.LiveRoom.Delete)
-			auth.POST("/live-rooms/:id/start", r.h.LiveRoom.Start)
-			auth.POST("/live-rooms/:id/end", r.h.LiveRoom.End)
+			auth.GET("/live-rooms", middleware.RequireStaff(), r.h.LiveRoom.List)
+			auth.GET("/live-rooms/:id", middleware.LiveAccessMiddleware(r.db), r.h.LiveRoom.GetByID)
+			auth.PUT("/live-rooms/:id", middleware.RequireStaff(), r.h.LiveRoom.Update)
+			auth.DELETE("/live-rooms/:id", middleware.RequireStaff(), r.h.LiveRoom.Delete)
+			auth.POST("/live-rooms/:id/start", middleware.RequireStaff(), r.h.LiveRoom.Start)
+			auth.POST("/live-rooms/:id/end", middleware.RequireStaff(), r.h.LiveRoom.End)
 			auth.GET("/live-rooms/calendar", r.h.LiveRoom.Calendar)
 			auth.GET("/live-rooms/customer-requests", r.h.LiveRoom.CustomerRequests)
 
@@ -242,7 +247,7 @@ func (r *Router) Setup() *gin.Engine {
 
                         // ===== 2026-09: 回放 Recordings =====
                         auth.GET("/recordings", middleware.RequireRole("admin", "supervisor"), r.h.Recording.List)
-                        auth.GET("/recordings/:id", middleware.LiveAccessMiddleware(r.db))
+                        auth.GET("/recordings/:id", middleware.RecordingAccessMiddleware(r.db))
                         auth.PUT("/recordings/:id/visibility", middleware.RequireRole("admin", "supervisor"), r.h.Recording.UpdateVisibility)
                         auth.DELETE("/recordings/:id", middleware.RequireRole("admin", "supervisor"), r.h.Recording.Delete)
                         auth.GET("/my/recordings", r.h.Recording.ListMine)

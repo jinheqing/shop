@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"strconv"
 	"time"
 )
 
@@ -24,6 +25,39 @@ func (j *JSONMap) Scan(value interface{}) error {
 
 // JSONArray is a helper type for jsonb columns (array of strings)
 type JSONArray []string
+
+// UnmarshalJSON — 兼容字符串与数字两种元素：
+//   privileges / reciprocal 语义是字符串数组（["vip_concierge"]）
+//   visible_user_ids / visible_group_ids 前端传的是数字数组（[1,2,3]）
+// 数字统一转成字符串存储，下游（live_access.go 的 ParseUint 比较）无需改动。
+func (j *JSONArray) UnmarshalJSON(data []byte) error {
+	var raw []interface{}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	out := make([]string, 0, len(raw))
+	for _, v := range raw {
+		switch x := v.(type) {
+		case string:
+			out = append(out, x)
+		case float64:
+			if x == float64(uint64(x)) {
+				out = append(out, strconv.FormatUint(uint64(x), 10))
+			} else {
+				out = append(out, strconv.FormatFloat(x, 'f', -1, 64))
+			}
+		case bool:
+			out = append(out, strconv.FormatBool(x))
+		case nil:
+			// 跳过 null 元素
+		default:
+			b, _ := json.Marshal(x)
+			out = append(out, string(b))
+		}
+	}
+	*j = out
+	return nil
+}
 
 func (j JSONArray) Value() (driver.Value, error) {
 	return json.Marshal(j)

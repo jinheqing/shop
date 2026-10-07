@@ -63,6 +63,7 @@ type SiteContent struct {
 	PageKey       string    `gorm:"column:page_key;uniqueIndex:idx_site_page_sec;not null;size:50" json:"page_key"`
 	SectionKey    string    `gorm:"column:section_key;uniqueIndex:idx_site_page_sec;not null;size:50" json:"section_key"`
 	Content       JSONMap   `gorm:"column:content;not null;type:jsonb" json:"content"`
+	IsPublished   bool      `gorm:"column:is_published;not null;default:true" json:"is_published"`
 	UpdatedByStaffID *uint64 `gorm:"column:updated_by_staff_id" json:"updated_by_staff_id,omitempty"`
 	UpdatedAt     time.Time `gorm:"column:updated_at;not null" json:"updated_at"`
 }
